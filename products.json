@@ -19,18 +19,18 @@
         },
         "M": {
           "available": true,
-          "stripe_link": "https://buy.stripe.com/LINK_MARROM_M",
-          "id_stripe": "price_marrom_m_001"
+          "stripe_link": "https://buy.stripe.com/bJeeVde2wgrZ2cpcxy18c01",
+          "id_stripe": "prod_Sfp76DBvJ4JbjZ"
         },
         "G": {
           "available": true,
-          "stripe_link": "https://buy.stripe.com/LINK_MARROM_G",
-          "id_stripe": "price_marrom_g_001"
+          "stripe_link": "https://buy.stripe.com/14AeVd0bG4Jh9ER2WY18c02",
+          "id_stripe": "prod_Sfp8rIvJOPm6AI"
         },
         "GG": {
           "available": true,
-          "stripe_link": "https://buy.stripe.com/LINK_MARROM_GG",
-          "id_stripe": "price_marrom_gg_001"
+          "stripe_link": "https://buy.stripe.com/3cI7sL0bGfnVaIV9lm18c03",
+          "id_stripe": "prod_Sfp8sbKNKcnY4c"
         }
       }
     },
