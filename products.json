@@ -77,7 +77,7 @@
       "title": "Camiseta ONE WAY Off White",
       "price": 120.00,
       "preco_custo": 51.50,
-      "image": "./img/camisetas/Camiseta_onewayBranca.png",
+      "image": "./img/camisetas/Camiseta_onewayBranca.PNG",
       "video": "./videos/camiseta-oneway-branca-preview.mp4",
       "sizes": {
         "P": {
@@ -111,7 +111,7 @@
       "title": "Camiseta The Way",
       "price": 120.00,
       "preco_custo": 49.50,
-      "image": "./img/camisetas/Camiseta_theway.png",
+      "image": "./img/camisetas/Camiseta_theway.PNG",
       "video": "./videos/camiseta-the-way-preview.mp4",
       "sizes": {
         "P": {
