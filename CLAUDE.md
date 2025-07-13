@@ -58,9 +58,17 @@ index.html (SPA estática)
 
 ### Status da Integração de Pagamento
 - Vendas de ingressos externas gerenciadas por tiketo.com.br
-- Sistema de produtos com Stripe parcialmente implementado
+- Sistema de produtos com Stripe implementado (internacional, sem parcelamento)
+- Mercado Pago em desenvolvimento (PIX + parcelamento 2x sem juros, até 12x com juros)
 - Lote 4 comentado (não disponível para venda)
 - Headers de segurança configurados em meta tags
+
+### Issues Ativas - Mercado Pago
+- Issue #6: Setup backend e dependências MP
+- Issue #7: Endpoint checkout com parcelamento  
+- Issue #8: Frontend dual payment (Stripe + MP)
+- Issue #9: Páginas success/cancel Mercado Pago
+- Issue #10: Testes e validação end-to-end
 
 ## Observações Importantes
 - Todo JavaScript está inline no index.html (381 linhas) - sem arquivos JS separados
