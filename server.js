@@ -104,15 +104,46 @@ app.post('/create-mp-checkout', async (req, res) => {
     // Valor base das camisetas
     let amount = 120.00;
     
-    // Aplicar desconto de 5% para PIX
+    // Configurações específicas por método de pagamento
+    let paymentConfig = {};
+    let description = `${productName} - Tamanho ${size}`;
+    
     if (paymentMethod === 'pix') {
-      amount = amount * 0.95; // 5% de desconto
+      amount = amount * 0.95; // 5% de desconto para PIX
+      description += ' (PIX - 5% desconto)';
+      paymentConfig = {
+        excluded_payment_methods: [],
+        excluded_payment_types: [
+          { id: 'credit_card' },    // Bloquear cartão de crédito
+          { id: 'debit_card' },     // Bloquear cartão de débito
+          { id: 'ticket' },         // Bloquear boletos
+          { id: 'bank_transfer' },  // Bloquear transferência
+          { id: 'atm' },           // Bloquear caixa eletrônico
+          { id: 'digital_currency' } // Bloquear moedas digitais
+        ],
+        installments: 1,
+        default_installments: 1
+      };
+    } else {
+      // Cartão (sem desconto)
+      paymentConfig = {
+        excluded_payment_methods: [],
+        excluded_payment_types: [
+          { id: 'account_money' },  // Bloquear PIX/saldo
+          { id: 'ticket' },         // Bloquear boletos
+          { id: 'bank_transfer' },  // Bloquear transferência
+          { id: 'atm' },           // Bloquear caixa eletrônico
+          { id: 'digital_currency' } // Bloquear moedas digitais
+        ],
+        installments: paymentMethod === '2x' ? 2 : 4,
+        default_installments: paymentMethod === '2x' ? 2 : 1
+      };
     }
 
     const preferenceData = {
       items: [
         {
-          title: `${productName} - Tamanho ${size}`,
+          title: description,
           description: 'Camiseta ONE WAY 2025',
           picture_url: 'https://oneway-production.up.railway.app/img/camisetas/camiseta_marrom.jpeg',
           category_id: 'fashion',
@@ -121,13 +152,24 @@ app.post('/create-mp-checkout', async (req, res) => {
           unit_price: amount
         }
       ],
-      payment_methods: {
-        excluded_payment_methods: [],
-        excluded_payment_types: [
-          { id: 'ticket' }       // Boletos em geral
-        ],
-        installments: 4, // Até 4 parcelas
-        default_installments: 1
+      payment_methods: paymentConfig,
+      payer: {
+        name: "",
+        surname: "",
+        email: "",
+        phone: {
+          area_code: "",
+          number: ""
+        },
+        identification: {
+          type: "",
+          number: ""
+        },
+        address: {
+          street_name: "",
+          street_number: "",
+          zip_code: ""
+        }
       },
       back_urls: {
         success: process.env.MP_SUCCESS_URL || 'https://oneway-production.up.railway.app/mp-success',
@@ -135,16 +177,20 @@ app.post('/create-mp-checkout', async (req, res) => {
         pending: process.env.MP_SUCCESS_URL || 'https://oneway-production.up.railway.app/mp-success'
       },
       auto_return: 'approved',
-      external_reference: `${productName}_${size}_${Date.now()}`,
+      external_reference: `${productName}_${size}_${paymentMethod}_${Date.now()}`,
       metadata: {
         product_name: productName || '',
         size: size || '',
-        price_id: priceId
+        price_id: priceId,
+        payment_method: paymentMethod,
+        original_amount: 120.00,
+        final_amount: amount
       },
       statement_descriptor: 'ONE WAY 2025',
       expires: true,
       expiration_date_from: new Date().toISOString(),
-      expiration_date_to: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24h
+      expiration_date_to: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24h
+      additional_info: `Produto: ${productName} | Tamanho: ${size} | Pagamento: ${paymentMethod}`
     };
 
     const response = await preference.create({ body: preferenceData });
