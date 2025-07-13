@@ -149,30 +149,15 @@ app.post('/create-mp-checkout', async (req, res) => {
         }
       ],
       payment_methods: paymentConfig,
-      payer: {
-        name: "",
-        surname: "",
-        email: "",
-        phone: {
-          area_code: "",
-          number: ""
-        },
-        identification: {
-          type: "",
-          number: ""
-        },
-        address: {
-          street_name: "",
-          street_number: "",
-          zip_code: ""
-        }
-      },
+      payer: {},
       back_urls: {
         success: process.env.MP_SUCCESS_URL || 'https://oneway-production.up.railway.app/mp-success',
         failure: process.env.MP_CANCEL_URL || 'https://oneway-production.up.railway.app/mp-cancel',
         pending: process.env.MP_SUCCESS_URL || 'https://oneway-production.up.railway.app/mp-success'
       },
       auto_return: 'approved',
+      purpose: 'wallet_purchase',
+      binary_mode: false,
       external_reference: `${productName}_${size}_${paymentMethod}_${Date.now()}`,
       metadata: {
         product_name: productName || '',
