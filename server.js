@@ -65,6 +65,36 @@ app.post('/create-checkout-session', async (req, res) => {
   }
 });
 
+// Endpoint para listar produtos e preços do Stripe
+app.get('/stripe-products', async (req, res) => {
+  try {
+    const products = await stripe.products.list({ limit: 100 });
+    const productData = [];
+
+    for (const product of products.data) {
+      const prices = await stripe.prices.list({ 
+        product: product.id,
+        limit: 100 
+      });
+      
+      productData.push({
+        product_id: product.id,
+        name: product.name,
+        prices: prices.data.map(price => ({
+          price_id: price.id,
+          amount: price.unit_amount / 100,
+          currency: price.currency
+        }))
+      });
+    }
+
+    res.json({ products: productData });
+  } catch (error) {
+    console.error('Erro ao listar produtos Stripe:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Rota para testar variáveis de ambiente
 app.get('/env-check', (req, res) => {
   res.json({
