@@ -125,7 +125,8 @@ app.post('/create-mp-checkout', async (req, res) => {
         excluded_payment_types: [
           { id: 'ticket' },      // Boletos em geral
           { id: 'bank_transfer' }, // Transferências/PIX
-          { id: 'atm' }          // Pagamento em caixa eletrônico
+          { id: 'atm' },         // Pagamento em caixa eletrônico
+          { id: 'digital_wallet' } // Carteiras digitais
         ],
         installments: 4, // Até 4 parcelas
         default_installments: 1
