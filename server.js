@@ -27,6 +27,15 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
+// Páginas de checkout
+app.get('/success', (req, res) => {
+  res.sendFile(path.join(__dirname, 'success.html'));
+});
+
+app.get('/cancel', (req, res) => {
+  res.sendFile(path.join(__dirname, 'cancel.html'));
+});
+
 // Endpoint para criar sessão de checkout Stripe
 app.post('/create-checkout-session', async (req, res) => {
   try {
