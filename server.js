@@ -149,7 +149,24 @@ app.post('/create-mp-checkout', async (req, res) => {
         }
       ],
       payment_methods: paymentConfig,
-      marketplace: 'NONE',
+      payer: {
+        name: "",
+        surname: "",
+        email: "",
+        phone: {
+          area_code: "",
+          number: ""
+        },
+        identification: {
+          type: "",
+          number: ""
+        },
+        address: {
+          street_name: "",
+          street_number: "",
+          zip_code: ""
+        }
+      },
       back_urls: {
         success: process.env.MP_SUCCESS_URL || 'https://oneway-production.up.railway.app/mp-success',
         failure: process.env.MP_CANCEL_URL || 'https://oneway-production.up.railway.app/mp-cancel',
