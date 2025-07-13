@@ -109,6 +109,46 @@ index.html (SPA estática)
 - ✅ Deploy no Railway funcionando
 - ✅ Imagens convertidas para JPEG (compatibilidade)
 
+## ROADMAP - Sistema de Gestão de Pedidos
+
+### Próximas Implementações (Issues GitHub)
+**Objetivo**: Criar sistema admin Django para gestão completa de pedidos e dados de compradores.
+
+#### Issues Criadas:
+1. **[#11 - Capturar dados MP na página sucesso](https://github.com/daviemanoel/ONEWAY/issues/11)** 🎯
+   - Implementar captura de `payment_id`, `status`, `external_reference` do Mercado Pago
+   - Modificar `mp-success.html` para extrair parâmetros da URL
+   - Base para integração com sistema admin
+
+2. **[#12 - Admin Django para gestão pedidos](https://github.com/daviemanoel/ONEWAY/issues/12)** 🛠️
+   - Criar models: Comprador (nome, email, telefone) e Pedido (produto, pagamento, status)
+   - Interface Django Admin completa com filtros e buscas
+   - Controle manual de status (Pago/Pendente/Cancelado)
+
+3. **[#13 - API comunicação Node.js ↔ Django](https://github.com/daviemanoel/ONEWAY/issues/13)** 🔗
+   - REST API para sincronizar dados entre sistemas
+   - Endpoints: criar pedido, atualizar status, consultar MP
+   - Autenticação por token API
+
+4. **[#14 - Formulário dados comprador](https://github.com/daviemanoel/ONEWAY/issues/14)** 📝
+   - Modal/seção checkout com campos: nome, email, telefone
+   - Validação JavaScript e UX responsiva
+   - Fluxo: dados → Django → redirect MP
+
+5. **[#15 - Webhook Mercado Pago](https://github.com/daviemanoel/ONEWAY/issues/15)** 🔄
+   - Automação: receber notificações MP para atualizar status
+   - Implementação futura (não crítico para MVP)
+
+#### Arquitetura Planejada:
+```
+[Site Node.js] ← API REST → [Admin Django] ← Webhook → [Mercado Pago]
+     ↓                           ↓                         ↓
+[Frontend]                 [Gestão Pedidos]           [Pagamentos]
+```
+
+#### Ordem de Implementação:
+`#11 (Base)` → `#12 (Admin)` → `#13 (API)` → `#14 (UX)` → `#15 (Automação)`
+
 ## Observações Técnicas Importantes
 - Todo JavaScript está inline no index.html (500+ linhas) - sem arquivos JS separados
 - Imagens otimizadas com lazy loading (exceto hero banner)
