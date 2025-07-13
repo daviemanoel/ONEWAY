@@ -1406,27 +1406,9 @@ img {
   object-position: center;
 }
 
-/* CSS limpo - produtos com vídeo */
-.product-image.has-video {
-  cursor: pointer;
-  position: relative;
-}
-
-.product-image.has-video .product-video {
-  position: absolute;
-  top: 0;
-  left: 0;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-  z-index: 1;
-}
-
-.product-image.has-video.video-active .product-video {
-  opacity: 1;
-}
-
-/* Sistema de galeria de imagens */
-.product-image.has-gallery .product-img {
+/* Sistema de galeria unificado (imagens + vídeo) */
+.product-image.has-gallery .product-img,
+.product-image.has-gallery .product-video {
   position: absolute;
   top: 0;
   left: 0;
@@ -1434,7 +1416,8 @@ img {
   transition: opacity 0.3s ease;
 }
 
-.product-image.has-gallery .product-img.active {
+.product-image.has-gallery .product-img.active,
+.product-image.has-gallery .product-video.active {
   opacity: 1;
   z-index: 2;
 }
@@ -1467,6 +1450,23 @@ img {
 
 .dot:hover {
   background: rgba(255, 122, 0, 0.7);
+}
+
+/* Dot de vídeo com ícone play */
+.dot[data-is-video="true"] {
+  background: rgba(255, 255, 255, 0.8);
+  color: #333;
+  font-size: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 10px;
+  height: 10px;
+}
+
+.dot[data-is-video="true"].active {
+  background: #ff7a00;
+  color: white;
 }
 
 .product-info {

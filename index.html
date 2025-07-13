@@ -298,22 +298,41 @@
                     const hasMultipleImages = product.images && product.images.length > 1;
                     const images = hasMultipleImages ? product.images : [product.image];
                     
+                    // Criar array de items incluindo vídeo se existir
+                    const mediaItems = [...images];
+                    if (hasVideo) {
+                        mediaItems.push(product.video);
+                    }
+                    
+                    const hasGallery = mediaItems.length > 1;
+                    
                     const productHTML = `
                         <div class="product-card" data-product-id="${product.id}">
-                            <div class="product-image ${hasVideo ? 'has-video' : ''} ${hasMultipleImages ? 'has-gallery' : ''}">
-                                ${images.map((img, index) => `
-                                    <img src="${img}" alt="${product.title}" loading="lazy" decoding="async" 
-                                         class="product-img ${index === 0 ? 'active' : ''}" 
-                                         data-image-index="${index}">
-                                `).join('')}
-                                ${hasVideo ? `<video class="product-video" muted loop playsinline preload="metadata">
-                                    <source src="${product.video}" type="video/mp4">
-                                </video>` : ''}
-                                ${hasMultipleImages ? `
+                            <div class="product-image ${hasGallery ? 'has-gallery' : ''}">
+                                ${mediaItems.map((item, index) => {
+                                    const isVideo = item.includes('.mp4');
+                                    if (isVideo) {
+                                        return `<video class="product-video ${index === 0 ? 'active' : ''}" 
+                                                       muted loop playsinline preload="metadata" 
+                                                       data-media-index="${index}">
+                                                    <source src="${item}" type="video/mp4">
+                                                </video>`;
+                                    } else {
+                                        return `<img src="${item}" alt="${product.title}" loading="lazy" decoding="async" 
+                                                     class="product-img ${index === 0 ? 'active' : ''}" 
+                                                     data-media-index="${index}">`;
+                                    }
+                                }).join('')}
+                                ${hasGallery ? `
                                     <div class="image-dots">
-                                        ${images.map((_, index) => `
-                                            <span class="dot ${index === 0 ? 'active' : ''}" data-image-index="${index}"></span>
-                                        `).join('')}
+                                        ${mediaItems.map((item, index) => {
+                                            const isVideo = item.includes('.mp4');
+                                            return `<span class="dot ${index === 0 ? 'active' : ''}" 
+                                                          data-media-index="${index}" 
+                                                          data-is-video="${isVideo}">
+                                                        ${isVideo ? '▶' : ''}
+                                                    </span>`;
+                                        }).join('')}
                                     </div>
                                 ` : ''}
                             </div>
@@ -340,7 +359,6 @@
                 
                 // Reinicializar funcionalidades após carregar produtos
                 initSizeButtons();
-                initVideoHover();
                 initImageGallery();
                 
             } catch (error) {
@@ -383,79 +401,40 @@
             });
         }
 
-        // Função para controlar hover do vídeo
-        function initVideoHover() {
-            document.querySelectorAll('.product-image.has-video').forEach(container => {
-                const video = container.querySelector('.product-video');
-                
-                if (video) {
-                    let isVideoActive = false;
-                    
-                    // Desktop: Mouse enter/leave
-                    container.addEventListener('mouseenter', () => {
-                        if (!isVideoActive) {
-                            container.classList.add('video-active');
-                            video.play().catch(e => console.log('Video play failed:', e));
-                        }
-                    });
-                    
-                    container.addEventListener('mouseleave', () => {
-                        if (!isVideoActive) {
-                            container.classList.remove('video-active');
-                            video.pause();
-                            video.currentTime = 0;
-                        }
-                    });
-                    
-                    // Mobile: Click para toggle (sem abrir player nativo)
-                    container.addEventListener('click', (e) => {
-                        // Detectar se é mobile (sem capacidade de hover)
-                        if (window.matchMedia('(hover: none)').matches) {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            
-                            if (!isVideoActive) {
-                                // Ativar vídeo
-                                container.classList.add('video-active');
-                                video.play().catch(e => console.log('Video play failed:', e));
-                                isVideoActive = true;
-                            } else {
-                                // Desativar vídeo
-                                container.classList.remove('video-active');
-                                video.pause();
-                                video.currentTime = 0;
-                                isVideoActive = false;
-                            }
-                        }
-                    });
-                    
-                    // Prevenir click no vídeo de abrir player nativo
-                    video.addEventListener('click', (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                    });
-                }
-            });
-        }
 
-        // Função para controlar galeria de imagens
+        // Função para controlar galeria unificada (imagens + vídeo)
         function initImageGallery() {
             document.querySelectorAll('.product-image.has-gallery').forEach(container => {
                 const dots = container.querySelectorAll('.dot');
                 const images = container.querySelectorAll('.product-img');
+                const videos = container.querySelectorAll('.product-video');
+                const allMedia = container.querySelectorAll('[data-media-index]');
                 
                 dots.forEach(dot => {
                     dot.addEventListener('click', (e) => {
                         e.stopPropagation();
-                        const imageIndex = parseInt(dot.dataset.imageIndex);
+                        const mediaIndex = parseInt(dot.dataset.mediaIndex);
+                        const isVideo = dot.dataset.isVideo === 'true';
                         
                         // Remove active de todos
                         dots.forEach(d => d.classList.remove('active'));
-                        images.forEach(img => img.classList.remove('active'));
+                        allMedia.forEach(media => {
+                            media.classList.remove('active');
+                            // Parar vídeos que não estão ativos
+                            if (media.tagName === 'VIDEO') {
+                                media.pause();
+                                media.currentTime = 0;
+                            }
+                        });
                         
                         // Adiciona active no selecionado
                         dot.classList.add('active');
-                        images[imageIndex].classList.add('active');
+                        allMedia[mediaIndex].classList.add('active');
+                        
+                        // Se for vídeo, reproduzir
+                        if (isVideo && allMedia[mediaIndex].tagName === 'VIDEO') {
+                            allMedia[mediaIndex].play().catch(e => console.log('Video play failed:', e));
+                        }
                     });
                 });
             });
