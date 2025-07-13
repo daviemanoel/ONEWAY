@@ -8,20 +8,30 @@ Este arquivo fornece orientações para o Claude Code (claude.ai/code) ao trabal
 - Manter consistência com o idioma do projeto (site em português)
 
 ## Visão Geral do Projeto
-Este é um site estático para o evento de conferência jovem "ONE WAY" (31 de julho - 2 de agosto de 2025). É uma aplicação de página única construída com HTML, CSS e JavaScript vanilla.
+Este é um site estático para o evento de conferência jovem "ONE WAY" (31 de julho - 2 de agosto de 2025). É uma aplicação de página única construída com HTML, CSS e JavaScript vanilla, com backend Node.js/Express para processamento de pagamentos.
 
 ## Comandos de Desenvolvimento
-Como este é um site estático sem processo de build:
+### Frontend (Site estático)
 - **Rodar localmente**: Abra `index.html` diretamente no navegador ou use um servidor local como `python -m http.server 8000` ou `npx serve`
 - **Sem comandos de build/lint/teste** - É puro HTML/CSS/JS sem ferramentas
+
+### Backend (Processamento de pagamentos)
+- **Servidor local**: `node server.js` na porta 3000
+- **Deploy**: Railway (https://oneway-production.up.railway.app)
+- **Dependências**: `npm install` (express, cors, stripe, mercadopago, dotenv)
+- **Variáveis ambiente**: STRIPE_SECRET_KEY, MERCADOPAGO_ACCESS_TOKEN
 
 ## Arquitetura e Componentes Principais
 
 ### Estrutura de Arquivos
-- `index.html` - Página única contendo todo o conteúdo (383 linhas)
-- `Css/style.css` - Todos os estilos em um arquivo (1655 linhas)
+- `index.html` - Página única contendo todo o conteúdo (507 linhas)
+- `Css/style.css` - Todos os estilos em um arquivo (1655+ linhas)
+- `server.js` - Backend Node.js/Express para pagamentos (212 linhas)
+- `products.json` - Base de dados dos produtos com preços e estoque
 - `img/` - Assets organizados: `img/camisetas/`, `img/ingressos/`, imagens gerais
-- `products.json` - Base de dados dos produtos com integração Stripe
+- `mp-success.html` / `mp-cancel.html` - Páginas de retorno Mercado Pago
+- `success.html` / `cancel.html` - Páginas de retorno Stripe
+- `package.json` - Dependências do backend
 
 ### Ordem Atual das Seções (após reordenação)
 ```
@@ -35,13 +45,15 @@ index.html (SPA estática)
 └── Rodapé: Logo simples
 ```
 
-### Sistema de Produtos Dinâmicos (Novo)
+### Sistema de Produtos Dinâmicos
 - **products.json** contém 4 camisetas com configuração completa por tamanho
 - Carregamento via JavaScript assíncrono com função `loadProducts()`
-- Integração direta com Stripe via links específicos por produto/tamanho
+- Integração com backend para processamento via Mercado Pago
 - Seleção de tamanhos com botões interativos (P, M, G, GG)
+- Seletor de forma de pagamento (PIX 5% OFF, 2x sem juros, até 4x)
 - Grid responsivo: 4 colunas desktop → 1 coluna mobile (vertical)
-- Preços e disponibilidade controlados via JSON
+- Preços, custos e estoque controlados via JSON
+- Galeria de imagens/vídeos com navegação por dots
 
 ### Sistema de Navegação e Layout
 - **Header fixo** com efeito blur e transparência ao rolar
@@ -52,30 +64,64 @@ index.html (SPA estática)
 
 ### Integração de Pagamentos
 - **Ingressos**: tiketo.com.br (links diretos, 3 lotes ativos)
-- **Produtos**: Stripe com links por tamanho específico
-- **Fallback**: Redirecionamento para tiketo quando Stripe indisponível
-- **Validação**: Seleção obrigatória de tamanho antes da compra
+- **Produtos**: Mercado Pago via backend Node.js/Express
+- **Fluxo**: Frontend → Backend `/create-mp-checkout` → Mercado Pago Checkout
+- **Validação**: Seleção obrigatória de tamanho e forma de pagamento
 
-### Status da Integração de Pagamento
-- Vendas de ingressos externas gerenciadas por tiketo.com.br
-- Sistema de produtos com Stripe implementado (internacional, sem parcelamento)
-- Mercado Pago em desenvolvimento (PIX + parcelamento 2x sem juros, até 12x com juros)
-- Lote 4 comentado (não disponível para venda)
-- Headers de segurança configurados em meta tags
+### Sistema de Pagamento Atual (Mercado Pago)
+- **PIX**: 5% de desconto (R$ 114,00)
+- **Cartão**: Até 2x sem juros, até 4x com juros (R$ 120,00)
+- **Backend**: Express.js com endpoints dedicados
+- **Segurança**: Variáveis de ambiente no Railway
+- **Checkout**: Simplificado sem exigência de login MP
+- **Retorno**: Páginas success/cancel dedicadas
 
-### Issues Ativas - Mercado Pago
-- Issue #6: Setup backend e dependências MP
-- Issue #7: Endpoint checkout com parcelamento  
-- Issue #8: Frontend dual payment (Stripe + MP)
-- Issue #9: Páginas success/cancel Mercado Pago
-- Issue #10: Testes e validação end-to-end
+### Estrutura products.json
+```json
+{
+  "products": {
+    "camiseta-marrom": {
+      "id": "1",
+      "title": "Camiseta One Way Marrom",
+      "price": 120.00,
+      "preco_custo": 53.50,
+      "image": "./img/camisetas/camiseta_marrom.jpeg",
+      "sizes": {
+        "P": {
+          "available": true,
+          "qtda_estoque": 8,
+          "stripe_link": "...",
+          "id_stripe": "..."
+        }
+      }
+    }
+  }
+}
+```
 
-## Observações Importantes
-- Todo JavaScript está inline no index.html (381 linhas) - sem arquivos JS separados
+### Status Implementação
+- ✅ Backend Node.js/Express configurado
+- ✅ Integração Mercado Pago completa
+- ✅ Frontend com seletor de pagamento
+- ✅ PIX com desconto de 5%
+- ✅ Parcelamento até 4x
+- ✅ Páginas de retorno configuradas
+- ✅ Deploy no Railway funcionando
+- ✅ Imagens convertidas para JPEG (compatibilidade)
+
+## Observações Técnicas Importantes
+- Todo JavaScript está inline no index.html (500+ linhas) - sem arquivos JS separados
 - Imagens otimizadas com lazy loading (exceto hero banner)
-- Sem variáveis de ambiente ou arquivos de configuração
+- Backend usa variáveis de ambiente para chaves API (Railway)
 - Design responsivo completo com mobile-first approach
 - FAQ interativo com 10 perguntas em accordion
+- Conversão PNG→JPEG para compatibilidade Linux (case-sensitive)
+
+## Limitações Conhecidas
+- Desconto PIX é aplicado no backend, mas cliente pode trocar método no checkout MP
+- Não há captura detalhada de dados do comprador (email, telefone)
+- Checkout sem login pode reduzir conversão mas melhora UX
+- Stripe mantido no código mas não utilizado no fluxo atual
 
 # important-instruction-reminders
 Do what has been asked; nothing more, nothing less.
