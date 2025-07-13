@@ -2,7 +2,13 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const { MercadoPagoConfig, Preference } = require('mercadopago');
 require('dotenv').config();
+
+// Configurar Mercado Pago
+const mercadoPagoClient = new MercadoPagoConfig({ 
+  accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN 
+});
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -75,10 +81,26 @@ app.post('/create-checkout-session', async (req, res) => {
 });
 
 
+// Health check específico Mercado Pago
+app.get('/mp-health', (req, res) => {
+  const mpConfigured = !!process.env.MERCADOPAGO_ACCESS_TOKEN;
+  const tokenType = process.env.MERCADOPAGO_ACCESS_TOKEN?.startsWith('TEST-') ? 'teste' : 
+                   process.env.MERCADOPAGO_ACCESS_TOKEN?.startsWith('APP_USR') ? 'produção' : 'inválido';
+  
+  res.json({
+    status: mpConfigured ? 'OK' : 'ERROR',
+    mercadopago_configured: mpConfigured,
+    token_type: tokenType,
+    timestamp: new Date().toISOString(),
+    service: 'Mercado Pago Integration'
+  });
+});
+
 // Rota para testar variáveis de ambiente
 app.get('/env-check', (req, res) => {
   res.json({
     stripe_configured: !!process.env.STRIPE_SECRET_KEY,
+    mercadopago_configured: !!process.env.MERCADOPAGO_ACCESS_TOKEN,
     node_env: process.env.NODE_ENV || 'development'
   });
 });
@@ -87,6 +109,7 @@ app.get('/env-check', (req, res) => {
 app.listen(PORT, () => {
   console.log(`🚀 Servidor rodando na porta ${PORT}`);
   console.log(`📍 Health check: http://localhost:${PORT}/health`);
+  console.log(`📍 MP Health check: http://localhost:${PORT}/mp-health`);
   console.log(`🌐 Site: http://localhost:${PORT}`);
   
   // Verificar configuração Stripe
@@ -94,6 +117,14 @@ app.listen(PORT, () => {
     console.log('⚠️  STRIPE_SECRET_KEY não configurada');
   } else {
     console.log('✅ STRIPE_SECRET_KEY configurada');
+  }
+  
+  // Verificar configuração Mercado Pago
+  if (!process.env.MERCADOPAGO_ACCESS_TOKEN) {
+    console.log('⚠️  MERCADOPAGO_ACCESS_TOKEN não configurada');
+  } else {
+    const tokenType = process.env.MERCADOPAGO_ACCESS_TOKEN.startsWith('TEST-') ? 'TESTE' : 'PRODUÇÃO';
+    console.log(`✅ MERCADOPAGO_ACCESS_TOKEN configurada (${tokenType})`);
   }
 });
 
