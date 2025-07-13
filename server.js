@@ -117,8 +117,16 @@ app.post('/create-mp-checkout', async (req, res) => {
         }
       ],
       payment_methods: {
-        excluded_payment_methods: [],
-        excluded_payment_types: [],
+        excluded_payment_methods: [
+          { id: 'pix' },        // PIX
+          { id: 'bolbradesco' }, // Boleto Bradesco  
+          { id: 'boletobancario' } // Boleto bancário
+        ],
+        excluded_payment_types: [
+          { id: 'ticket' },      // Boletos em geral
+          { id: 'bank_transfer' }, // Transferências/PIX
+          { id: 'atm' }          // Pagamento em caixa eletrônico
+        ],
         installments: 4, // Até 4 parcelas
         default_installments: 1
       },
