@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 require('dotenv').config();
 
 const app = express();
@@ -24,6 +25,44 @@ app.get('/health', (req, res) => {
 // Servir arquivos estáticos (site)
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+// Endpoint para criar sessão de checkout Stripe
+app.post('/create-checkout-session', async (req, res) => {
+  try {
+    const { priceId, productName, size } = req.body;
+
+    if (!priceId) {
+      return res.status(400).json({ 
+        error: 'priceId é obrigatório' 
+      });
+    }
+
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          price: priceId,
+          quantity: 1,
+        },
+      ],
+      mode: 'payment',
+      success_url: process.env.SUCCESS_URL,
+      cancel_url: process.env.CANCEL_URL,
+      metadata: {
+        product_name: productName || '',
+        size: size || ''
+      }
+    });
+
+    res.json({ url: session.url });
+  } catch (error) {
+    console.error('Erro ao criar sessão Stripe:', error);
+    res.status(500).json({ 
+      error: 'Erro interno do servidor',
+      message: error.message 
+    });
+  }
 });
 
 // Rota para testar variáveis de ambiente
