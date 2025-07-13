@@ -368,23 +368,49 @@
             });
         }
 
-        // Função para controlar hover do vídeo - VERSÃO SIMPLIFICADA
+        // Função para controlar hover do vídeo
         function initVideoHover() {
             document.querySelectorAll('.product-image.has-video').forEach(container => {
                 const video = container.querySelector('.product-video');
                 
                 if (video) {
-                    // Mouse enter - mostrar vídeo
+                    let isVideoActive = false;
+                    
+                    // Desktop: Mouse enter/leave
                     container.addEventListener('mouseenter', () => {
-                        container.classList.add('video-active');
-                        video.play().catch(e => console.log('Video play failed:', e));
+                        if (!isVideoActive) {
+                            container.classList.add('video-active');
+                            video.play().catch(e => console.log('Video play failed:', e));
+                        }
                     });
                     
-                    // Mouse leave - esconder vídeo
                     container.addEventListener('mouseleave', () => {
-                        container.classList.remove('video-active');
-                        video.pause();
-                        video.currentTime = 0;
+                        if (!isVideoActive) {
+                            container.classList.remove('video-active');
+                            video.pause();
+                            video.currentTime = 0;
+                        }
+                    });
+                    
+                    // Mobile: Click para toggle (sem interferir no scroll)
+                    container.addEventListener('click', (e) => {
+                        // Detectar se é mobile (sem capacidade de hover)
+                        if (window.matchMedia('(hover: none)').matches) {
+                            e.preventDefault();
+                            
+                            if (!isVideoActive) {
+                                // Ativar vídeo
+                                container.classList.add('video-active');
+                                video.play().catch(e => console.log('Video play failed:', e));
+                                isVideoActive = true;
+                            } else {
+                                // Desativar vídeo
+                                container.classList.remove('video-active');
+                                video.pause();
+                                video.currentTime = 0;
+                                isVideoActive = false;
+                            }
+                        }
                     });
                 }
             });
