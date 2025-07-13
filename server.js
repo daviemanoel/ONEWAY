@@ -9,6 +9,7 @@ require('dotenv').config();
 const mercadoPagoClient = new MercadoPagoConfig({ 
   accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN 
 });
+const preference = new Preference(mercadoPagoClient);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -80,6 +81,70 @@ app.post('/create-checkout-session', async (req, res) => {
   }
 });
 
+// Endpoint para criar preferência de pagamento Mercado Pago
+app.post('/create-mp-checkout', async (req, res) => {
+  try {
+    const { priceId, productName, size } = req.body;
+
+    if (!priceId) {
+      return res.status(400).json({ 
+        error: 'priceId é obrigatório' 
+      });
+    }
+
+    // Mapear price_id para valor (por enquanto fixo R$ 120,00)
+    const amount = 120.00;
+
+    const preferenceData = {
+      items: [
+        {
+          title: `${productName} - Tamanho ${size}`,
+          description: 'Camiseta ONE WAY 2025',
+          picture_url: 'https://oneway-production.up.railway.app/img/camisetas/camiseta_marrom.jpeg',
+          category_id: 'fashion',
+          quantity: 1,
+          currency_id: 'BRL',
+          unit_price: amount
+        }
+      ],
+      payment_methods: {
+        excluded_payment_methods: [],
+        excluded_payment_types: [],
+        installments: 12, // Até 12 parcelas
+        default_installments: 1
+      },
+      back_urls: {
+        success: process.env.MP_SUCCESS_URL || 'https://oneway-production.up.railway.app/mp-success',
+        failure: process.env.MP_CANCEL_URL || 'https://oneway-production.up.railway.app/mp-cancel',
+        pending: process.env.MP_SUCCESS_URL || 'https://oneway-production.up.railway.app/mp-success'
+      },
+      auto_return: 'approved',
+      external_reference: `${productName}_${size}_${Date.now()}`,
+      metadata: {
+        product_name: productName || '',
+        size: size || '',
+        price_id: priceId
+      },
+      statement_descriptor: 'ONE WAY 2025',
+      expires: true,
+      expiration_date_from: new Date().toISOString(),
+      expiration_date_to: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24h
+    };
+
+    const response = await preference.create({ body: preferenceData });
+
+    res.json({ 
+      checkout_url: response.init_point,
+      preference_id: response.id 
+    });
+  } catch (error) {
+    console.error('Erro ao criar preferência MP:', error);
+    res.status(500).json({ 
+      error: 'Erro interno do servidor',
+      message: error.message 
+    });
+  }
+});
 
 // Health check específico Mercado Pago
 app.get('/mp-health', (req, res) => {
