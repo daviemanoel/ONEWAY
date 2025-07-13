@@ -129,11 +129,7 @@ app.post('/create-mp-checkout', async (req, res) => {
       paymentConfig = {
         excluded_payment_methods: [],
         excluded_payment_types: [
-          { id: 'account_money' },  // Bloquear PIX/saldo
-          { id: 'ticket' },         // Bloquear boletos
-          { id: 'bank_transfer' },  // Bloquear transferência
-          { id: 'atm' },           // Bloquear caixa eletrônico
-          { id: 'digital_currency' } // Bloquear moedas digitais
+          { id: 'ticket' }         // Bloquear apenas boletos
         ],
         installments: paymentMethod === '2x' ? 2 : 4,
         default_installments: paymentMethod === '2x' ? 2 : 1
