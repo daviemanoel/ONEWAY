@@ -110,7 +110,7 @@ app.post('/create-mp-checkout', async (req, res) => {
       payment_methods: {
         excluded_payment_methods: [],
         excluded_payment_types: [],
-        installments: 12, // Até 12 parcelas
+        installments: 4, // Até 4 parcelas
         default_installments: 1
       },
       back_urls: {
