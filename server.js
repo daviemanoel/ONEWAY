@@ -68,14 +68,19 @@ app.post('/create-checkout-session', async (req, res) => {
 // Endpoint para listar produtos e preços do Stripe
 app.get('/stripe-products', async (req, res) => {
   try {
+    console.log('Listando produtos Stripe...');
     const products = await stripe.products.list({ limit: 100 });
+    console.log(`Encontrados ${products.data.length} produtos`);
+    
     const productData = [];
 
     for (const product of products.data) {
+      console.log(`Produto: ${product.id} - ${product.name}`);
       const prices = await stripe.prices.list({ 
         product: product.id,
         limit: 100 
       });
+      console.log(`  Preços encontrados: ${prices.data.length}`);
       
       productData.push({
         product_id: product.id,
@@ -88,7 +93,13 @@ app.get('/stripe-products', async (req, res) => {
       });
     }
 
-    res.json({ products: productData });
+    res.json({ 
+      products: productData,
+      debug: {
+        stripe_key_prefix: process.env.STRIPE_SECRET_KEY?.substring(0, 8) + '...',
+        total_products: products.data.length
+      }
+    });
   } catch (error) {
     console.error('Erro ao listar produtos Stripe:', error);
     res.status(500).json({ error: error.message });
