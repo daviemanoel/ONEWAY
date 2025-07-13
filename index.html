@@ -299,7 +299,7 @@
                         <div class="product-card" data-product-id="${product.id}">
                             <div class="product-image ${hasVideo ? 'has-video' : ''}">
                                 <img src="${product.image}" alt="${product.title}" loading="lazy" decoding="async" class="product-img">
-                                ${hasVideo ? `<video class="product-video" muted loop preload="metadata">
+                                ${hasVideo ? `<video class="product-video" muted loop playsinline preload="metadata">
                                     <source src="${product.video}" type="video/mp4">
                                 </video>` : ''}
                             </div>
@@ -392,11 +392,12 @@
                         }
                     });
                     
-                    // Mobile: Click para toggle (sem interferir no scroll)
+                    // Mobile: Click para toggle (sem abrir player nativo)
                     container.addEventListener('click', (e) => {
                         // Detectar se é mobile (sem capacidade de hover)
                         if (window.matchMedia('(hover: none)').matches) {
                             e.preventDefault();
+                            e.stopPropagation();
                             
                             if (!isVideoActive) {
                                 // Ativar vídeo
@@ -411,6 +412,12 @@
                                 isVideoActive = false;
                             }
                         }
+                    });
+                    
+                    // Prevenir click no vídeo de abrir player nativo
+                    video.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
                     });
                 }
             });
