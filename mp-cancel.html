@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pagamento Cancelado - ONE WAY 2025</title>
+    <link rel="stylesheet" type="text/css" href="./Css/style.css">
+    <link rel="icon" type="image/png" href="./img/2.png">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        .mp-cancel-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 2rem;
+            text-align: center;
+            background: linear-gradient(135deg, #ff9500 0%, #ffb347 100%);
+        }
+        .mp-cancel-card {
+            background: rgba(255, 255, 255, 0.98);
+            padding: 3rem;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+            max-width: 500px;
+            width: 100%;
+        }
+        .mp-icon {
+            font-size: 4rem;
+            color: #ff9500;
+            margin-bottom: 1.5rem;
+        }
+        .mp-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 1rem;
+            font-family: 'Montserrat', sans-serif;
+        }
+        .mp-message {
+            font-size: 1.1rem;
+            color: #666;
+            margin-bottom: 2rem;
+            line-height: 1.6;
+            font-family: 'Montserrat', sans-serif;
+        }
+        .mp-options {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 10px;
+            margin: 1.5rem 0;
+            text-align: left;
+        }
+        .mp-options h3 {
+            font-size: 1rem;
+            color: #333;
+            margin-bottom: 0.8rem;
+            font-weight: 600;
+        }
+        .mp-options p {
+            font-size: 0.9rem;
+            color: #666;
+            margin: 0.5rem 0;
+            padding-left: 1.5rem;
+        }
+        .mp-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 2rem;
+        }
+        .mp-button {
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s ease;
+            font-family: 'Montserrat', sans-serif;
+        }
+        .mp-button.primary {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+        }
+        .mp-button.secondary {
+            background: transparent;
+            color: #667eea;
+            border: 2px solid #667eea;
+        }
+        .mp-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+        .mp-logo {
+            width: 120px;
+            margin-top: 2rem;
+            opacity: 0.7;
+        }
+        @media (max-width: 768px) {
+            .mp-cancel-card {
+                padding: 2rem;
+            }
+            .mp-title {
+                font-size: 1.5rem;
+            }
+            .mp-message {
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="mp-cancel-container">
+        <div class="mp-cancel-card">
+            <div class="mp-icon">⚠️</div>
+            <h1 class="mp-title">Pagamento Cancelado</h1>
+            <p class="mp-message">
+                Seu pagamento foi cancelado e nenhum valor foi cobrado.
+            </p>
+            
+            <div class="mp-options">
+                <h3>Teve algum problema? Tente estas opções:</h3>
+                <p>💳 Verifique os dados do cartão</p>
+                <p>🔄 Tente um método de pagamento diferente</p>
+                <p>📧 Entre em contato conosco se precisar de ajuda</p>
+            </div>
+            
+            <p class="mp-message">
+                Não desista! Ainda dá tempo de garantir sua camiseta do <strong>ONE WAY 2025</strong>.
+            </p>
+            
+            <div class="mp-buttons">
+                <a href="/#produtos" class="mp-button primary">Tentar Novamente</a>
+                <a href="/" class="mp-button secondary">Voltar ao Site</a>
+            </div>
+            
+            <img src="https://http2.mlstatic.com/frontend-assets/mp-web-navigation/ui-navigation/5.21.22/mercadopago/logo__large@2x.png" 
+                 alt="Mercado Pago" class="mp-logo">
+        </div>
+    </div>
+</body>
+
+</html>

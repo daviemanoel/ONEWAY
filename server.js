@@ -34,13 +34,22 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Páginas de checkout
+// Páginas de checkout Stripe
 app.get('/success', (req, res) => {
   res.sendFile(path.join(__dirname, 'success.html'));
 });
 
 app.get('/cancel', (req, res) => {
   res.sendFile(path.join(__dirname, 'cancel.html'));
+});
+
+// Páginas de checkout Mercado Pago
+app.get('/mp-success', (req, res) => {
+  res.sendFile(path.join(__dirname, 'mp-success.html'));
+});
+
+app.get('/mp-cancel', (req, res) => {
+  res.sendFile(path.join(__dirname, 'mp-cancel.html'));
 });
 
 // Endpoint para criar sessão de checkout Stripe
