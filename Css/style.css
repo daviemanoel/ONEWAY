@@ -1419,6 +1419,7 @@ img {
     color: #666;
     margin-bottom: 8px;
     font-weight: 500;
+    font-family: "Montserrat", sans-serif;
 }
 
 .payment-method {
@@ -1427,6 +1428,8 @@ img {
     border: 2px solid #e0e0e0;
     border-radius: 6px;
     font-size: 0.9rem;
+    font-family: "Montserrat", sans-serif;
+    font-weight: 500;
     background-color: #f8f8f8;
     cursor: pointer;
     transition: all 0.3s ease;
