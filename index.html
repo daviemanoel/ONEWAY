@@ -295,13 +295,27 @@
                 
                 productsArray.forEach(product => {
                     const hasVideo = product.video && product.video !== '';
+                    const hasMultipleImages = product.images && product.images.length > 1;
+                    const images = hasMultipleImages ? product.images : [product.image];
+                    
                     const productHTML = `
                         <div class="product-card" data-product-id="${product.id}">
-                            <div class="product-image ${hasVideo ? 'has-video' : ''}">
-                                <img src="${product.image}" alt="${product.title}" loading="lazy" decoding="async" class="product-img">
+                            <div class="product-image ${hasVideo ? 'has-video' : ''} ${hasMultipleImages ? 'has-gallery' : ''}">
+                                ${images.map((img, index) => `
+                                    <img src="${img}" alt="${product.title}" loading="lazy" decoding="async" 
+                                         class="product-img ${index === 0 ? 'active' : ''}" 
+                                         data-image-index="${index}">
+                                `).join('')}
                                 ${hasVideo ? `<video class="product-video" muted loop playsinline preload="metadata">
                                     <source src="${product.video}" type="video/mp4">
                                 </video>` : ''}
+                                ${hasMultipleImages ? `
+                                    <div class="image-dots">
+                                        ${images.map((_, index) => `
+                                            <span class="dot ${index === 0 ? 'active' : ''}" data-image-index="${index}"></span>
+                                        `).join('')}
+                                    </div>
+                                ` : ''}
                             </div>
                             <div class="product-info">
                                 <h3>${product.title}</h3>
@@ -327,6 +341,7 @@
                 // Reinicializar funcionalidades após carregar produtos
                 initSizeButtons();
                 initVideoHover();
+                initImageGallery();
                 
             } catch (error) {
                 console.error('Erro ao carregar produtos:', error);
@@ -420,6 +435,29 @@
                         e.stopPropagation();
                     });
                 }
+            });
+        }
+
+        // Função para controlar galeria de imagens
+        function initImageGallery() {
+            document.querySelectorAll('.product-image.has-gallery').forEach(container => {
+                const dots = container.querySelectorAll('.dot');
+                const images = container.querySelectorAll('.product-img');
+                
+                dots.forEach(dot => {
+                    dot.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const imageIndex = parseInt(dot.dataset.imageIndex);
+                        
+                        // Remove active de todos
+                        dots.forEach(d => d.classList.remove('active'));
+                        images.forEach(img => img.classList.remove('active'));
+                        
+                        // Adiciona active no selecionado
+                        dot.classList.add('active');
+                        images[imageIndex].classList.add('active');
+                    });
+                });
             });
         }
 

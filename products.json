@@ -5,6 +5,10 @@
       "title": "Camiseta Marrom",
       "price": 120.00,
       "image": "./img/camisetas/camiseta_marrom.jpeg",
+      "images": [
+        "./img/camisetas/camiseta_marrom.jpeg",
+        "./img/camisetas/camiseta_marrom-2.jpeg"
+      ],
       "video": "./videos/camiseta-marrom-preview.mp4",
       "sizes": {
         "P": {
