@@ -4,6 +4,8 @@
       "id": "1",
       "title": "Camiseta Marrom",
       "price": 120.00,
+      "preco_custo": 45.00,
+      "qtda_estoque": 50,
       "image": "./img/camisetas/camiseta_marrom.jpeg",
       "images": [
         "./img/camisetas/camiseta_marrom.jpeg",
@@ -37,6 +39,8 @@
       "id": "2",
       "title": "Camiseta Jesus",
       "price": 120.00,
+      "preco_custo": 45.00,
+      "qtda_estoque": 40,
       "image": "./img/camisetas/Camiseta_jesus.jpeg",
       "video": "./videos/camiseta-jesus-preview.mp4",
       "sizes": {
@@ -66,6 +70,8 @@
       "id": "3",
       "title": "Camiseta ONE WAY Branca",
       "price": 120.00,
+      "preco_custo": 45.00,
+      "qtda_estoque": 45,
       "image": "./img/camisetas/Camiseta_onewayBranca.jpeg",
       "video": "./videos/camiseta-oneway-branca-preview.mp4",
       "sizes": {
@@ -95,6 +101,8 @@
       "id": "4",
       "title": "Camiseta The Way",
       "price": 120.00,
+      "preco_custo": 45.00,
+      "qtda_estoque": 35,
       "image": "./img/camisetas/Camiseta_theway.jpeg",
       "video": "./videos/camiseta-the-way-preview.mp4",
       "sizes": {
