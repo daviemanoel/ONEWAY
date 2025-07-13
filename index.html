@@ -346,7 +346,7 @@
                                             const isActive = size === 'M' && isAvailable;
                                             const disabled = !isAvailable ? 'disabled' : '';
                                             const activeClass = isActive ? 'active' : '';
-                                            return `<button class="size-btn ${activeClass}" data-size="${size}" data-stripe-link="${sizeData.stripe_link}" ${disabled}>${size}</button>`;
+                                            return `<button class="size-btn ${activeClass}" data-size="${size}" data-stripe-id="${sizeData.id_stripe}" ${disabled}>${size}</button>`;
                                         }).join('')}
                                     </div>
                                 </div>
@@ -383,19 +383,61 @@
                 });
             });
             
-            // Adicionar evento aos botões de comprar (atualizada)
+            // Adicionar evento aos botões de comprar (integração Stripe)
             document.querySelectorAll('.product-btn').forEach(button => {
-                button.addEventListener('click', function() {
+                button.addEventListener('click', async function() {
                     
                     // Pegar tamanho selecionado
                     const productCard = this.closest('.product-card');
                     const selectedSizeBtn = productCard.querySelector('.size-btn.active');
+                    const productId = this.dataset.productId;
                     
-                    if (selectedSizeBtn && selectedSizeBtn.dataset.stripeLink && selectedSizeBtn.dataset.stripeLink !== 'null') {
-                        // Redirecionar para o link específico do Stripe em nova aba
-                        window.open(selectedSizeBtn.dataset.stripeLink, '_blank');
-                    } else {
+                    if (!selectedSizeBtn) {
                         alert('Por favor, selecione um tamanho disponível.');
+                        return;
+                    }
+                    
+                    const size = selectedSizeBtn.dataset.size;
+                    const priceId = selectedSizeBtn.dataset.stripeId;
+                    const productName = productCard.querySelector('h3').textContent;
+                    
+                    if (!priceId || priceId === 'null') {
+                        alert('Tamanho indisponível para compra.');
+                        return;
+                    }
+                    
+                    // Desabilitar botão durante processamento
+                    this.disabled = true;
+                    this.textContent = 'Processando...';
+                    
+                    try {
+                        const response = await fetch('/create-checkout-session', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                priceId: priceId,
+                                productName: productName,
+                                size: size
+                            })
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (data.url) {
+                            // Redirecionar para o checkout Stripe
+                            window.location.href = data.url;
+                        } else {
+                            throw new Error(data.error || 'Erro ao processar pagamento');
+                        }
+                    } catch (error) {
+                        console.error('Erro no checkout:', error);
+                        alert('Erro ao processar pagamento. Tente novamente.');
+                    } finally {
+                        // Restaurar botão
+                        this.disabled = false;
+                        this.textContent = 'Comprar Agora';
                     }
                 });
             });
