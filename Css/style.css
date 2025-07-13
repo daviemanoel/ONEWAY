@@ -1422,7 +1422,7 @@ img {
   z-index: 2;
 }
 
-/* Dots/Indicadores */
+/* Dots/Indicadores - Desktop */
 .image-dots {
   position: absolute;
   bottom: 10px;
@@ -1467,6 +1467,44 @@ img {
 .dot[data-is-video="true"].active {
   background: #ff7a00;
   color: white;
+}
+
+/* Dots laterais no mobile */
+@media (max-width: 768px) {
+  .image-dots {
+    bottom: auto;
+    left: auto;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .dot {
+    width: 12px;
+    height: 12px;
+    background: rgba(255, 255, 255, 0.8);
+    border: 2px solid rgba(0, 0, 0, 0.3);
+  }
+  
+  .dot.active {
+    background: #ff7a00;
+    transform: scale(1.1);
+    border-color: white;
+  }
+  
+  .dot[data-is-video="true"] {
+    width: 14px;
+    height: 14px;
+    font-size: 8px;
+    background: rgba(255, 255, 255, 0.9);
+  }
+  
+  .dot[data-is-video="true"].active {
+    background: #ff7a00;
+    color: white;
+  }
 }
 
 .product-info {

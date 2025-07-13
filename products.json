@@ -7,7 +7,8 @@
       "image": "./img/camisetas/camiseta_marrom.jpeg",
       "images": [
         "./img/camisetas/camiseta_marrom.jpeg",
-        "./img/camisetas/camiseta_marrom-2.jpeg"
+        "./img/camisetas/camiseta_marrom-2.jpeg",
+        "./img/camisetas/camiseta_marrom-3.jpeg"
       ],
       "video": "./videos/camiseta-marrom-preview.mp4",
       "sizes": {
