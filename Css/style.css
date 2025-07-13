@@ -409,9 +409,148 @@ img {
   color: #64748b;
 }
 
+/* Coluna de Data */
+.date-header h2 {
+  font-family: "Montserrat", sans-serif;
+  font-weight: 700;
+  font-size: 24px;
+  color: #2c3e50;
+  margin: 0 0 30px 0;
+  text-align: center;
+}
+
+.date-info {
+  text-align: center;
+}
+
+.event-date {
+  font-family: "Montserrat", sans-serif;
+  font-weight: 700;
+  font-size: 18px;
+  color: #2c3e50;
+  margin-bottom: 8px;
+  letter-spacing: 1px;
+}
+
+.event-year {
+  font-family: "Montserrat", sans-serif;
+  font-weight: 300;
+  font-size: 32px;
+  color: #6366f1;
+  margin-bottom: 30px;
+  letter-spacing: 2px;
+}
+
+.event-location {
+  text-align: center;
+}
+
+.location-name {
+  font-family: "Montserrat", sans-serif;
+  font-weight: 600;
+  font-size: 16px;
+  color: #2c3e50;
+  margin-bottom: 8px;
+}
+
+.location-city {
+  font-family: "Montserrat", sans-serif;
+  font-weight: 400;
+  font-size: 14px;
+  color: #64748b;
+  line-height: 1.4;
+}
+
 /* Coluna de Ingressos */
-.tickets-info-section {
-  height: 100%;
+.tickets-header h2 {
+  font-family: "Montserrat", sans-serif;
+  font-weight: 700;
+  font-size: 24px;
+  color: #2c3e50;
+  margin: 0 0 30px 0;
+  text-align: center;
+}
+
+.tickets-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.ticket-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 15px 20px;
+  border-radius: 10px;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  background: white;
+  transition: all 0.3s ease;
+}
+
+.ticket-item.disponivel {
+  border-color: rgba(34, 197, 94, 0.3);
+  background: rgba(34, 197, 94, 0.02);
+}
+
+.ticket-item.esgotado {
+  background: rgba(248, 113, 113, 0.02);
+  border-color: rgba(248, 113, 113, 0.2);
+  opacity: 0.7;
+}
+
+.lote-name {
+  font-family: "Montserrat", sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+  color: #2c3e50;
+  flex: 0 0 auto;
+}
+
+.status {
+  font-family: "Montserrat", sans-serif;
+  font-weight: 500;
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+  flex: 0 0 auto;
+}
+
+.ticket-item.disponivel .status {
+  background: rgba(34, 197, 94, 0.1);
+  color: #15803d;
+}
+
+.ticket-item.esgotado .status {
+  background: rgba(248, 113, 113, 0.1);
+  color: #dc2626;
+}
+
+.price {
+  font-family: "Montserrat", sans-serif;
+  font-weight: 700;
+  font-size: 16px;
+  color: #2c3e50;
+  flex: 0 0 auto;
+}
+
+.buy-btn {
+  background: #3b82f6;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 6px;
+  text-decoration: none;
+  font-family: "Montserrat", sans-serif;
+  font-weight: 600;
+  font-size: 12px;
+  transition: all 0.3s ease;
+  flex: 0 0 auto;
+}
+
+.buy-btn:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
 }
 
 .tickets-header h2 {
@@ -563,6 +702,86 @@ img {
   
   .tickets-column {
     padding-top: 30px;
+  }
+
+  /* Responsivo para seção de ingressos */
+  .date-header h2,
+  .tickets-header h2 {
+    font-size: 20px;
+    margin-bottom: 20px;
+  }
+
+  .event-date {
+    font-size: 16px;
+  }
+
+  .event-year {
+    font-size: 24px;
+    margin-bottom: 20px;
+  }
+
+  .location-name {
+    font-size: 14px;
+  }
+
+  .location-city {
+    font-size: 12px;
+  }
+
+  .tickets-list {
+    gap: 12px;
+  }
+
+  .ticket-item {
+    padding: 12px 15px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .ticket-item.disponivel {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .ticket-item.disponivel .lote-name {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .ticket-item.disponivel .status {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .ticket-item.disponivel .price {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .ticket-item.disponivel .buy-btn {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .lote-name {
+    font-size: 12px;
+  }
+
+  .status {
+    font-size: 10px;
+    padding: 3px 6px;
+  }
+
+  .price {
+    font-size: 14px;
+  }
+
+  .buy-btn {
+    font-size: 11px;
+    padding: 6px 12px;
   }
   
   .date-header h2,
@@ -1086,26 +1305,17 @@ img {
 /* Responsividade Mobile para Produtos */
 @media (max-width: 768px) {
   .products-container {
-    display: flex;
-    grid-template-columns: none;
-    gap: 15px;
-    padding: 10px;
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-    scroll-behavior: smooth;
-  }
-  
-  .products-container::-webkit-scrollbar {
-    display: none;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 30px;
+    padding: 20px;
   }
   
   .product-card {
-    min-width: calc(100vw - 80px);
-    height: 400px;
-    flex-shrink: 0;
-    scroll-snap-align: center;
+    width: 100%;
+    max-width: 400px;
+    margin: 0 auto;
+    height: auto;
   }
   
   .product-image {
@@ -1143,30 +1353,16 @@ img {
 
 @media (max-width: 480px) {
   .products-container {
-    display: flex;
-    grid-template-columns: none;
-    gap: 15px;
     padding: 15px;
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-    scroll-behavior: smooth;
-  }
-  
-  .products-container::-webkit-scrollbar {
-    display: none;
+    gap: 25px;
   }
   
   .product-card {
-    min-width: calc(100vw - 70px);
-    height: 380px;
-    flex-shrink: 0;
-    scroll-snap-align: center;
+    max-width: 350px;
   }
   
   .product-image {
-    height: 260px;
+    height: 250px;
   }
 }
 
@@ -1205,7 +1401,7 @@ img {
 }
 
 .product-info {
-  padding: 15px;
+  padding: 15px 15px 25px 15px;
   text-align: left;
   display: flex;
   flex-direction: column;

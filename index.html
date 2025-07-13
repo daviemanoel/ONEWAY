@@ -36,82 +36,6 @@
             <img class="img-mobile" src="./img/One_Way_25-conv.png" alt="ONE WAY 2025 Mobile Banner" loading="eager" decoding="async">
         </div>
     </section>
-    
-    <!-- Seção Combinada: Save the Date + Ingressos -->
-    <section id="minha-secao" class="section_date_tickets">
-        <div class="table-container">
-            <table class="date-tickets-table">
-                <tr>
-                    <!-- Coluna Esquerda: Informações de Data -->
-                    <td class="date-column">
-                        <div class="date-info-section">
-                            <div class="date-header">
-                                <h2>📅 Save the Date</h2>
-                            </div>
-                            <div class="date-details">
-                                <div class="date-main">
-                                    <span class="date-range">31 DE JULHO À 02 DE AGOSTO</span>
-                                    <span class="year">2025</span>
-                                </div>
-                                <div class="location-main">
-                                    <span class="venue">Igreja MEVAM</span>
-                                    <span class="city">Franca - SP</span>
-                                </div>
-                            </div>
-                        </div>
-                    </td>
-                    
-                    <!-- Coluna Direita: Opções de Ingressos -->
-                    <td class="tickets-column">
-                        <div class="tickets-info-section">
-                            <div class="tickets-header">
-                                <h2>Garanta seu ingresso</h2>
-                            </div>
-                            <div class="tickets-options">
-                                <div class="ticket-option esgotado">
-                                    <div class="ticket-row">
-                                        <span class="lote-name">Lote 1</span>
-                                        <span class="status">ESGOTADO</span>
-                                        <span class="price">---</span>
-                                    </div>
-                                </div>
-                                <div class="ticket-option esgotado">
-                                    <div class="ticket-row">
-                                        <span class="lote-name">Lote 2</span>
-                                        <span class="status">ESGOTADO</span>
-                                        <span class="price">---</span>
-                                    </div>
-                                </div>
-                                <div class="ticket-option disponivel">
-                                    <div class="ticket-row">
-                                        <span class="lote-name">Lote 3</span>
-                                        <span class="status">DISPONÍVEL</span>
-                                        <span class="price">R$ 189,00</span>
-                                    </div>
-                                    <a href="https://tiketo.com.br/evento/3063" class="buy-btn">Comprar</a>
-                                </div>
-                                <!-- <div class="ticket-option disponivel">
-                                    <div class="ticket-row">
-                                        <span class="lote-name">Lote 4</span>
-                                        <span class="status">DISPONÍVEL</span>
-                                        <span class="price">R$ 219,00</span>
-                                    </div>
-                                    <a href="https://tiketo.com.br/evento/3063" class="buy-btn">Comprar</a>
-                                </div> -->
-                            </div>
-                        </div>
-                    </td>
-                </tr>
-            </table>
-        </div>
-    </section>
-
-    <!-- Seção de Produtos -->
-    <section id="produtos" class="section_products">
-        <div class="products-container" id="products-container">
-            <!-- Produtos serão carregados dinamicamente via JavaScript -->
-        </div>
-    </section>
 
     <section id="sobre" class="convidados">
         <div class="convidados__container">
@@ -130,6 +54,58 @@
         </div>
 
     </section>
+
+    <section id="produtos" class="section_products">
+        <div class="products-container" id="products-container">
+            <!-- Produtos serão carregados dinamicamente via JavaScript -->
+        </div>
+    </section>
+
+    <section id="minha-secao" class="section_date_tickets">
+        <div class="table-container">
+            <table class="date-tickets-table">
+                <tr>
+                    <td class="date-column">
+                        <div class="date-header">
+                            <h2>📅 Save the Date</h2>
+                        </div>
+                        <div class="date-info">
+                            <div class="event-date">31 DE JULHO À 02 DE AGOSTO</div>
+                            <div class="event-year">2025</div>
+                            <div class="event-location">
+                                <div class="location-name">Centro de Eventos Cristão IBFS</div>
+                                <div class="location-city">R. Irmã Maria Gabriela, 600 - Turu, São Luís - MA</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="tickets-column">
+                        <div class="tickets-header">
+                            <h2>Garanta seu ingresso</h2>
+                        </div>
+                        <div class="tickets-list">
+                            <div class="ticket-item esgotado">
+                                <span class="lote-name">Lote 1</span>
+                                <span class="status">ESGOTADO</span>
+                                <span class="price">---</span>
+                            </div>
+                            <div class="ticket-item esgotado">
+                                <span class="lote-name">Lote 2</span>
+                                <span class="status">ESGOTADO</span>
+                                <span class="price">---</span>
+                            </div>
+                            <div class="ticket-item disponivel">
+                                <span class="lote-name">Lote 3</span>
+                                <span class="status">DISPONÍVEL</span>
+                                <span class="price">R$ 170,00</span>
+                                <a href="https://tiketo.com.br/evento/3063" target="_blank" class="buy-btn">Comprar</a>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </section>
+
     <section id="faq" class="saq">
         <div class="faq-container">
             <img src="./img/FAQ.png" alt="FAQ" class="faq-logo" loading="lazy" decoding="async">
@@ -281,59 +257,6 @@
             }
         });
 
-        // Auto-scroll do carrossel no mobile
-        function initCarousel() {
-            const container = document.querySelector('.products-container');
-            if (!container) return {};
-            
-            let isScrolling = false;
-            let currentIndex = 0;
-            const cards = document.querySelectorAll('.product-card');
-            let autoScrollInterval;
-            
-            function autoScroll() {
-                if (window.innerWidth <= 768 && !isScrolling) {
-                    currentIndex = (currentIndex + 1) % cards.length;
-                    const cardWidth = cards[0].offsetWidth + 15; // largura + gap
-                    container.scrollTo({
-                        left: currentIndex * cardWidth,
-                        behavior: 'smooth'
-                    });
-                }
-            }
-            
-            function stopAutoScroll() {
-                isScrolling = true;
-                clearInterval(autoScrollInterval);
-            }
-            
-            function restartAutoScroll() {
-                isScrolling = false;
-                clearInterval(autoScrollInterval);
-                autoScrollInterval = setInterval(autoScroll, 5000);
-            }
-            
-            // Auto-scroll a cada 3 segundos
-            autoScrollInterval = setInterval(autoScroll, 3000);
-            
-            // Pausar auto-scroll quando usuário interage com o container
-            container.addEventListener('touchstart', stopAutoScroll);
-            container.addEventListener('touchend', restartAutoScroll);
-            
-            // Detectar mudança de orientação/resize
-            window.addEventListener('resize', () => {
-                clearInterval(autoScrollInterval);
-                if (window.innerWidth <= 768) {
-                    autoScrollInterval = setInterval(autoScroll, 3000);
-                }
-            });
-            
-            // Retornar funções para uso externo
-            return {
-                stopAutoScroll,
-                restartAutoScroll
-            };
-        }
         
         // Funcionalidade dos botões de tamanho
         function initSizeButtons() {
@@ -345,20 +268,12 @@
                     // Adiciona active no clicado
                     this.classList.add('active');
                     
-                    // Para o auto-scroll
-                    if (window.carousel && window.carousel.stopAutoScroll) {
-                        window.carousel.stopAutoScroll();
-                    }
                 });
             });
             
             // Adicionar evento aos botões de comprar
             document.querySelectorAll('.product-btn').forEach(button => {
                 button.addEventListener('click', function() {
-                    // Para o auto-scroll
-                    if (window.carousel && window.carousel.stopAutoScroll) {
-                        window.carousel.stopAutoScroll();
-                    }
                     
                     // Redirecionar para o site de compras
                     window.open('https://tiketo.com.br/evento/3063', '_blank');
@@ -406,7 +321,6 @@
                 });
                 
                 // Reinicializar funcionalidades após carregar produtos
-                window.carousel = initCarousel();
                 initSizeButtons();
                 
             } catch (error) {
@@ -428,20 +342,12 @@
                     // Adiciona active no clicado
                     this.classList.add('active');
                     
-                    // Para o auto-scroll
-                    if (window.carousel && window.carousel.stopAutoScroll) {
-                        window.carousel.stopAutoScroll();
-                    }
                 });
             });
             
             // Adicionar evento aos botões de comprar (atualizada)
             document.querySelectorAll('.product-btn').forEach(button => {
                 button.addEventListener('click', function() {
-                    // Para o auto-scroll
-                    if (window.carousel && window.carousel.stopAutoScroll) {
-                        window.carousel.stopAutoScroll();
-                    }
                     
                     // Pegar tamanho selecionado
                     const productCard = this.closest('.product-card');
