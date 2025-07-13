@@ -294,10 +294,14 @@
                 container.innerHTML = '';
                 
                 productsArray.forEach(product => {
+                    const hasVideo = product.video && product.video !== '';
                     const productHTML = `
                         <div class="product-card" data-product-id="${product.id}">
-                            <div class="product-image">
-                                <img src="${product.image}" alt="${product.title}" loading="lazy" decoding="async">
+                            <div class="product-image ${hasVideo ? 'has-video' : ''}">
+                                <img src="${product.image}" alt="${product.title}" loading="lazy" decoding="async" class="product-img">
+                                ${hasVideo ? `<video class="product-video" muted loop preload="metadata">
+                                    <source src="${product.video}" type="video/mp4">
+                                </video>` : ''}
                             </div>
                             <div class="product-info">
                                 <h3>${product.title}</h3>
@@ -322,6 +326,7 @@
                 
                 // Reinicializar funcionalidades após carregar produtos
                 initSizeButtons();
+                initVideoHover();
                 
             } catch (error) {
                 console.error('Erro ao carregar produtos:', error);
@@ -360,6 +365,28 @@
                         alert('Por favor, selecione um tamanho disponível.');
                     }
                 });
+            });
+        }
+
+        // Função para controlar hover do vídeo - VERSÃO SIMPLIFICADA
+        function initVideoHover() {
+            document.querySelectorAll('.product-image.has-video').forEach(container => {
+                const video = container.querySelector('.product-video');
+                
+                if (video) {
+                    // Mouse enter - mostrar vídeo
+                    container.addEventListener('mouseenter', () => {
+                        container.classList.add('video-active');
+                        video.play().catch(e => console.log('Video play failed:', e));
+                    });
+                    
+                    // Mouse leave - esconder vídeo
+                    container.addEventListener('mouseleave', () => {
+                        container.classList.remove('video-active');
+                        video.pause();
+                        video.currentTime = 0;
+                    });
+                }
             });
         }
 

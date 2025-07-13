@@ -32,7 +32,7 @@
     "camiseta-jesus": {
       "id": "2",
       "title": "Camiseta Jesus",
-      "price": 45.00,
+      "price": 120.00,
       "image": "./img/camisetas/Camiseta_jesus.jpeg",
       "video": "./videos/camiseta-jesus-preview.mp4",
       "sizes": {
@@ -61,7 +61,7 @@
     "camiseta-oneway-branca": {
       "id": "3",
       "title": "Camiseta ONE WAY Branca",
-      "price": 45.00,
+      "price": 120.00,
       "image": "./img/camisetas/Camiseta_onewayBranca.jpeg",
       "video": "./videos/camiseta-oneway-branca-preview.mp4",
       "sizes": {
@@ -90,7 +90,7 @@
     "camiseta-the-way": {
       "id": "4",
       "title": "Camiseta The Way",
-      "price": 45.00,
+      "price": 120.00,
       "image": "./img/camisetas/Camiseta_theway.jpeg",
       "video": "./videos/camiseta-the-way-preview.mp4",
       "sizes": {
