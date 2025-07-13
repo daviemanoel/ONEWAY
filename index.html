@@ -350,6 +350,23 @@
                                         }).join('')}
                                     </div>
                                 </div>
+                                <div class="payment-selector">
+                                    <label>Forma de pagamento:</label>
+                                    <select class="payment-method">
+                                        <option value="1x">À vista (Cartão Internacional)</option>
+                                        <option value="2x">2x sem juros</option>
+                                        <option value="3x">3x</option>
+                                        <option value="4x">4x</option>
+                                        <option value="5x">5x</option>
+                                        <option value="6x">6x</option>
+                                        <option value="7x">7x</option>
+                                        <option value="8x">8x</option>
+                                        <option value="9x">9x</option>
+                                        <option value="10x">10x</option>
+                                        <option value="11x">11x</option>
+                                        <option value="12x">12x</option>
+                                    </select>
+                                </div>
                                 <button class="product-btn" data-product-id="${product.id}">Comprar Agora</button>
                             </div>
                         </div>
@@ -383,7 +400,7 @@
                 });
             });
             
-            // Adicionar evento aos botões de comprar (integração Stripe)
+            // Adicionar evento aos botões de comprar (dual payment)
             document.querySelectorAll('.product-btn').forEach(button => {
                 button.addEventListener('click', async function() {
                     
@@ -391,6 +408,7 @@
                     const productCard = this.closest('.product-card');
                     const selectedSizeBtn = productCard.querySelector('.size-btn.active');
                     const productId = this.dataset.productId;
+                    const paymentMethod = productCard.querySelector('.payment-method').value;
                     
                     if (!selectedSizeBtn) {
                         alert('Por favor, selecione um tamanho disponível.');
@@ -411,23 +429,42 @@
                     this.textContent = 'Processando...';
                     
                     try {
-                        const response = await fetch('/create-checkout-session', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({
-                                priceId: priceId,
-                                productName: productName,
-                                size: size
-                            })
-                        });
+                        let response;
+                        
+                        if (paymentMethod === '1x') {
+                            // 1x = Stripe (cartão internacional)
+                            response = await fetch('/create-checkout-session', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({
+                                    priceId: priceId,
+                                    productName: productName,
+                                    size: size
+                                })
+                            });
+                        } else {
+                            // 2x ou mais = Mercado Pago
+                            response = await fetch('/create-mp-checkout', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({
+                                    priceId: priceId,
+                                    productName: productName,
+                                    size: size,
+                                    installments: parseInt(paymentMethod)
+                                })
+                            });
+                        }
                         
                         const data = await response.json();
                         
-                        if (data.url) {
-                            // Redirecionar para o checkout Stripe
-                            window.location.href = data.url;
+                        if (data.url || data.checkout_url) {
+                            // Redirecionar para o checkout
+                            window.location.href = data.url || data.checkout_url;
                         } else {
                             throw new Error(data.error || 'Erro ao processar pagamento');
                         }
