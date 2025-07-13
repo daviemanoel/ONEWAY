@@ -93,7 +93,7 @@ app.post('/create-checkout-session', async (req, res) => {
 // Endpoint para criar preferência de pagamento Mercado Pago
 app.post('/create-mp-checkout', async (req, res) => {
   try {
-    const { priceId, productName, size } = req.body;
+    const { priceId, productName, size, paymentMethod, installments } = req.body;
 
     if (!priceId) {
       return res.status(400).json({ 
@@ -101,8 +101,13 @@ app.post('/create-mp-checkout', async (req, res) => {
       });
     }
 
-    // Mapear price_id para valor (por enquanto fixo R$ 120,00)
-    const amount = 120.00;
+    // Valor base das camisetas
+    let amount = 120.00;
+    
+    // Aplicar desconto de 5% para PIX
+    if (paymentMethod === 'pix') {
+      amount = amount * 0.95; // 5% de desconto
+    }
 
     const preferenceData = {
       items: [
@@ -117,12 +122,9 @@ app.post('/create-mp-checkout', async (req, res) => {
         }
       ],
       payment_methods: {
-        excluded_payment_methods: [
-          { id: 'pix' }         // PIX
-        ],
+        excluded_payment_methods: [],
         excluded_payment_types: [
-          { id: 'ticket' },      // Boletos em geral
-          { id: 'bank_transfer' } // Transferências/PIX
+          { id: 'ticket' }       // Boletos em geral
         ],
         installments: 4, // Até 4 parcelas
         default_installments: 1
