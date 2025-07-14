@@ -5,6 +5,7 @@ from django.utils.safestring import mark_safe
 from .models import Comprador, Pedido
 import requests
 from django.conf import settings
+import os
 
 
 @admin.register(Comprador)
@@ -147,8 +148,10 @@ class PedidoAdmin(admin.ModelAdmin):
     def link_mercadopago(self, obj):
         """Link direto para o pagamento no painel do MP"""
         if obj.payment_id:
+            # URL correta para visualizar pagamento no painel MP
+            # Formato: https://www.mercadopago.com.br/vendas/detalhes/<payment_id>
             return format_html(
-                '<a href="https://www.mercadopago.com.br/activities/detail/{}" target="_blank">🔗 Ver no MP</a>',
+                '<a href="https://www.mercadopago.com.br/vendas/detalhes/{}" target="_blank" style="background: #009EE3; color: white; padding: 4px 8px; border-radius: 4px; text-decoration: none; display: inline-block;">🔗 Ver no MP</a>',
                 obj.payment_id
             )
         return "Payment ID não disponível"
@@ -157,18 +160,68 @@ class PedidoAdmin(admin.ModelAdmin):
     # Actions personalizadas
     def consultar_status_mp(self, request, queryset):
         """Action para consultar status no Mercado Pago"""
+        import requests
+        from django.conf import settings
+        
         updated = 0
+        errors = 0
+        
+        # Token do Mercado Pago (deve estar configurado no settings)
+        mp_token = getattr(settings, 'MERCADOPAGO_ACCESS_TOKEN', os.environ.get('MERCADOPAGO_ACCESS_TOKEN'))
+        
+        if not mp_token:
+            self.message_user(request, 'Token do Mercado Pago não configurado!', level='ERROR')
+            return
+        
         for pedido in queryset:
             if pedido.payment_id:
-                # Aqui seria implementada a consulta à API do MP
-                # Por ora, apenas simular
-                self.message_user(request, f'Consultando pedido {pedido.id}...')
-                updated += 1
+                try:
+                    # Consultar API do Mercado Pago
+                    response = requests.get(
+                        f'https://api.mercadopago.com/v1/payments/{pedido.payment_id}',
+                        headers={'Authorization': f'Bearer {mp_token}'}
+                    )
+                    
+                    if response.status_code == 200:
+                        data = response.json()
+                        novo_status = data.get('status', pedido.status_pagamento)
+                        
+                        # Atualizar status se mudou
+                        if novo_status != pedido.status_pagamento:
+                            pedido.status_pagamento = novo_status
+                            pedido.save()
+                            updated += 1
+                            self.message_user(
+                                request, 
+                                f'Pedido #{pedido.id}: {pedido.status_pagamento} → {novo_status}',
+                                level='SUCCESS'
+                            )
+                        else:
+                            self.message_user(
+                                request, 
+                                f'Pedido #{pedido.id}: Status mantido ({novo_status})',
+                                level='INFO'
+                            )
+                    else:
+                        errors += 1
+                        self.message_user(
+                            request, 
+                            f'Erro ao consultar pedido #{pedido.id}: HTTP {response.status_code}',
+                            level='ERROR'
+                        )
+                except Exception as e:
+                    errors += 1
+                    self.message_user(
+                        request, 
+                        f'Erro ao consultar pedido #{pedido.id}: {str(e)}',
+                        level='ERROR'
+                    )
         
+        # Resumo final
         if updated:
-            self.message_user(request, f'{updated} pedidos consultados no Mercado Pago.')
-        else:
-            self.message_user(request, 'Nenhum pedido tinha Payment ID para consulta.')
+            self.message_user(request, f'✅ {updated} pedidos atualizados no total.', level='SUCCESS')
+        if errors:
+            self.message_user(request, f'❌ {errors} erros durante a consulta.', level='ERROR')
     
     consultar_status_mp.short_description = "🔄 Consultar status no Mercado Pago"
     

@@ -44,6 +44,7 @@ class CriarPedidoSerializer(serializers.Serializer):
     preference_id = serializers.CharField(max_length=100, required=False, allow_blank=True)
     merchant_order_id = serializers.CharField(max_length=50, required=False, allow_blank=True)
     external_reference = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    status_pagamento = serializers.ChoiceField(choices=Pedido.STATUS_CHOICES, required=False, default='pending')
     
     def create(self, validated_data):
         # Extrair dados do comprador
