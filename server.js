@@ -32,6 +32,8 @@ app.get('/health', (req, res) => {
 
 // Servir arquivos estáticos (site)
 app.get('/', (req, res) => {
+  console.log('📍 Acessando rota raiz /');
+  console.log('📁 Diretório atual:', __dirname);
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
