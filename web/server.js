@@ -123,7 +123,7 @@ app.post('/create-checkout-session', async (req, res) => {
 // Endpoint para criar preferência de pagamento Mercado Pago
 app.post('/create-mp-checkout', async (req, res) => {
   try {
-    const { priceId, productName, size, paymentMethod, installments } = req.body;
+    const { priceId, productName, size, paymentMethod, installments, nome, email, telefone } = req.body;
 
     if (!priceId) {
       return res.status(400).json({ 
@@ -167,9 +167,17 @@ app.post('/create-mp-checkout', async (req, res) => {
       auto_return: 'approved',
       external_reference: `${productName}_${size}_${Date.now()}`,
       metadata: {
+        // Dados do comprador
+        comprador_nome: nome || '',
+        comprador_email: email || '',
+        comprador_telefone: telefone || '',
+        // Dados do produto
         product_name: productName || '',
         size: size || '',
-        price_id: priceId
+        price_id: priceId,
+        // Dados do pedido
+        forma_pagamento: paymentMethod === 'pix' ? 'pix' : paymentMethod === '2x' ? '2x' : '4x',
+        preco_original: amount
       },
       statement_descriptor: 'ONE WAY 2025',
       expires: true,
@@ -177,72 +185,14 @@ app.post('/create-mp-checkout', async (req, res) => {
       expiration_date_to: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24h
     };
 
-    // Enviar dados do pedido para o Django ANTES de criar a preferência MP
-    let djangoPedidoId = null;
-    if (process.env.DJANGO_API_URL && process.env.DJANGO_API_TOKEN) {
-      console.log('🔗 Tentando conectar com Django API:', process.env.DJANGO_API_URL);
-      try {
-        const pedidoData = {
-          // Dados do comprador (agora vindos do formulário)
-          nome: req.body.nome || "Cliente Temporário",
-          email: req.body.email || "cliente@temp.com", 
-          telefone: req.body.telefone || "(00) 00000-0000",
-          
-          // Dados do pedido - mapear nome do produto corretamente
-          produto: productName.toLowerCase().includes('marrom') ? 'camiseta-marrom' :
-                   productName.toLowerCase().includes('jesus') ? 'camiseta-jesus' :
-                   productName.toLowerCase().includes('branca') || productName.toLowerCase().includes('white') ? 'camiseta-oneway-branca' :
-                   productName.toLowerCase().includes('way') ? 'camiseta-the-way' : 'camiseta-marrom',
-          tamanho: size,
-          preco: amount,
-          forma_pagamento: paymentMethod === 'pix' ? 'pix' : paymentMethod === '2x' ? '2x' : '4x',
-          
-          // Dados do Mercado Pago (serão atualizados depois)
-          external_reference: preferenceData.external_reference
-        };
+    // REMOVIDO: Criação imediata de registros Django
+    // Os registros serão criados apenas na página de sucesso quando o pagamento for confirmado
 
-        const djangoResponse = await axios.post(
-          `${process.env.DJANGO_API_URL}/pedidos/`,
-          pedidoData,
-          {
-            headers: {
-              'Authorization': `Token ${process.env.DJANGO_API_TOKEN}`,
-              'Content-Type': 'application/json'
-            }
-          }
-        );
-
-        djangoPedidoId = djangoResponse.data.id;
-        console.log('Pedido criado no Django:', djangoPedidoId);
-      } catch (error) {
-        console.error('Erro ao enviar para Django:', error.response?.data || error.message);
-        // Não bloquear o checkout se falhar o Django
-      }
-    }
-
-    // Agora tentar criar a preferência do Mercado Pago
+    // Criar apenas a preferência do Mercado Pago
     const response = await preference.create({ body: preferenceData });
-
-    // Se chegou até aqui, atualizar o pedido Django com o preference_id
-    if (djangoPedidoId && process.env.DJANGO_API_URL && process.env.DJANGO_API_TOKEN) {
-      try {
-        await axios.post(
-          `${process.env.DJANGO_API_URL}/pedidos/${djangoPedidoId}/atualizar_status/`,
-          {
-            preference_id: response.id
-          },
-          {
-            headers: {
-              'Authorization': `Token ${process.env.DJANGO_API_TOKEN}`,
-              'Content-Type': 'application/json'
-            }
-          }
-        );
-        console.log('Preference ID atualizado no Django');
-      } catch (error) {
-        console.error('Erro ao atualizar preference_id:', error.response?.data || error.message);
-      }
-    }
+    
+    console.log('Preferência MP criada:', response.id);
+    console.log('Dados do comprador incluídos no metadata para criação posterior');
 
     res.json({ 
       checkout_url: response.init_point,
