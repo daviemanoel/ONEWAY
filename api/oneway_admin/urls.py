@@ -17,8 +17,10 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import path, include
+from pedidos.views import consultar_mp_admin
 
 urlpatterns = [
+    path("consultar-mp/", consultar_mp_admin, name="consultar_mp_admin"),
     path("admin/", admin.site.urls),
     path("api/", include("pedidos.urls")),
 ]

@@ -35,6 +35,7 @@ class PedidoAdmin(admin.ModelAdmin):
         'preco_final',
         'forma_pagamento_display',
         'status_display_admin',
+        'status_mercadopago',
         'data_pedido'
     ]
     
@@ -148,11 +149,17 @@ class PedidoAdmin(admin.ModelAdmin):
     def link_mercadopago(self, obj):
         """Link direto para o pagamento no painel do MP"""
         if obj.payment_id:
-            # URL correta para visualizar pagamento no painel MP
-            # Formato: https://www.mercadopago.com.br/vendas/detalhes/<payment_id>
+            # Tentar múltiplos formatos de URL do MP
+            # Formato 1: activities com payment_id
+            url_activities = f"https://www.mercadopago.com.br/activities/{obj.payment_id}"
+            
+            # Formato 2: activities/detail com payment_id  
+            url_detail = f"https://www.mercadopago.com.br/activities/detail/{obj.payment_id}"
+            
+            # Por padrão usar o formato activities simples
             return format_html(
-                '<a href="https://www.mercadopago.com.br/vendas/detalhes/{}" target="_blank" style="background: #009EE3; color: white; padding: 4px 8px; border-radius: 4px; text-decoration: none; display: inline-block;">🔗 Ver no MP</a>',
-                obj.payment_id
+                '<a href="{}" target="_blank" style="background: #009EE3; color: white; padding: 4px 8px; border-radius: 4px; text-decoration: none; display: inline-block;">🔗 Ver no MP</a>',
+                url_activities
             )
         return "Payment ID não disponível"
     link_mercadopago.short_description = 'Link MP'

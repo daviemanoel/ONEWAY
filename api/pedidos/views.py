@@ -4,7 +4,13 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.authentication import TokenAuthentication
 from django.shortcuts import get_object_or_404
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
+from django.contrib.admin.views.decorators import staff_member_required
 import requests
+import json
+import os
 from django.conf import settings
 from .models import Comprador, Pedido
 from .serializers import (
@@ -125,3 +131,119 @@ class PedidoViewSet(viewsets.ModelViewSet):
                 {'erro': f'Erro ao consultar Mercado Pago: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@staff_member_required
+def consultar_mp_admin(request):
+    """Endpoint para consultar status MP via admin interface"""
+    try:
+        data = json.loads(request.body)
+        payment_id = data.get('payment_id')
+        
+        if not payment_id:
+            return JsonResponse({
+                'success': False,
+                'error': 'Payment ID é obrigatório'
+            })
+        
+        # Buscar pedido no banco
+        try:
+            pedido = Pedido.objects.get(payment_id=payment_id)
+        except Pedido.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': f'Pedido com payment_id {payment_id} não encontrado'
+            })
+        
+        # Token do Mercado Pago
+        mp_token = getattr(settings, 'MERCADOPAGO_ACCESS_TOKEN', os.environ.get('MERCADOPAGO_ACCESS_TOKEN'))
+        
+        if not mp_token:
+            return JsonResponse({
+                'success': False,
+                'error': 'Token do Mercado Pago não configurado'
+            })
+        
+        # Consultar API do Mercado Pago
+        response = requests.get(
+            f'https://api.mercadopago.com/v1/payments/{payment_id}',
+            headers={'Authorization': f'Bearer {mp_token}'},
+            timeout=10
+        )
+        
+        if response.status_code == 200:
+            mp_data = response.json()
+            novo_status = mp_data.get('status', pedido.status_pagamento)
+            status_detail = mp_data.get('status_detail', '')
+            
+            # Atualizar status se mudou
+            status_mudou = False
+            if novo_status != pedido.status_pagamento:
+                pedido.status_pagamento = novo_status
+                pedido.save()
+                status_mudou = True
+            
+            # Mapear status para display
+            status_display_map = {
+                'pending': 'Pendente',
+                'approved': 'Aprovado',
+                'in_process': 'Em processamento',
+                'rejected': 'Rejeitado',
+                'cancelled': 'Cancelado',
+                'refunded': 'Estornado',
+            }
+            
+            return JsonResponse({
+                'success': True,
+                'pedido_id': pedido.id,
+                'payment_id': payment_id,
+                'status_anterior': pedido.status_pagamento if not status_mudou else '',
+                'novo_status': novo_status,
+                'status_display': status_display_map.get(novo_status, novo_status),
+                'status_detail': status_detail,
+                'status_mudou': status_mudou,
+                'detalhes': {
+                    'transaction_amount': mp_data.get('transaction_amount'),
+                    'payment_method_id': mp_data.get('payment_method_id'),
+                    'date_created': mp_data.get('date_created'),
+                    'date_approved': mp_data.get('date_approved'),
+                }
+            })
+        
+        elif response.status_code == 404:
+            return JsonResponse({
+                'success': False,
+                'error': f'Payment {payment_id} não encontrado no Mercado Pago'
+            })
+        
+        else:
+            return JsonResponse({
+                'success': False,
+                'error': f'Erro na API do MP: HTTP {response.status_code}'
+            })
+            
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'JSON inválido na requisição'
+        })
+    
+    except requests.exceptions.Timeout:
+        return JsonResponse({
+            'success': False,
+            'error': 'Timeout na consulta ao Mercado Pago'
+        })
+    
+    except requests.exceptions.RequestException as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Erro de conexão: {str(e)}'
+        })
+    
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Erro interno: {str(e)}'
+        })
