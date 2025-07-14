@@ -430,7 +430,7 @@
                             size: size,
                             paymentMethod: paymentMethod,
                             installments: paymentMethod === 'pix' ? 1 : parseInt(paymentMethod),
-                            price: productPrice
+                            price: productPrice // Só para exibição no modal - backend ignora
                         });
                     } catch (error) {
                         console.error('Erro ao abrir checkout:', error);

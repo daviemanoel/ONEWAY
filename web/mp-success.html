@@ -141,16 +141,23 @@
             const merchantOrderId = urlParams.get('merchant_order_id');
             const preferenceId = urlParams.get('preference_id');
             
-            // Se houver parâmetros do MP, exibir os dados
+            // Se houver parâmetros do MP, processar o pagamento
             if (paymentId || status || externalReference) {
-                exibirDadosPagamento({
+                const dadosMP = {
                     paymentId,
                     status,
                     externalReference,
                     paymentType,
                     merchantOrderId,
                     preferenceId
-                });
+                };
+                
+                exibirDadosPagamento(dadosMP);
+                
+                // Se pagamento aprovado, criar registros no banco
+                if (status === 'approved') {
+                    criarRegistrosPagamento(dadosMP);
+                }
             }
         }
         
@@ -215,6 +222,133 @@
             
             // Log para debugging (pode ser removido em produção)
             console.log('Dados do pagamento capturados:', dados);
+        }
+        
+        // Função para criar registros no banco após pagamento aprovado
+        async function criarRegistrosPagamento(dadosMP) {
+            try {
+                console.log('🔄 Criando registros para pagamento aprovado...');
+                
+                // Primeiro, buscar metadata do pagamento no MP
+                const metadataResponse = await fetch(`/api/mp-payment-details/${dadosMP.paymentId}`);
+                
+                if (!metadataResponse.ok) {
+                    throw new Error('Erro ao buscar detalhes do pagamento no MP');
+                }
+                
+                const { metadata } = await metadataResponse.json();
+                
+                if (!metadata || !metadata.comprador_nome) {
+                    throw new Error('Dados do comprador não encontrados no pagamento');
+                }
+                
+                // Criar pedido no Django
+                const pedidoData = {
+                    // Dados do comprador
+                    nome: metadata.comprador_nome,
+                    email: metadata.comprador_email,
+                    telefone: metadata.comprador_telefone,
+                    
+                    // Dados do produto - mapear nome para ID
+                    produto: mapearProdutoParaId(metadata.product_name),
+                    tamanho: metadata.size,
+                    preco: parseFloat(metadata.preco_original),
+                    forma_pagamento: metadata.forma_pagamento,
+                    
+                    // Dados Mercado Pago
+                    payment_id: dadosMP.paymentId,
+                    external_reference: dadosMP.externalReference,
+                    preference_id: dadosMP.preferenceId,
+                    merchant_order_id: dadosMP.merchantOrderId,
+                    status_pagamento: 'approved'
+                };
+                
+                console.log('📤 Enviando dados para Django:', pedidoData);
+                
+                const djangoResponse = await fetch('/api/django/pedidos/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(pedidoData)
+                });
+                
+                if (djangoResponse.ok) {
+                    const pedidoCriado = await djangoResponse.json();
+                    console.log('✅ Pedido criado com sucesso:', pedidoCriado);
+                    exibirSucessoCriacao(pedidoCriado);
+                } else {
+                    const errorData = await djangoResponse.json();
+                    console.error('❌ Erro Django:', errorData);
+                    
+                    // Verificar se é duplicata (já processado)
+                    if (errorData.error && errorData.error.includes('já existe')) {
+                        exibirJaProcessado();
+                    } else {
+                        throw new Error(errorData.error || 'Erro ao criar pedido');
+                    }
+                }
+                
+            } catch (error) {
+                console.error('❌ Erro ao processar pagamento:', error);
+                exibirErroProcessamento(error.message);
+            }
+        }
+        
+        // Função para mapear nome do produto para ID do Django
+        function mapearProdutoParaId(productName) {
+            const mapping = {
+                'Camiseta One Way Marrom': 'camiseta-marrom',
+                'Camiseta Jesus Christ': 'camiseta-jesus',
+                'Camiseta One Way Branca': 'camiseta-oneway-branca',
+                'Camiseta The Way': 'camiseta-the-way'
+            };
+            
+            return mapping[productName] || 'camiseta-marrom';
+        }
+        
+        // Função para exibir sucesso na criação
+        function exibirSucessoCriacao(pedido) {
+            const paymentDetails = document.getElementById('payment-details');
+            const sucessoHtml = `
+                <div style="background: #d4edda; border: 1px solid #c3e6cb; padding: 1rem; border-radius: 5px; margin-bottom: 1rem;">
+                    <h4 style="color: #155724; margin: 0 0 0.5rem 0;">🎉 Pedido Registrado!</h4>
+                    <p style="color: #155724; margin: 0;"><strong>ID do Pedido:</strong> #${pedido.id}</p>
+                    <p style="color: #155724; margin: 0;"><strong>Comprador:</strong> ${pedido.comprador.nome}</p>
+                </div>
+                ${paymentDetails.innerHTML}
+            `;
+            paymentDetails.innerHTML = sucessoHtml;
+        }
+        
+        // Função para exibir que já foi processado
+        function exibirJaProcessado() {
+            const paymentDetails = document.getElementById('payment-details');
+            const infoHtml = `
+                <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 1rem; border-radius: 5px; margin-bottom: 1rem;">
+                    <h4 style="color: #856404; margin: 0 0 0.5rem 0;">ℹ️ Já Processado</h4>
+                    <p style="color: #856404; margin: 0;">Este pagamento já foi registrado anteriormente.</p>
+                </div>
+                ${paymentDetails.innerHTML}
+            `;
+            paymentDetails.innerHTML = infoHtml;
+        }
+        
+        // Função para exibir erro
+        function exibirErroProcessamento(errorMessage) {
+            const paymentDetails = document.getElementById('payment-details');
+            const erroHtml = `
+                <div style="background: #f8d7da; border: 1px solid #f5c6cb; padding: 1rem; border-radius: 5px; margin-bottom: 1rem;">
+                    <h4 style="color: #721c24; margin: 0 0 0.5rem 0;">⚠️ Erro no Processamento</h4>
+                    <p style="color: #721c24; margin: 0;">Erro: ${errorMessage}</p>
+                    <p style="color: #721c24; margin: 0.5rem 0 0 0; font-size: 0.9rem;">
+                        Seu pagamento foi aprovado, mas houve um problema ao registrar o pedido. 
+                        Entre em contato conosco informando o ID do pagamento.
+                    </p>
+                </div>
+                ${paymentDetails.innerHTML}
+            `;
+            paymentDetails.innerHTML = erroHtml;
         }
         
         // Executar quando a página carregar

@@ -1,10 +1,36 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { MercadoPagoConfig, Preference } = require('mercadopago');
 const axios = require('axios');
 require('dotenv').config();
+
+// Cache do catálogo de produtos para performance e segurança
+let productsCache = null;
+let productsCacheTime = 0;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
+
+function getProductsCatalog() {
+  const now = Date.now();
+  
+  // Usar cache se ainda válido
+  if (productsCache && (now - productsCacheTime) < CACHE_DURATION) {
+    return productsCache;
+  }
+  
+  try {
+    const productsPath = path.join(__dirname, 'products.json');
+    const data = fs.readFileSync(productsPath, 'utf8');
+    productsCache = JSON.parse(data);
+    productsCacheTime = now;
+    return productsCache;
+  } catch (error) {
+    console.error('Erro crítico ao carregar products.json:', error);
+    throw new Error('Catálogo de produtos indisponível');
+  }
+}
 
 // Configurações da API Django
 const DJANGO_API_URL = process.env.DJANGO_API_URL || 'http://localhost:8000/api';
@@ -123,7 +149,7 @@ app.post('/create-checkout-session', async (req, res) => {
 // Endpoint para criar preferência de pagamento Mercado Pago
 app.post('/create-mp-checkout', async (req, res) => {
   try {
-    const { priceId, productName, size, paymentMethod, installments, nome, email, telefone, price } = req.body;
+    const { priceId, productName, size, paymentMethod, installments, nome, email, telefone } = req.body;
 
     if (!priceId) {
       return res.status(400).json({ 
@@ -131,13 +157,55 @@ app.post('/create-mp-checkout', async (req, res) => {
       });
     }
 
-    // Usar o preço enviado do frontend (do products.json)
-    let amount = parseFloat(price) || 120.00;
+    // SEGURANÇA: Buscar preço real do catálogo no servidor (ignora frontend)
+    let productsData;
+    try {
+      productsData = getProductsCatalog();
+    } catch (error) {
+      return res.status(500).json({ 
+        error: 'Serviço temporariamente indisponível. Tente novamente.' 
+      });
+    }
+
+    // Encontrar produto pelo nome exato
+    const product = Object.values(productsData.products)
+      .find(p => p.title === productName);
     
-    // Aplicar desconto de 5% para PIX
+    if (!product) {
+      console.warn(`Produto não encontrado: "${productName}"`);
+      return res.status(400).json({ 
+        error: 'Produto não encontrado. Atualize a página e tente novamente.' 
+      });
+    }
+
+    // FONTE ÚNICA DA VERDADE: preço sempre do servidor
+    let amount = parseFloat(product.price);
+    
+    if (isNaN(amount) || amount <= 0) {
+      console.error(`Preço inválido: ${productName} = ${product.price}`);
+      return res.status(500).json({ 
+        error: 'Configuração inválida do produto. Contate o suporte.' 
+      });
+    }
+    
+    // Aplicar desconto de 5% para PIX baseado no preço real
+    const originalAmount = amount;
     if (paymentMethod === 'pix') {
       amount = amount * 0.95; // 5% de desconto
     }
+    
+    // Log de segurança: registrar preço usado vs enviado pelo frontend
+    const frontendPrice = parseFloat(req.body.price);
+    if (frontendPrice && Math.abs(frontendPrice - originalAmount) > 0.01) {
+      console.warn(`🚨 TENTATIVA DE MANIPULAÇÃO DE PREÇO:
+        Produto: ${productName}
+        Preço real: R$ ${originalAmount.toFixed(2)}
+        Preço enviado: R$ ${frontendPrice.toFixed(2)}
+        IP: ${req.ip}
+        User-Agent: ${req.get('User-Agent')}`);
+    }
+    
+    console.log(`✅ Checkout seguro: ${productName} - ${paymentMethod} - R$ ${amount.toFixed(2)}`);
 
     const preferenceData = {
       items: [
@@ -204,6 +272,103 @@ app.post('/create-mp-checkout', async (req, res) => {
       error: 'Erro interno do servidor',
       message: error.message 
     });
+  }
+});
+
+// Endpoint para buscar detalhes do pagamento MP (usado pela página de sucesso)
+app.get('/api/mp-payment-details/:paymentId', async (req, res) => {
+  try {
+    const { paymentId } = req.params;
+    
+    if (!paymentId) {
+      return res.status(400).json({ error: 'Payment ID é obrigatório' });
+    }
+    
+    console.log(`🔍 Buscando detalhes do pagamento MP: ${paymentId}`);
+    
+    // Buscar detalhes do pagamento no MP
+    const { Payment } = require('mercadopago');
+    const payment = new Payment(mercadoPagoClient);
+    
+    const paymentData = await payment.get({ id: paymentId });
+    
+    if (!paymentData) {
+      return res.status(404).json({ error: 'Pagamento não encontrado' });
+    }
+    
+    // Buscar metadata da preferência se disponível
+    let metadata = {};
+    if (paymentData.additional_info?.items?.[0]?.title) {
+      // Se não tem metadata no payment, buscar na preferência
+      const preferenceId = paymentData.additional_info.preference_id;
+      
+      if (preferenceId) {
+        try {
+          const { Preference } = require('mercadopago');
+          const preferenceClient = new Preference(mercadoPagoClient);
+          const preferenceData = await preferenceClient.get({ preferenceId });
+          metadata = preferenceData.metadata || {};
+        } catch (prefError) {
+          console.warn('Erro ao buscar preferência:', prefError.message);
+        }
+      }
+    }
+    
+    console.log(`✅ Metadata encontrada:`, metadata);
+    
+    res.json({
+      payment_status: paymentData.status,
+      payment_id: paymentData.id,
+      external_reference: paymentData.external_reference,
+      metadata: metadata
+    });
+    
+  } catch (error) {
+    console.error('Erro ao buscar detalhes MP:', error);
+    res.status(500).json({ 
+      error: 'Erro ao consultar Mercado Pago',
+      details: error.message 
+    });
+  }
+});
+
+// Endpoint proxy para Django API (criar pedidos)
+app.post('/api/django/pedidos/', async (req, res) => {
+  try {
+    if (!DJANGO_API_TOKEN) {
+      return res.status(500).json({ 
+        error: 'Configuração Django incompleta' 
+      });
+    }
+    
+    console.log('🔗 Enviando pedido para Django API...');
+    
+    const response = await axios.post(
+      `${DJANGO_API_URL}/pedidos/`,
+      req.body,
+      {
+        headers: {
+          'Authorization': `Token ${DJANGO_API_TOKEN}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    
+    console.log('✅ Pedido criado no Django:', response.data.id);
+    res.json(response.data);
+    
+  } catch (error) {
+    console.error('❌ Erro no proxy Django:', error.response?.data || error.message);
+    
+    if (error.response?.status === 400) {
+      // Erro de validação do Django
+      res.status(400).json(error.response.data);
+    } else {
+      res.status(500).json({ 
+        error: 'Erro interno ao processar pedido',
+        details: error.message
+      });
+    }
   }
 });
 
