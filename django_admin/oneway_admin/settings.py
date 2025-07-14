@@ -30,6 +30,7 @@ DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 ALLOWED_HOSTS = ['*'] if DEBUG else [
     '.railway.app',
     '.oneway-admin.up.railway.app',
+    'oneway-production.up.railway.app',
     'localhost',
     '127.0.0.1'
 ]
@@ -166,3 +167,19 @@ ADMIN_INDEX_TITLE = "Painel Administrativo"
 
 # Mercado Pago (será usado na API)
 MERCADOPAGO_ACCESS_TOKEN = ""  # Configurar via variável de ambiente em produção
+
+# CSRF Settings
+CSRF_TRUSTED_ORIGINS = [
+    'https://oneway-production.up.railway.app',
+    'https://*.railway.app',
+    'https://*.oneway-admin.up.railway.app',
+]
+
+# Security settings for production
+if not DEBUG:
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_REDIRECT_EXEMPT = []
+    SECURE_REFERRER_POLICY = 'same-origin'
