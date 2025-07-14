@@ -27,6 +27,18 @@ class Command(BaseCommand):
                 
             self.stdout.write("✅ Todas as tabelas criadas com sucesso!")
             
+            # Criar superuser se não existir
+            from django.contrib.auth.models import User
+            if not User.objects.filter(username='admin').exists():
+                User.objects.create_superuser(
+                    username='admin',
+                    email='admin@oneway.com.br',
+                    password='oneway2025'
+                )
+                self.stdout.write("👤 Superuser 'admin' criado (senha: oneway2025)")
+            else:
+                self.stdout.write("👤 Superuser 'admin' já existe")
+            
         except Exception as e:
             self.stdout.write(f"❌ Erro: {e}")
             # Fallback
