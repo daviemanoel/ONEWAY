@@ -1,8 +1,4 @@
 {
-  "build": {
-    "builder": "docker-compose",
-    "dockerComposeFile": "docker-compose.yml"
-  },
   "deploy": {
     "healthcheckPath": "/",
     "healthcheckTimeout": 300,

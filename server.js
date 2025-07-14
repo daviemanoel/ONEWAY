@@ -151,6 +151,7 @@ app.post('/create-mp-checkout', async (req, res) => {
     // Enviar dados do pedido para o Django ANTES de criar a preferência MP
     let djangoPedidoId = null;
     if (process.env.DJANGO_API_URL && process.env.DJANGO_API_TOKEN) {
+      console.log('🔗 Tentando conectar com Django API:', process.env.DJANGO_API_URL);
       try {
         const pedidoData = {
           // Dados do comprador (agora vindos do formulário)
