@@ -228,9 +228,9 @@ app.post('/create-mp-checkout', async (req, res) => {
         default_installments: 1
       },
       back_urls: {
-        success: process.env.MP_SUCCESS_URL || 'https://oneway-production.up.railway.app/mp-success',
+        success: `${process.env.MP_SUCCESS_URL || 'https://oneway-production.up.railway.app/mp-success'}?nome=${encodeURIComponent(nome)}&email=${encodeURIComponent(email)}&telefone=${encodeURIComponent(telefone)}&produto=${encodeURIComponent(productName)}&tamanho=${size}&preco=${amount}&forma_pagamento=${paymentMethod}`,
         failure: process.env.MP_CANCEL_URL || 'https://oneway-production.up.railway.app/mp-cancel',
-        pending: process.env.MP_SUCCESS_URL || 'https://oneway-production.up.railway.app/mp-success'
+        pending: `${process.env.MP_SUCCESS_URL || 'https://oneway-production.up.railway.app/mp-success'}?nome=${encodeURIComponent(nome)}&email=${encodeURIComponent(email)}&telefone=${encodeURIComponent(telefone)}&produto=${encodeURIComponent(productName)}&tamanho=${size}&preco=${amount}&forma_pagamento=${paymentMethod}`
       },
       auto_return: 'approved',
       external_reference: `${productName}_${size}_${Date.now()}`,

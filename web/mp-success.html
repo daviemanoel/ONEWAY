@@ -229,32 +229,59 @@
             try {
                 console.log('🔄 Criando registros para pagamento aprovado...');
                 
-                // Primeiro, buscar metadata do pagamento no MP (incluir preference_id)
-                const url = `/api/mp-payment-details/${dadosMP.paymentId}?preference_id=${dadosMP.preferenceId}`;
-                const metadataResponse = await fetch(url);
+                // Capturar dados do comprador da URL (mais confiável!)
+                const urlParams = new URLSearchParams(window.location.search);
+                const dadosComprador = {
+                    nome: urlParams.get('nome'),
+                    email: urlParams.get('email'), 
+                    telefone: urlParams.get('telefone'),
+                    produto: urlParams.get('produto'),
+                    tamanho: urlParams.get('tamanho'),
+                    preco: urlParams.get('preco'),
+                    forma_pagamento: urlParams.get('forma_pagamento')
+                };
                 
-                if (!metadataResponse.ok) {
-                    throw new Error('Erro ao buscar detalhes do pagamento no MP');
-                }
+                console.log('📋 Dados capturados da URL:', dadosComprador);
                 
-                const { metadata } = await metadataResponse.json();
-                
-                if (!metadata || !metadata.comprador_nome) {
-                    throw new Error('Dados do comprador não encontrados no pagamento');
+                // Se não tem dados na URL, tentar buscar do MP (fallback)
+                if (!dadosComprador.nome || !dadosComprador.email) {
+                    console.log('⚠️ Dados não encontrados na URL, buscando no MP...');
+                    
+                    const url = `/api/mp-payment-details/${dadosMP.paymentId}?preference_id=${dadosMP.preferenceId}`;
+                    const metadataResponse = await fetch(url);
+                    
+                    if (!metadataResponse.ok) {
+                        throw new Error('Erro ao buscar detalhes do pagamento no MP');
+                    }
+                    
+                    const { metadata } = await metadataResponse.json();
+                    
+                    if (!metadata || !metadata.comprador_nome) {
+                        throw new Error('Dados do comprador não encontrados');
+                    }
+                    
+                    // Usar dados do metadata MP
+                    dadosComprador.nome = metadata.comprador_nome;
+                    dadosComprador.email = metadata.comprador_email;
+                    dadosComprador.telefone = metadata.comprador_telefone;
+                    dadosComprador.produto = metadata.product_name;
+                    dadosComprador.tamanho = metadata.size;
+                    dadosComprador.preco = metadata.preco_original;
+                    dadosComprador.forma_pagamento = metadata.forma_pagamento;
                 }
                 
                 // Criar pedido no Django
                 const pedidoData = {
-                    // Dados do comprador
-                    nome: metadata.comprador_nome,
-                    email: metadata.comprador_email,
-                    telefone: metadata.comprador_telefone,
+                    // Dados do comprador (já capturados acima)
+                    nome: dadosComprador.nome,
+                    email: dadosComprador.email,
+                    telefone: dadosComprador.telefone,
                     
                     // Dados do produto - mapear nome para ID
-                    produto: mapearProdutoParaId(metadata.product_name),
-                    tamanho: metadata.size,
-                    preco: parseFloat(metadata.preco_original),
-                    forma_pagamento: metadata.forma_pagamento,
+                    produto: mapearProdutoParaId(dadosComprador.produto),
+                    tamanho: dadosComprador.tamanho,
+                    preco: parseFloat(dadosComprador.preco),
+                    forma_pagamento: dadosComprador.forma_pagamento,
                     
                     // Dados Mercado Pago
                     payment_id: dadosMP.paymentId,
@@ -315,7 +342,7 @@
                 <div style="background: #d4edda; border: 1px solid #c3e6cb; padding: 1rem; border-radius: 5px; margin-bottom: 1rem;">
                     <h4 style="color: #155724; margin: 0 0 0.5rem 0;">🎉 Pedido Registrado!</h4>
                     <p style="color: #155724; margin: 0;"><strong>ID do Pedido:</strong> #${pedido.id}</p>
-                    <p style="color: #155724; margin: 0;"><strong>Comprador:</strong> ${pedido.comprador.nome}</p>
+                    <p style="color: #155724; margin: 0;"><strong>Comprador:</strong> ${pedido.comprador?.nome || pedido.nome}</p>
                 </div>
                 ${paymentDetails.innerHTML}
             `;
