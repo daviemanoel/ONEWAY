@@ -1,7 +1,7 @@
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.authentication import TokenAuthentication
 from django.shortcuts import get_object_or_404
 import requests
@@ -21,11 +21,7 @@ class CompradorViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = CompradorSerializer
     authentication_classes = [TokenAuthentication]
     
-    def get_permissions(self):
-        # Permitir acesso sem autenticação para métodos de leitura
-        if self.action in ['list', 'retrieve']:
-            return [AllowAny()]
-        return super().get_permissions()
+    permission_classes = [IsAuthenticated]
 
 
 class PedidoViewSet(viewsets.ModelViewSet):
@@ -34,14 +30,7 @@ class PedidoViewSet(viewsets.ModelViewSet):
     serializer_class = PedidoSerializer
     authentication_classes = [TokenAuthentication]
     
-    def get_permissions(self):
-        # Permitir criar pedido sem autenticação (vem do Node.js)
-        if self.action == 'create':
-            return [AllowAny()]
-        # Permitir consultar por external_reference sem autenticação
-        if self.action in ['buscar_por_referencia', 'consultar_mercadopago']:
-            return [AllowAny()]
-        return super().get_permissions()
+    permission_classes = [IsAuthenticated]
     
     def get_serializer_class(self):
         if self.action == 'create':
