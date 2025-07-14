@@ -144,7 +144,7 @@ app.post('/create-mp-checkout', async (req, res) => {
         {
           title: `${productName} - Tamanho ${size}`,
           description: 'Camiseta ONE WAY 2025',
-          picture_url: 'https://oneway-production.up.railway.app/img/camisetas/camiseta_marrom.jpeg',
+          picture_url: 'https://web-production-2614.up.railway.app/img/camisetas/camiseta_marrom.jpeg',
           category_id: 'fashion',
           quantity: 1,
           currency_id: 'BRL',
