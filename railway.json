@@ -1,10 +1,11 @@
 {
   "build": {
-    "builder": "dockerfile"
+    "builder": "docker-compose",
+    "dockerComposeFile": "docker-compose.yml"
   },
   "deploy": {
-    "healthcheckPath": "/health",
-    "healthcheckTimeout": 180,
+    "healthcheckPath": "/",
+    "healthcheckTimeout": 300,
     "restartPolicyType": "on_failure",
     "restartPolicyMaxRetries": 3
   }
