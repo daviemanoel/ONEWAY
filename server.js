@@ -33,12 +33,14 @@ app.get('/health', (req, res) => {
 // Proxy para Django Admin
 app.use('/admin', (req, res) => {
   const url = `http://localhost:8000${req.originalUrl}`;
-  axios.get(url).then(response => {
-    res.send(response.data);
-  }).catch(error => {
-    console.error('Erro proxy Django:', error.message);
-    res.status(500).send('Django não disponível');
-  });
+  setTimeout(() => {
+    axios.get(url).then(response => {
+      res.send(response.data);
+    }).catch(error => {
+      console.error('Erro proxy Django:', error.message);
+      res.status(500).send('Django ainda não disponível, aguarde...');
+    });
+  }, 1000);
 });
 
 // Proxy para Django API  
