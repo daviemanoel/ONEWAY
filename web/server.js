@@ -188,8 +188,11 @@ app.post('/create-mp-checkout', async (req, res) => {
           email: req.body.email || "cliente@temp.com", 
           telefone: req.body.telefone || "(00) 00000-0000",
           
-          // Dados do pedido
-          produto: productName.toLowerCase().replace(/ /g, '-'),
+          // Dados do pedido - mapear nome do produto corretamente
+          produto: productName.toLowerCase().includes('marrom') ? 'camiseta-marrom' :
+                   productName.toLowerCase().includes('jesus') ? 'camiseta-jesus' :
+                   productName.toLowerCase().includes('branca') || productName.toLowerCase().includes('white') ? 'camiseta-oneway-branca' :
+                   productName.toLowerCase().includes('way') ? 'camiseta-the-way' : 'camiseta-marrom',
           tamanho: size,
           preco: amount,
           forma_pagamento: paymentMethod === 'pix' ? 'pix' : paymentMethod === '2x' ? '2x' : '4x',
