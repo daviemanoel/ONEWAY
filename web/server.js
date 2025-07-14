@@ -123,7 +123,7 @@ app.post('/create-checkout-session', async (req, res) => {
 // Endpoint para criar preferência de pagamento Mercado Pago
 app.post('/create-mp-checkout', async (req, res) => {
   try {
-    const { priceId, productName, size, paymentMethod, installments, nome, email, telefone } = req.body;
+    const { priceId, productName, size, paymentMethod, installments, nome, email, telefone, price } = req.body;
 
     if (!priceId) {
       return res.status(400).json({ 
@@ -131,8 +131,8 @@ app.post('/create-mp-checkout', async (req, res) => {
       });
     }
 
-    // Valor base das camisetas
-    let amount = 120.00;
+    // Usar o preço enviado do frontend (do products.json)
+    let amount = parseFloat(price) || 120.00;
     
     // Aplicar desconto de 5% para PIX
     if (paymentMethod === 'pix') {

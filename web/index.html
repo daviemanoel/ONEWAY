@@ -308,7 +308,7 @@
                     const hasGallery = mediaItems.length > 1;
                     
                     const productHTML = `
-                        <div class="product-card" data-product-id="${product.id}">
+                        <div class="product-card" data-product-id="${product.id}" data-product-price="${product.price}">
                             <div class="product-image ${hasGallery ? 'has-gallery' : ''}">
                                 ${mediaItems.map((item, index) => {
                                     const isVideo = item.includes('.mp4');
@@ -411,6 +411,7 @@
                     const size = selectedSizeBtn.dataset.size;
                     const priceId = selectedSizeBtn.dataset.stripeId;
                     const productName = productCard.querySelector('h3').textContent;
+                    const productPrice = parseFloat(productCard.dataset.productPrice);
                     
                     if (!priceId || priceId === 'null') {
                         alert('Tamanho indisponível para compra.');
@@ -428,7 +429,8 @@
                             productName: productName,
                             size: size,
                             paymentMethod: paymentMethod,
-                            installments: paymentMethod === 'pix' ? 1 : parseInt(paymentMethod)
+                            installments: paymentMethod === 'pix' ? 1 : parseInt(paymentMethod),
+                            price: productPrice
                         });
                     } catch (error) {
                         console.error('Erro ao abrir checkout:', error);
@@ -487,8 +489,8 @@
         function openCheckoutModal(checkoutData) {
             currentCheckoutData = checkoutData;
             
-            // Calcular preço
-            let amount = 120.00;
+            // Usar o preço real do produto
+            let amount = checkoutData.price || 120.00;
             if (checkoutData.paymentMethod === 'pix') {
                 amount = amount * 0.95; // 5% de desconto
             }

@@ -12,17 +12,12 @@ Este é um site estático para o evento de conferência jovem "ONE WAY" (31 de j
 
 ## Comandos de Desenvolvimento
 
-### Docker (Ambiente Completo - RECOMENDADO)
-- **Subir ambiente**: `docker compose up -d`
-- **Logs**: `docker compose logs -f`
-- **Status**: `docker compose ps`
-- **Parar**: `docker compose down`
-- **Rebuild**: `docker compose up --build -d`
-
-**URLs Docker:**
-- Site: http://localhost:8080/
-- Django Admin: http://localhost:8080/admin/
-- API Health: http://localhost:8080/api/health
+### Railway CLI (Produção)
+- **Logs em tempo real**: `railway logs -f`
+- **Status**: `railway status`
+- **Deploy forçado**: `railway up`
+- **Executar comando**: `railway run --service API <comando>`
+- **Conectar projeto**: `railway link` (escolher ONEWAY → API)
 
 ### Frontend (Site estático)
 - **Rodar localmente**: Abra `index.html` diretamente no navegador ou use um servidor local como `python -m http.server 8000` ou `npx serve`
@@ -35,22 +30,32 @@ Este é um site estático para o evento de conferência jovem "ONE WAY" (31 de j
 - **Variáveis ambiente**: STRIPE_SECRET_KEY, MERCADOPAGO_ACCESS_TOKEN
 
 ### Django Admin (Sistema de gestão)
-- **Ambiente local**: Via Docker (recomendado)
-- **Migrar**: `python manage.py migrate` (dentro do container Django)
-- **Criar superuser**: `python manage.py createsuperuser`
-- **Dependências**: Ver `django_admin/requirements.txt`
+- **Ambiente local**: `cd api && python manage.py runserver` (SQLite local)
+- **Produção Railway**: PostgreSQL gerenciado com dados persistentes
+- **Migrar localmente**: `python manage.py migrate`
+- **Setup completo produção**: `python manage.py setup_database` (comando personalizado)
+- **Admin produção**: https://api-production-e044.up.railway.app/admin/ (admin/oneway2025)
+- **Dependências**: Ver `api/requirements.txt`
 
 ## Arquitetura e Componentes Principais
 
 ### Estrutura de Arquivos
-- `index.html` - Página única contendo todo o conteúdo (507 linhas)
-- `Css/style.css` - Todos os estilos em um arquivo (1655+ linhas)
-- `server.js` - Backend Node.js/Express para pagamentos (212 linhas)
-- `products.json` - Base de dados dos produtos com preços e estoque
-- `img/` - Assets organizados: `img/camisetas/`, `img/ingressos/`, imagens gerais
-- `mp-success.html` / `mp-cancel.html` - Páginas de retorno Mercado Pago
-- `success.html` / `cancel.html` - Páginas de retorno Stripe
-- `package.json` - Dependências do backend
+```
+ONEWAY/
+├── web/                          # Frontend estático
+│   ├── index.html               # SPA principal (500+ linhas)
+│   ├── Css/style.css           # Estilos completos (1655+ linhas)
+│   ├── server.js               # Backend Node.js/Express
+│   ├── products.json           # Base de dados produtos
+│   ├── mp-success.html         # Captura dados Mercado Pago
+│   └── img/                    # Assets organizados
+└── api/                         # Django Admin System
+    ├── oneway_admin/           # Configurações Django
+    ├── pedidos/                # App principal com models
+    ├── manage.py               # Django CLI
+    ├── requirements.txt        # Dependências Python
+    └── Dockerfile              # Deploy Railway
+```
 
 ### Ordem Atual das Seções (após reordenação)
 ```
@@ -129,7 +134,8 @@ index.html (SPA estática)
 - ✅ Imagens convertidas para JPEG (compatibilidade)
 - ✅ **Issue #11**: Captura dados MP implementada (mp-success.html)
 - ✅ **Issue #12**: Django Admin completo com PostgreSQL
-- ✅ **Docker Environment**: Multi-container com Nginx, Django, Node.js, PostgreSQL
+- ✅ **Railway Deploy**: PostgreSQL persistente, dados preservados entre deploys
+- ✅ **Comando personalizado**: setup_database para inicialização automática
 
 ## ROADMAP - Sistema de Gestão de Pedidos
 
@@ -176,15 +182,21 @@ index.html (SPA estática)
 #### Status Atual (14/07/2025):
 - **COMPLETADO**: Issues #11 e #12 - Base e Admin funcionais
 - **PRÓXIMO**: Issue #13 - API REST para integração Node.js ↔ Django  
-- **Docker**: Environment completo com PostgreSQL rodando localmente
+- **PRODUÇÃO**: Railway com PostgreSQL, dados persistentes, admin funcional
 
 ## Observações Técnicas Importantes
-- Todo JavaScript está inline no index.html (500+ linhas) - sem arquivos JS separados
-- Imagens otimizadas com lazy loading (exceto hero banner)
-- Backend usa variáveis de ambiente para chaves API (Railway)
-- Design responsivo completo com mobile-first approach
-- FAQ interativo com 10 perguntas em accordion
-- Conversão PNG→JPEG para compatibilidade Linux (case-sensitive)
+
+### Deploy e Banco de Dados
+- **PostgreSQL Railway**: Banco persistente, dados nunca são perdidos entre deploys
+- **Comando setup_database**: Criação automática de tabelas Django + superuser admin/oneway2025
+- **WhiteNoise**: Serve arquivos estáticos CSS/JS do Django Admin corretamente
+- **Variável DATABASE_URL**: Auto-detecta PostgreSQL em produção, SQLite local
+
+### Frontend e UX
+- **JavaScript inline**: Todo código JS está no index.html (500+ linhas)
+- **Lazy loading**: Imagens otimizadas exceto hero banner
+- **Mobile-first**: Breakpoint principal 768px, design responsivo completo
+- **Conversão JPEG**: Compatibilidade Linux (case-sensitive)
 
 ## Limitações Conhecidas
 - Desconto PIX é aplicado no backend, mas cliente pode trocar método no checkout MP
