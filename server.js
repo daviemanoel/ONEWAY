@@ -30,6 +30,27 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Proxy para Django Admin
+app.use('/admin', (req, res) => {
+  const url = `http://localhost:8000${req.originalUrl}`;
+  axios.get(url).then(response => {
+    res.send(response.data);
+  }).catch(error => {
+    console.error('Erro proxy Django:', error.message);
+    res.status(500).send('Django não disponível');
+  });
+});
+
+// Proxy para Django API  
+app.use('/django-api', (req, res) => {
+  const url = `http://localhost:8000/api${req.url}`;
+  axios.get(url).then(response => {
+    res.json(response.data);
+  }).catch(error => {
+    res.status(500).json({error: 'Django API não disponível'});
+  });
+});
+
 // Servir arquivos estáticos (site)
 app.get('/', (req, res) => {
   console.log('📍 Acessando rota raiz /');
