@@ -27,13 +27,7 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', "django-insecure-r#v!npvj$g78o#
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = ['*'] if DEBUG else [
-    '.railway.app',
-    '.oneway-admin.up.railway.app',
-    'oneway-production.up.railway.app',
-    'localhost',
-    '127.0.0.1'
-]
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
