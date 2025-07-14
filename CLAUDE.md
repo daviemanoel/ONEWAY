@@ -11,6 +11,19 @@ Este arquivo fornece orientações para o Claude Code (claude.ai/code) ao trabal
 Este é um site estático para o evento de conferência jovem "ONE WAY" (31 de julho - 2 de agosto de 2025). É uma aplicação de página única construída com HTML, CSS e JavaScript vanilla, com backend Node.js/Express para processamento de pagamentos.
 
 ## Comandos de Desenvolvimento
+
+### Docker (Ambiente Completo - RECOMENDADO)
+- **Subir ambiente**: `docker compose up -d`
+- **Logs**: `docker compose logs -f`
+- **Status**: `docker compose ps`
+- **Parar**: `docker compose down`
+- **Rebuild**: `docker compose up --build -d`
+
+**URLs Docker:**
+- Site: http://localhost:8080/
+- Django Admin: http://localhost:8080/admin/
+- API Health: http://localhost:8080/api/health
+
 ### Frontend (Site estático)
 - **Rodar localmente**: Abra `index.html` diretamente no navegador ou use um servidor local como `python -m http.server 8000` ou `npx serve`
 - **Sem comandos de build/lint/teste** - É puro HTML/CSS/JS sem ferramentas
@@ -20,6 +33,12 @@ Este é um site estático para o evento de conferência jovem "ONE WAY" (31 de j
 - **Deploy**: Railway (https://oneway-production.up.railway.app)
 - **Dependências**: `npm install` (express, cors, stripe, mercadopago, dotenv)
 - **Variáveis ambiente**: STRIPE_SECRET_KEY, MERCADOPAGO_ACCESS_TOKEN
+
+### Django Admin (Sistema de gestão)
+- **Ambiente local**: Via Docker (recomendado)
+- **Migrar**: `python manage.py migrate` (dentro do container Django)
+- **Criar superuser**: `python manage.py createsuperuser`
+- **Dependências**: Ver `django_admin/requirements.txt`
 
 ## Arquitetura e Componentes Principais
 
@@ -108,6 +127,9 @@ index.html (SPA estática)
 - ✅ Páginas de retorno configuradas
 - ✅ Deploy no Railway funcionando
 - ✅ Imagens convertidas para JPEG (compatibilidade)
+- ✅ **Issue #11**: Captura dados MP implementada (mp-success.html)
+- ✅ **Issue #12**: Django Admin completo com PostgreSQL
+- ✅ **Docker Environment**: Multi-container com Nginx, Django, Node.js, PostgreSQL
 
 ## ROADMAP - Sistema de Gestão de Pedidos
 
@@ -115,15 +137,17 @@ index.html (SPA estática)
 **Objetivo**: Criar sistema admin Django para gestão completa de pedidos e dados de compradores.
 
 #### Issues Criadas:
-1. **[#11 - Capturar dados MP na página sucesso](https://github.com/daviemanoel/ONEWAY/issues/11)** 🎯
-   - Implementar captura de `payment_id`, `status`, `external_reference` do Mercado Pago
-   - Modificar `mp-success.html` para extrair parâmetros da URL
-   - Base para integração com sistema admin
+1. **[#11 - Capturar dados MP na página sucesso](https://github.com/daviemanoel/ONEWAY/issues/11)** ✅ **COMPLETO**
+   - ✅ JavaScript implementado em `mp-success.html` para capturar parâmetros URL
+   - ✅ Extração de `payment_id`, `status`, `external_reference` do Mercado Pago
+   - ✅ Exibição visual dos dados capturados para o usuário
 
-2. **[#12 - Admin Django para gestão pedidos](https://github.com/daviemanoel/ONEWAY/issues/12)** 🛠️
-   - Criar models: Comprador (nome, email, telefone) e Pedido (produto, pagamento, status)
-   - Interface Django Admin completa com filtros e buscas
-   - Controle manual de status (Pago/Pendente/Cancelado)
+2. **[#12 - Admin Django para gestão pedidos](https://github.com/daviemanoel/ONEWAY/issues/12)** ✅ **COMPLETO**
+   - ✅ Models completos: Comprador e Pedido com todos os campos necessários
+   - ✅ Django Admin customizado com filtros, buscas e actions
+   - ✅ Interface visual com status coloridos e links para Mercado Pago
+   - ✅ PostgreSQL integrado via Docker
+   - ✅ Sistema funcionando em http://localhost:8080/admin/
 
 3. **[#13 - API comunicação Node.js ↔ Django](https://github.com/daviemanoel/ONEWAY/issues/13)** 🔗
    - REST API para sincronizar dados entre sistemas
@@ -147,7 +171,12 @@ index.html (SPA estática)
 ```
 
 #### Ordem de Implementação:
-`#11 (Base)` → `#12 (Admin)` → `#13 (API)` → `#14 (UX)` → `#15 (Automação)`
+✅ `#11 (Base)` → ✅ `#12 (Admin)` → 🎯 `#13 (API)` → ⏳ `#14 (UX)` → ⏳ `#15 (Automação)`
+
+#### Status Atual (14/07/2025):
+- **COMPLETADO**: Issues #11 e #12 - Base e Admin funcionais
+- **PRÓXIMO**: Issue #13 - API REST para integração Node.js ↔ Django  
+- **Docker**: Environment completo com PostgreSQL rodando localmente
 
 ## Observações Técnicas Importantes
 - Todo JavaScript está inline no index.html (500+ linhas) - sem arquivos JS separados

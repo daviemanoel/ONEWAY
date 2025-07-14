@@ -101,8 +101,9 @@ class Pedido(models.Model):
     @property
     def valor_com_desconto(self):
         """Calcula o valor final considerando desconto PIX"""
+        from decimal import Decimal
         if self.forma_pagamento == 'pix':
-            return self.preco * 0.95  # 5% desconto
+            return self.preco * Decimal('0.95')  # 5% desconto
         return self.preco
 
     def save(self, *args, **kwargs):

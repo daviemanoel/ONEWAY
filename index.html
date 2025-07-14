@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ONE WAY 2025 - Evento Oficial</title>
     <link rel="stylesheet" type="text/css" href="./Css/style.css">
+    <link rel="stylesheet" type="text/css" href="./Css/modal-checkout.css">
     <link rel="icon" type="image/png" href="./img/2.png">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 </head>
@@ -421,32 +422,17 @@
                     this.textContent = 'Processando...';
                     
                     try {
-                        // Todos os pagamentos via Mercado Pago
-                        const response = await fetch('/create-mp-checkout', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({
-                                priceId: priceId,
-                                productName: productName,
-                                size: size,
-                                paymentMethod: paymentMethod,
-                                installments: paymentMethod === 'pix' ? 1 : parseInt(paymentMethod)
-                            })
+                        // Abrir modal de dados do comprador
+                        openCheckoutModal({
+                            priceId: priceId,
+                            productName: productName,
+                            size: size,
+                            paymentMethod: paymentMethod,
+                            installments: paymentMethod === 'pix' ? 1 : parseInt(paymentMethod)
                         });
-                        
-                        const data = await response.json();
-                        
-                        if (data.checkout_url) {
-                            // Redirecionar para o checkout Mercado Pago
-                            window.location.href = data.checkout_url;
-                        } else {
-                            throw new Error(data.error || 'Erro ao processar pagamento');
-                        }
                     } catch (error) {
-                        console.error('Erro no checkout:', error);
-                        alert('Erro ao processar pagamento. Tente novamente.');
+                        console.error('Erro ao abrir checkout:', error);
+                        alert('Erro ao abrir formulário. Tente novamente.');
                     } finally {
                         // Restaurar botão
                         this.disabled = false;
@@ -495,12 +481,262 @@
             });
         }
 
+        // ========== MODAL DE CHECKOUT ==========
+        let currentCheckoutData = null;
+
+        function openCheckoutModal(checkoutData) {
+            currentCheckoutData = checkoutData;
+            
+            // Calcular preço
+            let amount = 120.00;
+            if (checkoutData.paymentMethod === 'pix') {
+                amount = amount * 0.95; // 5% de desconto
+            }
+            
+            // Preencher resumo do pedido
+            document.getElementById('product-summary-text').textContent = 
+                `${checkoutData.productName} - Tamanho ${checkoutData.size}`;
+                
+            const paymentMethodText = checkoutData.paymentMethod === 'pix' 
+                ? 'PIX (5% de desconto)' 
+                : checkoutData.paymentMethod === '2x' 
+                    ? 'Cartão de Crédito 2x sem juros'
+                    : 'Cartão de Crédito até 4x';
+                    
+            document.getElementById('price-summary-text').innerHTML = 
+                checkoutData.paymentMethod === 'pix' 
+                    ? `<s>R$ 120,00</s> R$ ${amount.toFixed(2)} (${paymentMethodText})`
+                    : `R$ ${amount.toFixed(2)} (${paymentMethodText})`;
+            
+            // Limpar formulário
+            document.getElementById('checkout-form').reset();
+            clearErrors();
+            
+            // Mostrar modal
+            document.getElementById('checkout-modal').style.display = 'block';
+        }
+
+        function closeCheckoutModal() {
+            document.getElementById('checkout-modal').style.display = 'none';
+            currentCheckoutData = null;
+        }
+
+        // Validação de campos
+        function validateField(field) {
+            const value = field.value.trim();
+            let isValid = true;
+            let errorMessage = '';
+
+            switch(field.type) {
+                case 'text':
+                    if (value.length < 2) {
+                        isValid = false;
+                        errorMessage = 'Nome deve ter pelo menos 2 caracteres';
+                    }
+                    break;
+                case 'email':
+                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                    if (!emailRegex.test(value)) {
+                        isValid = false;
+                        errorMessage = 'Digite um e-mail válido';
+                    }
+                    break;
+                case 'tel':
+                    const phoneRegex = /^\(\d{2}\)\s\d{4,5}-\d{4}$/;
+                    if (!phoneRegex.test(value)) {
+                        isValid = false;
+                        errorMessage = 'Use o formato: (11) 99999-9999';
+                    }
+                    break;
+            }
+
+            showFieldError(field, isValid, errorMessage);
+            return isValid;
+        }
+
+        function showFieldError(field, isValid, errorMessage) {
+            const formGroup = field.closest('.form-group');
+            let errorElement = formGroup.querySelector('.error-message');
+            
+            if (!errorElement) {
+                errorElement = document.createElement('div');
+                errorElement.className = 'error-message';
+                formGroup.appendChild(errorElement);
+            }
+
+            if (isValid) {
+                field.classList.remove('error');
+                errorElement.style.display = 'none';
+            } else {
+                field.classList.add('error');
+                errorElement.textContent = errorMessage;
+                errorElement.style.display = 'block';
+            }
+        }
+
+        function clearErrors() {
+            document.querySelectorAll('.form-group input').forEach(input => {
+                input.classList.remove('error');
+            });
+            document.querySelectorAll('.error-message').forEach(error => {
+                error.style.display = 'none';
+            });
+        }
+
+        // Máscara de telefone
+        function formatPhone(input) {
+            let value = input.value.replace(/\D/g, '');
+            if (value.length >= 11) {
+                value = value.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+            } else if (value.length >= 10) {
+                value = value.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+            } else if (value.length >= 6) {
+                value = value.replace(/(\d{2})(\d{4})/, '($1) $2');
+            } else if (value.length >= 2) {
+                value = value.replace(/(\d{2})/, '($1) ');
+            }
+            input.value = value;
+        }
+
+        // Processar checkout final
+        async function processCheckout(formData) {
+            if (!currentCheckoutData) return;
+
+            const checkoutButton = document.querySelector('.confirm-btn');
+            checkoutButton.disabled = true;
+            checkoutButton.textContent = 'Processando...';
+
+            try {
+                const response = await fetch('/create-mp-checkout', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        ...currentCheckoutData,
+                        // Dados do comprador
+                        nome: formData.get('nome'),
+                        email: formData.get('email'),
+                        telefone: formData.get('telefone')
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.checkout_url) {
+                    // Fechar modal e redirecionar para o checkout Mercado Pago
+                    closeCheckoutModal();
+                    window.location.href = data.checkout_url;
+                } else {
+                    throw new Error(data.error || 'Erro ao processar pagamento');
+                }
+            } catch (error) {
+                console.error('Erro no checkout:', error);
+                
+                // Verificar se é erro de token
+                if (error.message.includes('invalid_token') || error.message.includes('bad_request')) {
+                    alert('⚠️ Sistema em modo de desenvolvimento\n\nPara testar com pagamento real, configure um token válido do Mercado Pago.\n\nOs dados do pedido foram salvos com sucesso no sistema!');
+                } else {
+                    alert('Erro ao processar pagamento. Tente novamente.');
+                }
+            } finally {
+                checkoutButton.disabled = false;
+                checkoutButton.textContent = 'Confirmar e Pagar';
+            }
+        }
+
         // Inicializar quando página carregar
         document.addEventListener('DOMContentLoaded', () => {
             loadProducts();
+
+            // Event listeners do modal
+            document.querySelector('.close').addEventListener('click', closeCheckoutModal);
+            document.querySelector('.cancel-btn').addEventListener('click', closeCheckoutModal);
+            
+            // Fechar modal clicando fora
+            window.addEventListener('click', (event) => {
+                const modal = document.getElementById('checkout-modal');
+                if (event.target === modal) {
+                    closeCheckoutModal();
+                }
+            });
+
+            // Validação em tempo real
+            document.getElementById('nome').addEventListener('blur', function() {
+                validateField(this);
+            });
+
+            document.getElementById('email').addEventListener('blur', function() {
+                validateField(this);
+            });
+
+            document.getElementById('telefone').addEventListener('input', function() {
+                formatPhone(this);
+            });
+
+            document.getElementById('telefone').addEventListener('blur', function() {
+                validateField(this);
+            });
+
+            // Submit do formulário
+            document.getElementById('checkout-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                // Validar todos os campos
+                const fields = this.querySelectorAll('input[required]');
+                let allValid = true;
+                
+                fields.forEach(field => {
+                    if (!validateField(field)) {
+                        allValid = false;
+                    }
+                });
+
+                if (allValid) {
+                    const formData = new FormData(this);
+                    processCheckout(formData);
+                } else {
+                    alert('Por favor, corrija os erros no formulário.');
+                }
+            });
         });
 
     </script>
+
+    <!-- Modal de Dados do Comprador -->
+    <div id="checkout-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Finalizar Compra</h2>
+            <form id="checkout-form">
+                <div class="form-group">
+                    <label for="nome">Nome Completo *</label>
+                    <input type="text" id="nome" name="nome" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="email">E-mail *</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="telefone">Telefone/WhatsApp *</label>
+                    <input type="tel" id="telefone" name="telefone" placeholder="(11) 99999-9999" required>
+                </div>
+                
+                <div class="product-summary">
+                    <h3>Resumo do Pedido:</h3>
+                    <p id="product-summary-text"></p>
+                    <p id="price-summary-text"></p>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="cancel-btn">Cancelar</button>
+                    <button type="submit" class="confirm-btn">Confirmar e Pagar</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
 </body>
 

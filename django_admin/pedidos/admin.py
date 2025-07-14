@@ -97,8 +97,8 @@ class PedidoAdmin(admin.ModelAdmin):
         valor = obj.valor_com_desconto
         if obj.forma_pagamento == 'pix' and valor < obj.preco:
             return format_html(
-                '<span style="color: green;"><s>R$ {:.2f}</s><br/>R$ {:.2f}</span>',
-                obj.preco, valor
+                '<span style="color: green;"><s>R$ {}</s><br/>R$ {}</span>',
+                f'{obj.preco:.2f}', f'{valor:.2f}'
             )
         return f'R$ {valor:.2f}'
     preco_final.short_description = 'Preço Final'

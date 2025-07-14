@@ -3,6 +3,7 @@ const cors = require('cors');
 const path = require('path');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { MercadoPagoConfig, Preference } = require('mercadopago');
+const axios = require('axios');
 require('dotenv').config();
 
 // Configurar Mercado Pago
@@ -147,7 +148,68 @@ app.post('/create-mp-checkout', async (req, res) => {
       expiration_date_to: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24h
     };
 
+    // Enviar dados do pedido para o Django ANTES de criar a preferência MP
+    let djangoPedidoId = null;
+    if (process.env.DJANGO_API_URL && process.env.DJANGO_API_TOKEN) {
+      try {
+        const pedidoData = {
+          // Dados do comprador (agora vindos do formulário)
+          nome: req.body.nome || "Cliente Temporário",
+          email: req.body.email || "cliente@temp.com", 
+          telefone: req.body.telefone || "(00) 00000-0000",
+          
+          // Dados do pedido
+          produto: productName.toLowerCase().replace(/ /g, '-'),
+          tamanho: size,
+          preco: amount,
+          forma_pagamento: paymentMethod === 'pix' ? 'pix' : paymentMethod === '2x' ? '2x' : '4x',
+          
+          // Dados do Mercado Pago (serão atualizados depois)
+          external_reference: preferenceData.external_reference
+        };
+
+        const djangoResponse = await axios.post(
+          `${process.env.DJANGO_API_URL}/pedidos/`,
+          pedidoData,
+          {
+            headers: {
+              'Authorization': `Token ${process.env.DJANGO_API_TOKEN}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+
+        djangoPedidoId = djangoResponse.data.id;
+        console.log('Pedido criado no Django:', djangoPedidoId);
+      } catch (error) {
+        console.error('Erro ao enviar para Django:', error.response?.data || error.message);
+        // Não bloquear o checkout se falhar o Django
+      }
+    }
+
+    // Agora tentar criar a preferência do Mercado Pago
     const response = await preference.create({ body: preferenceData });
+
+    // Se chegou até aqui, atualizar o pedido Django com o preference_id
+    if (djangoPedidoId && process.env.DJANGO_API_URL && process.env.DJANGO_API_TOKEN) {
+      try {
+        await axios.post(
+          `${process.env.DJANGO_API_URL}/pedidos/${djangoPedidoId}/atualizar_status/`,
+          {
+            preference_id: response.id
+          },
+          {
+            headers: {
+              'Authorization': `Token ${process.env.DJANGO_API_TOKEN}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+        console.log('Preference ID atualizado no Django');
+      } catch (error) {
+        console.error('Erro ao atualizar preference_id:', error.response?.data || error.message);
+      }
+    }
 
     res.json({ 
       checkout_url: response.init_point,
