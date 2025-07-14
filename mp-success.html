@@ -108,9 +108,11 @@
             
             <div class="mp-payment-info">
                 <h3>Detalhes do pagamento:</h3>
-                <p>✓ Pagamento processado com segurança</p>
-                <p>✓ Você receberá um e-mail de confirmação</p>
-                <p>✓ Fique atento às instruções de entrega</p>
+                <div id="payment-details">
+                    <p>✓ Pagamento processado com segurança</p>
+                    <p>✓ Você receberá um e-mail de confirmação</p>
+                    <p>✓ Fique atento às instruções de entrega</p>
+                </div>
             </div>
             
             <p class="mp-message">
@@ -125,6 +127,99 @@
             </div>
         </div>
     </div>
+
+    <script>
+        // Função para capturar parâmetros da URL do Mercado Pago
+        function capturarParametrosMP() {
+            const urlParams = new URLSearchParams(window.location.search);
+            
+            // Parâmetros principais do Mercado Pago
+            const paymentId = urlParams.get('payment_id');
+            const status = urlParams.get('status');
+            const externalReference = urlParams.get('external_reference');
+            const paymentType = urlParams.get('payment_type');
+            const merchantOrderId = urlParams.get('merchant_order_id');
+            const preferenceId = urlParams.get('preference_id');
+            
+            // Se houver parâmetros do MP, exibir os dados
+            if (paymentId || status || externalReference) {
+                exibirDadosPagamento({
+                    paymentId,
+                    status,
+                    externalReference,
+                    paymentType,
+                    merchantOrderId,
+                    preferenceId
+                });
+            }
+        }
+        
+        // Função para exibir os dados capturados
+        function exibirDadosPagamento(dados) {
+            const paymentDetails = document.getElementById('payment-details');
+            let html = '';
+            
+            // Mapear status para mensagens amigáveis
+            const statusMessages = {
+                'approved': '✅ Aprovado',
+                'pending': '⏳ Pendente',
+                'in_process': '🔄 Processando',
+                'rejected': '❌ Rejeitado',
+                'cancelled': '🚫 Cancelado'
+            };
+            
+            // Mapear tipos de pagamento
+            const paymentTypeMessages = {
+                'credit_card': '💳 Cartão de Crédito',
+                'debit_card': '💳 Cartão de Débito',
+                'account_money': '💰 Dinheiro em Conta',
+                'ticket': '🎫 Boleto',
+                'bank_transfer': '🏦 Transferência',
+                'pix': '⚡ PIX'
+            };
+            
+            // Construir HTML com os dados
+            if (dados.paymentId) {
+                html += `<p><strong>ID do Pagamento:</strong> ${dados.paymentId}</p>`;
+            }
+            
+            if (dados.status) {
+                const statusText = statusMessages[dados.status] || dados.status;
+                html += `<p><strong>Status:</strong> ${statusText}</p>`;
+            }
+            
+            if (dados.paymentType) {
+                const typeText = paymentTypeMessages[dados.paymentType] || dados.paymentType;
+                html += `<p><strong>Método:</strong> ${typeText}</p>`;
+            }
+            
+            if (dados.externalReference) {
+                html += `<p><strong>Referência:</strong> ${dados.externalReference}</p>`;
+            }
+            
+            if (dados.merchantOrderId) {
+                html += `<p><strong>Pedido:</strong> ${dados.merchantOrderId}</p>`;
+            }
+            
+            // Adicionar timestamp
+            const now = new Date().toLocaleString('pt-BR');
+            html += `<p><strong>Processado em:</strong> ${now}</p>`;
+            
+            // Adicionar linha separadora e dados originais
+            html += '<hr style="margin: 1rem 0; border: 1px solid #eee;">';
+            html += '<p>✓ Pagamento processado com segurança</p>';
+            html += '<p>✓ Você receberá um e-mail de confirmação</p>';
+            html += '<p>✓ Fique atento às instruções de entrega</p>';
+            
+            paymentDetails.innerHTML = html;
+            
+            // Log para debugging (pode ser removido em produção)
+            console.log('Dados do pagamento capturados:', dados);
+        }
+        
+        // Executar quando a página carregar
+        document.addEventListener('DOMContentLoaded', capturarParametrosMP);
+    </script>
 </body>
 
 </html>
