@@ -35,7 +35,15 @@ Este é um site estático para o evento de conferência jovem "ONE WAY" (31 de j
 - **Migrar localmente**: `python manage.py migrate`
 - **Setup completo produção**: `python manage.py setup_database` (comando personalizado)
 - **Admin produção**: https://api-production-e044.up.railway.app/admin/ (admin/oneway2025)
+- **API Token**: `python manage.py create_api_token` (integração Node.js)
+- **Consulta MP**: Botão admin funcional com API real
 - **Dependências**: Ver `api/requirements.txt`
+
+### Comandos Úteis de Gestão
+- **Testar API**: `curl -H "Authorization: Token SEU_TOKEN" https://api-production-e044.up.railway.app/api/pedidos/`
+- **Reset DB local**: `rm db.sqlite3 && python manage.py migrate && python manage.py createsuperuser`
+- **Logs produção**: `railway logs --service API`
+- **Deploy forçado**: `railway up --service API`
 
 ## Arquitetura e Componentes Principais
 
@@ -86,19 +94,21 @@ index.html (SPA estática)
 - **Layout tabela** para seção ingressos (Date + Tickets combinados)
 - **Breakpoint principal**: 768px para mobile/desktop
 
-### Integração de Pagamentos
+### Integração de Pagamentos Completa
 - **Ingressos**: tiketo.com.br (links diretos, 3 lotes ativos)
-- **Produtos**: Mercado Pago via backend Node.js/Express
-- **Fluxo**: Frontend → Backend `/create-mp-checkout` → Mercado Pago Checkout
-- **Validação**: Seleção obrigatória de tamanho e forma de pagamento
+- **Produtos**: Sistema completo Mercado Pago + Django
+- **Fluxo Seguro**: Frontend → MP → Registro automático no banco
+- **Validação**: Formulário obrigatório + seleção produto/pagamento
 
-### Sistema de Pagamento Atual (Mercado Pago)
-- **PIX**: 5% de desconto (R$ 114,00)
-- **Cartão**: Até 2x sem juros, até 4x com juros (R$ 120,00)
-- **Backend**: Express.js com endpoints dedicados
-- **Segurança**: Variáveis de ambiente no Railway
-- **Checkout**: Simplificado sem exigência de login MP
-- **Retorno**: Páginas success/cancel dedicadas
+### Sistema de Pagamento Otimizado (Mercado Pago)
+- **PIX**: 5% de desconto automático
+- **Cartão**: Até 2x sem juros, até 4x com juros
+- **Segurança**: Preços sempre do servidor (products.json)
+- **Anti-fraude**: Logs de tentativas de manipulação
+- **Checkout**: Sem login obrigatório + UX otimizada
+- **Gestão**: Admin Django com controle total
+- **Status**: Sincronização automática com MP
+- **Dados limpos**: Zero registros "fantasma"
 
 ### Estrutura products.json
 ```json
@@ -134,55 +144,83 @@ index.html (SPA estática)
 - ✅ Imagens convertidas para JPEG (compatibilidade)
 - ✅ **Issue #11**: Captura dados MP implementada (mp-success.html)
 - ✅ **Issue #12**: Django Admin completo com PostgreSQL
+- ✅ **Issue #13**: API REST Django-Node.js funcional
+- ✅ **Issue #14**: Formulário de dados do comprador (implementado)
+- ✅ **Issue #17**: Fluxo otimizado - sem registros imediatos
+- ✅ **Issue #18**: Criação retroativa na página de sucesso
 - ✅ **Railway Deploy**: PostgreSQL persistente, dados preservados entre deploys
 - ✅ **Comando personalizado**: setup_database para inicialização automática
+- ✅ **Segurança**: Preços sempre vindos do servidor (products.json)
+- ✅ **Admin funcional**: Links MP, consulta status, gestão completa
 
-## ROADMAP - Sistema de Gestão de Pedidos
+## FLUXO COMPLETO DE PAGAMENTO OTIMIZADO
 
-### Próximas Implementações (Issues GitHub)
-**Objetivo**: Criar sistema admin Django para gestão completa de pedidos e dados de compradores.
+### Sistema Atual Implementado ✅
+**Objetivo ALCANÇADO**: Sistema completo de e-commerce com gestão de pedidos sem registros "fantasma".
 
-#### Issues Criadas:
-1. **[#11 - Capturar dados MP na página sucesso](https://github.com/daviemanoel/ONEWAY/issues/11)** ✅ **COMPLETO**
-   - ✅ JavaScript implementado em `mp-success.html` para capturar parâmetros URL
-   - ✅ Extração de `payment_id`, `status`, `external_reference` do Mercado Pago
-   - ✅ Exibição visual dos dados capturados para o usuário
-
-2. **[#12 - Admin Django para gestão pedidos](https://github.com/daviemanoel/ONEWAY/issues/12)** ✅ **COMPLETO**
-   - ✅ Models completos: Comprador e Pedido com todos os campos necessários
-   - ✅ Django Admin customizado com filtros, buscas e actions
-   - ✅ Interface visual com status coloridos e links para Mercado Pago
-   - ✅ PostgreSQL integrado via Docker
-   - ✅ Sistema funcionando em http://localhost:8080/admin/
-
-3. **[#13 - API comunicação Node.js ↔ Django](https://github.com/daviemanoel/ONEWAY/issues/13)** 🔗
-   - REST API para sincronizar dados entre sistemas
-   - Endpoints: criar pedido, atualizar status, consultar MP
-   - Autenticação por token API
-
-4. **[#14 - Formulário dados comprador](https://github.com/daviemanoel/ONEWAY/issues/14)** 📝
-   - Modal/seção checkout com campos: nome, email, telefone
-   - Validação JavaScript e UX responsiva
-   - Fluxo: dados → Django → redirect MP
-
-5. **[#15 - Webhook Mercado Pago](https://github.com/daviemanoel/ONEWAY/issues/15)** 🔄
-   - Automação: receber notificações MP para atualizar status
-   - Implementação futura (não crítico para MVP)
-
-#### Arquitetura Planejada:
+#### Fluxo de Pagamento Seguro:
 ```
-[Site Node.js] ← API REST → [Admin Django] ← Webhook → [Mercado Pago]
-     ↓                           ↓                         ↓
-[Frontend]                 [Gestão Pedidos]           [Pagamentos]
+1. Cliente preenche formulário (nome, email, telefone)
+2. Seleciona produto + tamanho + forma de pagamento
+3. Clica "Pagar" → Cria preferência MP (SEM registro no banco)
+4. Redireciona para Mercado Pago
+5. Cliente paga no MP
+6. MP redireciona para mp-success.html COM dados do comprador na URL
+7. Página detecta status=approved → Cria registros automaticamente
+8. Exibe confirmação visual + ID do pedido
 ```
 
-#### Ordem de Implementação:
-✅ `#11 (Base)` → ✅ `#12 (Admin)` → 🎯 `#13 (API)` → ⏳ `#14 (UX)` → ⏳ `#15 (Automação)`
+#### Issues Implementadas e Funcionais:
+1. **[#11 - Capturar dados MP](https://github.com/daviemanoel/ONEWAY/issues/11)** ✅ **COMPLETO**
+   - JavaScript avançado em `mp-success.html` 
+   - Captura parâmetros MP + dados comprador via URL
+   - Estados visuais: loading, sucesso, erro, já processado
 
-#### Status Atual (14/07/2025):
-- **COMPLETADO**: Issues #11 e #12 - Base e Admin funcionais
-- **PRÓXIMO**: Issue #13 - API REST para integração Node.js ↔ Django  
-- **PRODUÇÃO**: Railway com PostgreSQL, dados persistentes, admin funcional
+2. **[#12 - Admin Django](https://github.com/daviemanoel/ONEWAY/issues/12)** ✅ **COMPLETO**
+   - Models: Comprador e Pedido com relacionamento
+   - Admin customizado: filtros, buscas, actions, status coloridos
+   - Links funcionais para Mercado Pago
+   - Botão "Consultar Status MP" com integração real
+   - PostgreSQL Railway com dados persistentes
+
+3. **[#13 - API REST Django-Node.js](https://github.com/daviemanoel/ONEWAY/issues/13)** ✅ **COMPLETO**
+   - Django REST Framework com token authentication
+   - Endpoints: `/api/pedidos/`, `/api/mp-payment-details/`
+   - Proxy Node.js para comunicação segura
+   - Serializers com validação e criação atômica
+
+4. **[#14 - Formulário comprador](https://github.com/daviemanoel/ONEWAY/issues/14)** ✅ **COMPLETO**
+   - Modal responsivo com validação JavaScript
+   - Campos: nome, email, telefone (todos obrigatórios)
+   - Máscara de telefone brasileiro
+   - Integração com fluxo de pagamento
+
+5. **[#17 - Fluxo otimizado](https://github.com/daviemanoel/ONEWAY/issues/17)** ✅ **COMPLETO**
+   - Removida criação imediata de registros
+   - Dados do comprador incluídos na URL de retorno
+   - Cache de produtos.json para performance
+   - Logs de segurança anti-fraude
+
+6. **[#18 - Criação retroativa](https://github.com/daviemanoel/ONEWAY/issues/18)** ✅ **COMPLETO**
+   - Registros criados apenas quando pagamento aprovado
+   - Fallback para metadata MP se necessário
+   - Detecção de duplicatas
+   - Feedback visual completo
+
+#### Próximas Implementações (Opcionais):
+- **Issue #15**: Webhook MP para automação total (não crítico)
+- **Relatórios**: Dashboard de vendas e métricas
+- **Notificações**: Email automático para compradores
+- **Estoque**: Controle automático de quantidades
+
+#### Arquitetura Final Implementada:
+```
+[Frontend HTML/JS] → [Node.js/Express] → [Mercado Pago]
+                            ↓
+                    [Django REST API] → [PostgreSQL Railway]
+                            ↓
+                    [Admin Interface] → [Gestão Completa]
+```
 
 ## Observações Técnicas Importantes
 
@@ -198,11 +236,37 @@ index.html (SPA estática)
 - **Mobile-first**: Breakpoint principal 768px, design responsivo completo
 - **Conversão JPEG**: Compatibilidade Linux (case-sensitive)
 
-## Limitações Conhecidas
-- Desconto PIX é aplicado no backend, mas cliente pode trocar método no checkout MP
-- Não há captura detalhada de dados do comprador (email, telefone)
-- Checkout sem login pode reduzir conversão mas melhora UX
-- Stripe mantido no código mas não utilizado no fluxo atual
+## Configurações de Produção
+
+### Variáveis de Ambiente Necessárias
+```bash
+# Node.js (Railway Web Service)
+MERCADOPAGO_ACCESS_TOKEN=APP_USR_xxx  # Token produção MP
+DJANGO_API_URL=https://api-production-e044.up.railway.app/api
+DJANGO_API_TOKEN=xxx  # Token gerado pelo Django
+MP_SUCCESS_URL=https://oneway-production.up.railway.app/mp-success
+MP_CANCEL_URL=https://oneway-production.up.railway.app/mp-cancel
+
+# Django (Railway API Service)  
+DATABASE_URL=postgresql://xxx  # Auto-configurado pelo Railway
+DJANGO_SECRET_KEY=xxx
+DEBUG=False
+MERCADOPAGO_ACCESS_TOKEN=APP_USR_xxx  # Para consultas admin
+```
+
+### Segurança Implementada
+- ✅ **Preços protegidos**: Sempre vindos do products.json servidor
+- ✅ **Token API**: Autenticação segura Django ↔ Node.js
+- ✅ **CORS configurado**: Apenas domínios autorizados
+- ✅ **Logs anti-fraude**: Detecção de tentativas de manipulação
+- ✅ **Validação dupla**: Frontend + backend + Django
+- ✅ **PostgreSQL**: Banco persistente e seguro
+
+### Limitações Conhecidas (Menores)
+- Cliente pode alterar método no checkout MP (preço permanece correto)
+- Links MP admin podem precisar ajuste conforme painel MP
+- Checkout sem login MP (trade-off: UX vs conversão)
+- Stripe mantido no código (legacy, não usado)
 
 # important-instruction-reminders
 Do what has been asked; nothing more, nothing less.
