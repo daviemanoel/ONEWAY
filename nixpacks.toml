@@ -1,0 +1,15 @@
+[phases.setup]
+nixPkgs = ['python39']
+
+[phases.install]
+cmds = ['cd django_admin && pip install -r requirements.txt']
+
+[phases.build]
+cmds = [
+  'cd django_admin',
+  'python manage.py collectstatic --noinput',
+  'python manage.py migrate'
+]
+
+[start]
+cmd = 'cd django_admin && python criar_dados_exemplo.py && gunicorn oneway_admin.wsgi:application --bind 0.0.0.0:$PORT'
