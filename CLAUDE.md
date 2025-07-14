@@ -36,7 +36,7 @@ Este é um site estático para o evento de conferência jovem "ONE WAY" (31 de j
 - **Setup completo produção**: `python manage.py setup_database` (comando personalizado)
 - **Admin produção**: https://api-production-e044.up.railway.app/admin/ (admin/oneway2025)
 - **API Token**: `python manage.py create_api_token` (integração Node.js)
-- **Consulta MP**: Botão admin funcional com API real
+- **Consulta MP**: ⚠️ **EM DESENVOLVIMENTO** - Botão implementado mas com problemas de conectividade
 - **Dependências**: Ver `api/requirements.txt`
 
 ### Comandos Úteis de Gestão
@@ -180,7 +180,7 @@ index.html (SPA estática)
    - Models: Comprador e Pedido com relacionamento
    - Admin customizado: filtros, buscas, actions, status coloridos
    - Links funcionais para Mercado Pago
-   - Botão "Consultar Status MP" com integração real
+   - ⚠️ Botão "Consultar Status MP" implementado mas com problemas de conectividade
    - PostgreSQL Railway com dados persistentes
 
 3. **[#13 - API REST Django-Node.js](https://github.com/daviemanoel/ONEWAY/issues/13)** ✅ **COMPLETO**
@@ -207,11 +207,19 @@ index.html (SPA estática)
    - Detecção de duplicatas
    - Feedback visual completo
 
-#### Próximas Implementações (Opcionais):
+#### Próximas Implementações:
+- ⚠️ **URGENTE: Fix botão Consultar MP** - Resolver conectividade com API MP
 - **Issue #15**: Webhook MP para automação total (não crítico)
 - **Relatórios**: Dashboard de vendas e métricas
 - **Notificações**: Email automático para compradores
 - **Estoque**: Controle automático de quantidades
+
+#### Problemas Conhecidos:
+- ❌ **Botão "Consultar Status MP"**: Implementado com JavaScript, CSS e endpoint Django, mas não está funcionando em produção
+  - Código completo em: `api/pedidos/static/admin/js/consultar_mp.js`
+  - Endpoint: `/consultar-mp/` com autenticação staff_member_required
+  - Token MP configurado no Railway
+  - Precisa investigar logs detalhados e debugging
 
 #### Arquitetura Final Implementada:
 ```
