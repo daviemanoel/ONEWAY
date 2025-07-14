@@ -6,6 +6,10 @@ const { MercadoPagoConfig, Preference } = require('mercadopago');
 const axios = require('axios');
 require('dotenv').config();
 
+// Configurações da API Django
+const DJANGO_API_URL = process.env.DJANGO_API_URL || 'http://localhost:8000/api';
+const DJANGO_API_TOKEN = process.env.DJANGO_API_TOKEN;
+
 // Configurar Mercado Pago
 const mercadoPagoClient = new MercadoPagoConfig({ 
   accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN 
