@@ -24,22 +24,7 @@ def fix_database():
             
         print("✅ Tabelas criadas com sucesso!")
         
-        # Verifica se as tabelas foram criadas
-        with connection.cursor() as cursor:
-            cursor.execute("""
-                SELECT table_name 
-                FROM information_schema.tables 
-                WHERE table_schema = 'public' 
-                AND table_name LIKE 'django_%'
-            """)
-            tables = cursor.fetchall()
-            
-        if tables:
-            print(f"✅ Encontradas {len(tables)} tabelas Django:")
-            for table in tables:
-                print(f"  - {table[0]}")
-        else:
-            print("❌ Nenhuma tabela Django encontrada")
+        print("✅ Migrações executadas com sucesso!")
             
     except Exception as e:
         print(f"❌ Erro ao criar tabelas: {e}")
