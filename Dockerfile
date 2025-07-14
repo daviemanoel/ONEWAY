@@ -1,26 +1,39 @@
-# Multi-stage build para Railway
-FROM node:18-alpine as nodejs
+# Dockerfile unificado para Railway - Django + Node.js
+FROM python:3.11-slim
 
-# Install curl for health checks
-RUN apk add --no-cache curl
+# Install Node.js e outras dependências
+RUN apt-get update && apt-get install -y \
+    curl \
+    supervisor \
+    && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+    && apt-get install -y nodejs \
+    && rm -rf /var/lib/apt/lists/*
 
-# Node.js setup
 WORKDIR /app
+
+# Copy e instalar dependências Python (Django)
+COPY django_admin/requirements.txt ./django_requirements.txt
+RUN pip install --no-cache-dir -r django_requirements.txt
+
+# Copy e instalar dependências Node.js
 COPY package*.json ./
 RUN npm install
+
+# Copy arquivos Django
+COPY django_admin/ ./django_admin/
+
+# Copy arquivos Node.js e frontend
 COPY server.js .
 COPY products.json .
 COPY index.html .
 COPY Css/ ./Css/
 COPY img/ ./img/
 
-# Expose Node.js port  
+# Copy configuração supervisord
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+# Expose port
 EXPOSE $PORT
-EXPOSE 3000
 
-# Health check for Node.js
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:${PORT:-3000}/health || exit 1
-
-# Start Node.js (Railway will run this)
-CMD ["node", "server.js"]
+# Start supervisord
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
