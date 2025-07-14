@@ -296,22 +296,31 @@ app.get('/api/mp-payment-details/:paymentId', async (req, res) => {
       return res.status(404).json({ error: 'Pagamento não encontrado' });
     }
     
-    // Buscar metadata da preferência se disponível
+    // Buscar metadata da preferência
     let metadata = {};
-    if (paymentData.additional_info?.items?.[0]?.title) {
-      // Se não tem metadata no payment, buscar na preferência
-      const preferenceId = paymentData.additional_info.preference_id;
-      
-      if (preferenceId) {
-        try {
-          const { Preference } = require('mercadopago');
-          const preferenceClient = new Preference(mercadoPagoClient);
-          const preferenceData = await preferenceClient.get({ preferenceId });
-          metadata = preferenceData.metadata || {};
-        } catch (prefError) {
-          console.warn('Erro ao buscar preferência:', prefError.message);
-        }
+    
+    // Primeiro tentar pegar preference_id dos parâmetros da URL (mais confiável)
+    const urlParams = req.query;
+    let preferenceId = urlParams.preference_id;
+    
+    // Se não veio na URL, tentar pegar do paymentData
+    if (!preferenceId) {
+      preferenceId = paymentData.additional_info?.preference_id;
+    }
+    
+    if (preferenceId) {
+      try {
+        console.log(`🔍 Buscando preferência: ${preferenceId}`);
+        const preferenceData = await preference.get({ preferenceId });
+        metadata = preferenceData.metadata || {};
+        console.log(`📋 Metadata da preferência:`, metadata);
+      } catch (prefError) {
+        console.warn('⚠️ Erro ao buscar preferência:', prefError.message);
+        // Tentar buscar metadata do próprio payment como fallback
+        metadata = paymentData.metadata || {};
       }
+    } else {
+      console.warn('⚠️ Preference ID não encontrado');
     }
     
     console.log(`✅ Metadata encontrada:`, metadata);

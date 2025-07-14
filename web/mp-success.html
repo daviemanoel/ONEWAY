@@ -229,8 +229,9 @@
             try {
                 console.log('🔄 Criando registros para pagamento aprovado...');
                 
-                // Primeiro, buscar metadata do pagamento no MP
-                const metadataResponse = await fetch(`/api/mp-payment-details/${dadosMP.paymentId}`);
+                // Primeiro, buscar metadata do pagamento no MP (incluir preference_id)
+                const url = `/api/mp-payment-details/${dadosMP.paymentId}?preference_id=${dadosMP.preferenceId}`;
+                const metadataResponse = await fetch(url);
                 
                 if (!metadataResponse.ok) {
                     throw new Error('Erro ao buscar detalhes do pagamento no MP');
