@@ -1,0 +1,11 @@
+# Ignorar Node.js para priorizar Django
+package.json
+package-lock.json
+node_modules/
+server.js
+
+# Manter apenas Django
+!django_admin/
+!Dockerfile
+!nixpacks.toml
+!railway.json

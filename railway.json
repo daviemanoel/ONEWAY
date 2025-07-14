@@ -1,10 +1,10 @@
 {
   "$schema": "https://railway.app/railway.schema.json",
   "build": {
-    "builder": "NIXPACKS"
+    "builder": "DOCKERFILE",
+    "dockerfilePath": "Dockerfile"
   },
   "deploy": {
-    "startCommand": "cd django_admin && python manage.py migrate && python manage.py collectstatic --noinput && python criar_dados_exemplo.py && gunicorn oneway_admin.wsgi:application --bind 0.0.0.0:$PORT",
     "healthcheckPath": "/admin/",
     "healthcheckTimeout": 100,
     "restartPolicyType": "ON_FAILURE",
