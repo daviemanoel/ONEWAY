@@ -239,7 +239,7 @@ app.post('/create-mp-checkout', async (req, res) => {
       forma_pagamento: paymentMethod === 'pix' ? 'pix' : paymentMethod === '2x' ? '2x' : '4x',
       
       // Status inicial
-      status_pagamento: 'pendente',
+      status_pagamento: 'pending',
       external_reference: externalReference
     };
     
