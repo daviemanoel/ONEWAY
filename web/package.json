@@ -1,11 +1,13 @@
 {
   "name": "oneway-backend",
-  "version": "1.0.0",
-  "description": "Backend para integração Stripe Checkout - ONE WAY 2025",
+  "version": "2.0.0",
+  "description": "Backend Node.js/Express para e-commerce ONE WAY 2025 - Integração Mercado Pago com Django Admin",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js"
+    "dev": "node server.js",
+    "health": "curl http://localhost:3000/health",
+    "mp-health": "curl http://localhost:3000/mp-health"
   },
   "engines": {
     "node": ">=18.0.0"
@@ -19,11 +21,23 @@
     "stripe": "^14.15.0"
   },
   "keywords": [
-    "stripe",
-    "checkout",
+    "oneway",
     "nodejs",
-    "oneway"
+    "express",
+    "mercadopago",
+    "ecommerce",
+    "django-integration",
+    "railway",
+    "checkout",
+    "pagamentos"
   ],
   "author": "ONE WAY 2025",
-  "license": "MIT"
-}
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/daviemanoel/ONEWAY.git"
+  },
+  "homepage": "https://oneway.mevamfranca.com.br",
+  "bugs": {
+    "url": "https://github.com/daviemanoel/ONEWAY/issues"
+  }

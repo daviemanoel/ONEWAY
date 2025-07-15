@@ -42,9 +42,11 @@ Este é um site estático para o evento de conferência jovem "ONE WAY" (31 de j
 - **Sem comandos de build/lint/teste** - É puro HTML/CSS/JS sem ferramentas
 
 ### Backend (Processamento de pagamentos)
-- **Servidor local**: `node server.js` na porta 3000
+- **Servidor local**: `cd web && node server.js` na porta 3000
+- **Scripts disponíveis**: `npm start` ou `npm run dev`
 - **Deploy**: Railway (https://oneway.mevamfranca.com.br)
-- **Dependências**: `npm install` (express, cors, stripe, mercadopago, dotenv)
+- **Dependências**: `cd web && npm install` (express, cors, stripe, mercadopago, dotenv)
+- **Node.js**: >= 18.0.0 (especificado em package.json)
 - **Variáveis ambiente**: STRIPE_SECRET_KEY, MERCADOPAGO_ACCESS_TOKEN
 
 ### Django Admin (Sistema de gestão)
