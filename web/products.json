@@ -3,7 +3,8 @@
     "camiseta-marrom": {
       "id": "1",
       "title": "Camiseta One Way Marrom",
-      "price": 1.00,
+      "price": 120.00,
+      
       "preco_custo": 53.50,
       "image": "./img/camisetas/camiseta_marrom.jpeg",
       "images": [

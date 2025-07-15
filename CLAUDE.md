@@ -103,6 +103,7 @@ index.html (SPA estática)
 ### Sistema de Pagamento Otimizado (Mercado Pago)
 - **PIX**: 5% de desconto automático
 - **Cartão**: Até 2x sem juros, até 4x com juros
+- **Métodos Dinâmicos**: Configuração baseada na escolha do usuário (Issue #24)
 - **Segurança**: Preços sempre do servidor (products.json)
 - **Anti-fraude**: Logs de tentativas de manipulação
 - **Checkout**: Sem login obrigatório + UX otimizada
@@ -213,6 +214,14 @@ index.html (SPA estática)
    - Fallback para metadata MP se necessário
    - Detecção de duplicatas
    - Feedback visual completo
+
+7. **[#24 - Métodos de pagamento dinâmicos](https://github.com/daviemanoel/ONEWAY/issues/24)** ✅ **COMPLETO**
+   - Configuração dinâmica baseada na escolha do usuário
+   - **PIX**: Exclui cartões de crédito e débito (apenas PIX + conta MP)
+   - **2x sem juros**: Exclui PIX, limita a 2 parcelas
+   - **4x com juros**: Exclui PIX, permite até 4 parcelas
+   - Resolve inconsistência entre seleção no site e checkout MP
+   - Implementado em `server.js:293-338` com logs de debug
 
 #### Próximas Implementações:
 - ⚠️ **URGENTE: Fix botão Consultar MP** - Resolver conectividade com API MP
