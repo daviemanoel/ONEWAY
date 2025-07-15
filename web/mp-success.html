@@ -324,7 +324,7 @@
                 // ETAPA 1: Buscar pedido existente por external_reference
                 console.log('📋 Buscando pedido existente...');
                 
-                const buscarResponse = await fetch(`/api/django/pedidos/referencia/${externalReference}/`);
+                const buscarResponse = await fetch(`/api/django/pedidos/referencia/${encodeURIComponent(externalReference)}/`);
                 
                 if (!buscarResponse.ok) {
                     if (buscarResponse.status === 404) {
