@@ -302,6 +302,8 @@ app.post('/create-mp-checkout', async (req, res) => {
         };
 
         // Configuração dinâmica baseada na escolha do usuário
+        console.log(`🔧 Configurando métodos de pagamento para: ${paymentMethod}`);
+        
         if (paymentMethod === 'pix') {
           // Quando PIX: excluir cartões
           payment_methods.excluded_payment_types.push(
@@ -309,6 +311,7 @@ app.post('/create-mp-checkout', async (req, res) => {
             { id: 'debit_card' }
           );
           payment_methods.installments = 1;
+          console.log('✅ PIX: Cartões excluídos');
         } else if (paymentMethod === '2x') {
           // Quando 2x: limitar parcelamento e excluir PIX
           payment_methods.excluded_payment_types.push(
@@ -316,6 +319,7 @@ app.post('/create-mp-checkout', async (req, res) => {
           );
           payment_methods.installments = 2;
           payment_methods.default_installments = 2;
+          console.log('✅ 2x: PIX excluído, máximo 2 parcelas');
         } else if (paymentMethod === '4x') {
           // Quando 4x: permitir até 4 parcelas e excluir PIX
           payment_methods.excluded_payment_types.push(
@@ -323,7 +327,12 @@ app.post('/create-mp-checkout', async (req, res) => {
           );
           payment_methods.installments = 4;
           payment_methods.default_installments = 1;
+          console.log('✅ 4x: PIX excluído, máximo 4 parcelas');
+        } else {
+          console.log(`⚠️ Método de pagamento não reconhecido: ${paymentMethod}`);
         }
+        
+        console.log('🔧 Configuração final payment_methods:', JSON.stringify(payment_methods, null, 2));
 
         return payment_methods;
       })(),
