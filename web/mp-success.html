@@ -154,12 +154,12 @@
                 
                 exibirDadosPagamento(dadosMP);
                 
-                // Se pagamento aprovado, atualizar pedido existente
-                if (status === 'approved') {
-                    console.log('✅ PAGAMENTO APROVADO - INICIANDO ATUALIZAÇÃO DO PEDIDO');
+                // Se pagamento aprovado ou pendente, atualizar pedido existente
+                if (status === 'approved' || status === 'pending') {
+                    console.log(`✅ PAGAMENTO ${status.toUpperCase()} - INICIANDO ATUALIZAÇÃO DO PEDIDO`);
                     atualizarPedidoExistente(dadosMP);
                 } else {
-                    console.log('⚠️ PAGAMENTO NÃO APROVADO - STATUS:', status);
+                    console.log('⚠️ PAGAMENTO NÃO PROCESSADO - STATUS:', status);
                 }
             }
         }
@@ -261,11 +261,15 @@
                 // ETAPA 2: Atualizar status do pedido para aprovado
                 console.log('🔄 Atualizando status do pedido...');
                 
+                // Capturar status real da URL
+                const urlParams = new URLSearchParams(window.location.search);
+                const statusReal = urlParams.get('status') || dadosMP.status;
+                
                 const dadosAtualizacao = {
-                    status_pagamento: 'approved',
+                    status_pagamento: statusReal, // Usar status real do MP
                     payment_id: dadosMP.paymentId,
                     merchant_order_id: dadosMP.merchantOrderId,
-                    observacoes: `Pagamento aprovado via ${dadosMP.paymentType || 'MP'} em ${new Date().toLocaleString('pt-BR')}`
+                    observacoes: `Pagamento ${statusReal} via ${dadosMP.paymentType || 'MP'} em ${new Date().toLocaleString('pt-BR')}`
                 };
                 
                 console.log('📤 Dados para atualização:', dadosAtualizacao);
