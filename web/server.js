@@ -222,8 +222,9 @@ app.post('/create-mp-checkout', async (req, res) => {
     // NOVO FLUXO: Criar pedido ANTES da preferência MP
     console.log('💾 ETAPA 1: Criando pedido pendente no Django...');
     
-    // Gerar external_reference único
-    const externalReference = `${productName}_${size}_${Date.now()}`;
+    // Gerar external_reference único sem espaços
+    const produtoId = mapearProdutoParaId(productName).replace('camiseta-', '').replace('-', '').toUpperCase();
+    const externalReference = `ONEWAY-${produtoId}-${size}-${Date.now()}`;
     
     // Preparar dados do pedido
     const pedidoData = {
