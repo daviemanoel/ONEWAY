@@ -4,7 +4,6 @@
       "id": "1",
       "title": "Camiseta One Way Marrom",
       "price": 120.00,
-      
       "preco_custo": 53.50,
       "image": "./img/camisetas/camiseta_marrom.jpeg",
       "images": [
@@ -55,13 +54,13 @@
         "M": {
           "available": true,
           "qtda_estoque": 10,
-          "stripe_link": "https://buy.stripe.com/LINK_CAMISETA_JESUS_M",
+          "stripe_link": null,
           "id_stripe": "price_jesus_m_001"
         },
         "G": {
           "available": true,
           "qtda_estoque": 10,
-          "stripe_link": "https://buy.stripe.com/LINK_CAMISETA_JESUS_G",
+          "stripe_link": null,
           "id_stripe": "price_jesus_g_001"
         },
         "GG": {
@@ -82,25 +81,25 @@
         "P": {
           "available": true,
           "qtda_estoque": 5,
-          "stripe_link": "https://buy.stripe.com/LINK_ONEWAY_BRANCA_P",
+          "stripe_link": null,
           "id_stripe": "price_oneway_branca_p_001"
         },
         "M": {
           "available": true,
           "qtda_estoque": 10,
-          "stripe_link": "https://buy.stripe.com/LINK_ONEWAY_BRANCA_M",
+          "stripe_link": null,
           "id_stripe": "price_oneway_branca_m_001"
         },
         "G": {
           "available": true,
           "qtda_estoque": 10,
-          "stripe_link": "https://buy.stripe.com/LINK_ONEWAY_BRANCA_G",
+          "stripe_link": null,
           "id_stripe": "price_oneway_branca_g_001"
         },
         "GG": {
           "available": true,
           "qtda_estoque": 5,
-          "stripe_link": "https://buy.stripe.com/LINK_ONEWAY_BRANCA_GG",
+          "stripe_link": null,
           "id_stripe": "price_oneway_branca_gg_001"
         }
       }
@@ -115,25 +114,25 @@
         "P": {
           "available": true,
           "qtda_estoque": 5,
-          "stripe_link": "https://buy.stripe.com/LINK_THE_WAY_P",
+          "stripe_link": null,
           "id_stripe": "price_the_way_p_001"
         },
         "M": {
           "available": true,
           "qtda_estoque": 10,
-          "stripe_link": "https://buy.stripe.com/LINK_THE_WAY_M",
+          "stripe_link": null,
           "id_stripe": "price_the_way_m_001"
         },
         "G": {
           "available": true,
           "qtda_estoque": 10,
-          "stripe_link": "https://buy.stripe.com/LINK_THE_WAY_G",
+          "stripe_link": null,
           "id_stripe": "price_the_way_g_001"
         },
         "GG": {
           "available": true,
           "qtda_estoque": 5,
-          "stripe_link": "https://buy.stripe.com/LINK_THE_WAY_GG",
+          "stripe_link": null,
           "id_stripe": "price_the_way_gg_001"
         }
       }
