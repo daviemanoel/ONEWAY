@@ -511,6 +511,53 @@ app.get('/api/django/pedidos/referencia/:external_reference/', async (req, res) 
   }
 });
 
+// Endpoint proxy para atualizar status do pedido
+app.post('/api/django/pedidos/:id/atualizar_status/', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    if (!DJANGO_API_TOKEN) {
+      return res.status(500).json({ 
+        error: 'Configuração Django incompleta' 
+      });
+    }
+    
+    console.log('🔄 Atualizando status do pedido:', id);
+    console.log('📤 Dados para atualização:', req.body);
+    
+    const response = await axios.post(
+      `${DJANGO_API_URL}/pedidos/${id}/atualizar_status/`,
+      req.body,
+      {
+        headers: {
+          'Authorization': `Token ${DJANGO_API_TOKEN}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    
+    console.log('✅ Status atualizado com sucesso:', response.data.id);
+    res.json(response.data);
+    
+  } catch (error) {
+    console.error('❌ Erro ao atualizar status:', error.response?.data || error.message);
+    
+    if (error.response?.status === 404) {
+      res.status(404).json({ 
+        error: 'Pedido não encontrado para atualização',
+        pedido_id: req.params.id
+      });
+    } else if (error.response?.status === 400) {
+      res.status(400).json(error.response.data);
+    } else {
+      res.status(500).json({ 
+        error: 'Erro interno ao atualizar pedido',
+        details: error.message
+      });
+    }
+  }
+});
+
 // Endpoint proxy para Django API (criar pedidos)
 app.post('/api/django/pedidos/', async (req, res) => {
   try {
