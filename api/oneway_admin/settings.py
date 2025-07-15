@@ -146,7 +146,8 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
-    "https://oneway-production.up.railway.app",
+    "https://oneway.mevamfranca.com.br",
+    "https://oneway-production.up.railway.app",  # Manter para testes
 ]
 
 CORS_ALLOW_ALL_ORIGINS = False  # Manter False para segurança
@@ -172,7 +173,9 @@ MERCADOPAGO_ACCESS_TOKEN = ""  # Configurar via variável de ambiente em produç
 
 # CSRF Settings
 CSRF_TRUSTED_ORIGINS = [
-    'https://oneway-production.up.railway.app',
+    'https://oneway.mevamfranca.com.br',
+    'https://api.oneway.mevamfranca.com.br',
+    'https://oneway-production.up.railway.app',  # Manter para testes
     'https://*.railway.app',
     'https://*.oneway-admin.up.railway.app',
     'http://localhost:8080',

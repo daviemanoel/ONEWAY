@@ -43,7 +43,7 @@ Este é um site estático para o evento de conferência jovem "ONE WAY" (31 de j
 
 ### Backend (Processamento de pagamentos)
 - **Servidor local**: `node server.js` na porta 3000
-- **Deploy**: Railway (https://oneway-production.up.railway.app)
+- **Deploy**: Railway (https://oneway.mevamfranca.com.br)
 - **Dependências**: `npm install` (express, cors, stripe, mercadopago, dotenv)
 - **Variáveis ambiente**: STRIPE_SECRET_KEY, MERCADOPAGO_ACCESS_TOKEN
 
@@ -52,18 +52,22 @@ Este é um site estático para o evento de conferência jovem "ONE WAY" (31 de j
 - **Produção Railway**: PostgreSQL gerenciado com dados persistentes
 - **Migrar localmente**: `python manage.py migrate`
 - **Setup completo produção**: `python manage.py setup_database` (comando personalizado)
-- **Admin produção**: https://api-production-e044.up.railway.app/admin/ (admin/oneway2025)
+- **Admin produção**: https://api.oneway.mevamfranca.com.br/admin/ (admin/oneway2025)
 - **API Token**: Criar no Django Admin em `/admin/authtoken/tokenproxy/` (integração Node.js)
+- **Comandos customizados**: `python manage.py criar_token_api --username api_nodejs`
 - **Consulta MP**: ⚠️ **EM DESENVOLVIMENTO** - Botão implementado mas com problemas de conectividade
-- **Dependências**: Ver `api/requirements.txt`
+- **Dependências**: Django 5.2.4, DRF 3.16.0, psycopg2-binary 2.9.9
 - **Models**: Comprador, Pedido com relacionamento 1:N
 - **API REST**: Endpoints para CRUD completo de pedidos
 
 ### Comandos Úteis de Gestão
-- **Testar API**: `curl -H "Authorization: Token SEU_TOKEN" https://api-production-e044.up.railway.app/api/pedidos/`
+- **Testar API**: `curl -H "Authorization: Token SEU_TOKEN" https://api.oneway.mevamfranca.com.br/api/pedidos/`
 - **Reset DB local**: `rm db.sqlite3 && python manage.py migrate && python manage.py createsuperuser`
 - **Logs produção**: `railway logs --service API`
 - **Deploy forçado**: `railway up --service API`
+- **Diagnóstico DB**: `python test_db.py` (script de 125 linhas)
+- **Recuperação DB**: `python fix_db.py` (em caso de problemas)
+- **Health checks**: `/health` (Node.js), `/mp-health` (Mercado Pago), `/admin/` (Django)
 
 ## Arquitetura e Componentes Principais
 
@@ -246,9 +250,18 @@ index.html (SPA estática)
    - Resolve inconsistência entre seleção no site e checkout MP
    - Implementado em `server.js:293-338` com logs de debug
 
+8. **[#25 - Testes de validação](https://github.com/daviemanoel/ONEWAY/issues/25)** ✅ **COMPLETO**
+   - Testes realizados em produção com sucesso
+   - Comportamento validado para todos os métodos de pagamento
+
+9. **[#27-28 - Melhorias finais](https://github.com/daviemanoel/ONEWAY/issues/27)** ✅ **COMPLETO**
+   - Processamento automático de cancelamentos
+   - Refatoração de external_reference
+
 #### Próximas Implementações:
 - ⚠️ **URGENTE: Fix botão Consultar MP** - Resolver conectividade com API MP
-- **Issue #15**: Webhook MP para automação total (não crítico)
+- **[Issue #15](https://github.com/daviemanoel/ONEWAY/issues/15)**: Webhook MP para automação total (não crítico)
+- **[Issue #26](https://github.com/daviemanoel/ONEWAY/issues/26)**: Atualização da documentação ✅ **EM ANDAMENTO**
 - **Relatórios**: Dashboard de vendas e métricas
 - **Notificações**: Email automático para compradores
 - **Estoque**: Controle automático de quantidades
@@ -260,7 +273,31 @@ index.html (SPA estática)
   - Endpoint: `/consultar-mp/` com autenticação staff_member_required
   - Token MP configurado no Railway
   - Precisa investigar logs detalhados e debugging
-- ⚠️ **Logs de debug**: Adicionados em `server.js` para monitorar configuração de métodos de pagamento
+- ✅ **Logs de debug**: Funcionando em `server.js` para monitorar configuração de métodos de pagamento
+
+#### Detalhes Técnicos - Métodos de Pagamento Dinâmicos:
+
+**Configuração no server.js (linhas 293-338):**
+```javascript
+// PIX selecionado:
+payment_methods.excluded_payment_types = [
+  { id: 'ticket' },      // Boletos
+  { id: 'credit_card' }, // Cartão crédito
+  { id: 'debit_card' }   // Cartão débito
+];
+
+// 2x ou 4x selecionado:
+payment_methods.excluded_payment_types = [
+  { id: 'ticket' },        // Boletos
+  { id: 'bank_transfer' }  // PIX
+];
+```
+
+**Logs implementados:**
+- `🔧 Configurando métodos de pagamento para: [método]`
+- `✅ PIX: Cartões excluídos`
+- `✅ 2x: PIX excluído, máximo 2 parcelas`
+- `✅ 4x: PIX excluído, máximo 4 parcelas`
 
 #### Arquitetura Final Implementada:
 ```
@@ -288,13 +325,19 @@ index.html (SPA estática)
 - **PostgreSQL Railway**: Banco persistente, dados nunca são perdidos entre deploys
 - **Comando setup_database**: Criação automática de tabelas Django + superuser admin/oneway2025
 - **WhiteNoise**: Serve arquivos estáticos CSS/JS do Django Admin corretamente
-- **Variável DATABASE_URL**: Auto-detecta PostgreSQL em produção, SQLite local
+- **Configuração híbrida**: Auto-detecta PostgreSQL produção / SQLite local via DATABASE_URL
+- **Scripts diagnóstico**: test_db.py (análise completa), fix_db.py (recuperação)
+- **Dockerfile otimizado**: Python 3.11-slim, gunicorn, collectstatic automático
+- **Runtime**: Node.js >= 18.0.0, Python 3.11.9
 
 ### Frontend e UX
-- **JavaScript inline**: Todo código JS está no index.html (500+ linhas)
+- **JavaScript inline**: Todo código JS está no index.html (744 linhas)
+- **CSS modular**: style.css (2048 linhas), modal-checkout.css, pedidos_admin.css
 - **Lazy loading**: Imagens otimizadas exceto hero banner
 - **Mobile-first**: Breakpoint principal 768px, design responsivo completo
-- **Conversão JPEG**: Compatibilidade Linux (case-sensitive)
+- **Assets**: Todas imagens convertidas para JPEG (compatibilidade Linux)
+- **Cache**: Sistema de 5 minutos para products.json
+- **Total código**: 3.477 linhas (HTML/CSS/JS core)
 
 ## Configurações de Produção
 
@@ -302,10 +345,10 @@ index.html (SPA estática)
 ```bash
 # Node.js (Railway Web Service)
 MERCADOPAGO_ACCESS_TOKEN=APP_USR_xxx  # Token produção MP
-DJANGO_API_URL=https://api-production-e044.up.railway.app/api
+DJANGO_API_URL=https://api.oneway.mevamfranca.com.br/api
 DJANGO_API_TOKEN=xxx  # Token gerado pelo Django
-MP_SUCCESS_URL=https://web-production-2614.up.railway.app/mp-success
-MP_CANCEL_URL=https://web-production-2614.up.railway.app/mp-cancel
+MP_SUCCESS_URL=https://oneway.mevamfranca.com.br/mp-success
+MP_CANCEL_URL=https://oneway.mevamfranca.com.br/mp-cancel
 
 # Django (Railway API Service)  
 DATABASE_URL=postgresql://xxx  # Auto-configurado pelo Railway
@@ -317,17 +360,19 @@ MERCADOPAGO_ACCESS_TOKEN=APP_USR_xxx  # Para consultas admin
 ### Segurança Implementada
 - ✅ **Preços protegidos**: Sempre vindos do products.json servidor
 - ✅ **Token API**: Autenticação segura Django ↔ Node.js
-- ✅ **CORS configurado**: Apenas domínios autorizados
+- ✅ **CORS configurado**: Apenas domínios autorizados Railway/localhost
+- ✅ **CSRF Protection**: Trusted origins configurados
+- ✅ **Security Headers**: XSS, HSTS, Content-Type configurados
 - ✅ **Logs anti-fraude**: Detecção de tentativas de manipulação
 - ✅ **Validação dupla**: Frontend + backend + Django
 - ✅ **PostgreSQL**: Banco persistente e seguro
 
 ### URLs de Produção
-- **Frontend**: https://web-production-2614.up.railway.app/
-- **Django Admin**: https://api-production-e044.up.railway.app/admin/
-- **API REST**: https://api-production-e044.up.railway.app/api/
-- **Health Check**: https://web-production-2614.up.railway.app/health
-- **MP Health**: https://web-production-2614.up.railway.app/mp-health
+- **Frontend**: https://oneway.mevamfranca.com.br/
+- **Django Admin**: https://api.oneway.mevamfranca.com.br/admin/
+- **API REST**: https://api.oneway.mevamfranca.com.br/api/
+- **Health Check**: https://oneway.mevamfranca.com.br/health
+- **MP Health**: https://oneway.mevamfranca.com.br/mp-health
 
 ### Limitações Conhecidas (Menores)
 - ⚠️ Cliente pode alterar método no checkout MP (preço permanece correto)
@@ -350,10 +395,11 @@ Site de e-commerce para venda de camisetas do evento ONE WAY 2025, com sistema c
 - ✅ **Banco**: PostgreSQL Railway persistente
 
 ### 📊 Estatísticas Técnicas
-- **Linhas de código**: 2000+ (HTML/CSS/JS + Python)
-- **Issues implementadas**: 7 principais (#11, #12, #13, #14, #17, #18, #24)
-- **Commits**: 50+ com implementações incrementais
-- **Arquivos principais**: 15+ arquivos de código
+- **Linhas de código**: 3.477+ core (HTML/CSS/JS) + 1.500+ Python
+- **Issues implementadas**: 15+ completas (#11-14, #17-19, #22-28)
+- **Dependências**: Node.js 17MB otimizado, Python 15+ packages
+- **Scripts**: test_db.py (125 linhas), server.js (685 linhas), index.html (744 linhas)
+- **Arquivos CSS**: style.css (2.048 linhas) + modais customizados
 
 ### 🔧 Tecnologias Utilizadas
 - **Frontend**: HTML5, CSS3, JavaScript ES6+

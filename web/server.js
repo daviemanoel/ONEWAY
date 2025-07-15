@@ -283,7 +283,7 @@ app.post('/create-mp-checkout', async (req, res) => {
         {
           title: `${productName} - Tamanho ${size}`,
           description: 'Camiseta ONE WAY 2025',
-          picture_url: 'https://web-production-2614.up.railway.app/img/camisetas/camiseta_marrom.jpeg',
+          picture_url: 'https://oneway.mevamfranca.com.br/img/camisetas/camiseta_marrom.jpeg',
           category_id: 'fashion',
           quantity: 1,
           currency_id: 'BRL',
@@ -337,9 +337,9 @@ app.post('/create-mp-checkout', async (req, res) => {
         return payment_methods;
       })(),
       back_urls: {
-        success: `${process.env.MP_SUCCESS_URL || 'https://oneway-production.up.railway.app/mp-success'}?external_reference=${externalReference}`,
-        failure: process.env.MP_CANCEL_URL || 'https://oneway-production.up.railway.app/mp-cancel',
-        pending: `${process.env.MP_SUCCESS_URL || 'https://oneway-production.up.railway.app/mp-success'}?external_reference=${externalReference}`
+        success: `${process.env.MP_SUCCESS_URL || 'https://oneway.mevamfranca.com.br/mp-success'}?external_reference=${externalReference}`,
+        failure: process.env.MP_CANCEL_URL || 'https://oneway.mevamfranca.com.br/mp-cancel',
+        pending: `${process.env.MP_SUCCESS_URL || 'https://oneway.mevamfranca.com.br/mp-success'}?external_reference=${externalReference}`
       },
       auto_return: 'approved',
       external_reference: externalReference,
