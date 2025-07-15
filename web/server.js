@@ -290,14 +290,43 @@ app.post('/create-mp-checkout', async (req, res) => {
           unit_price: amount
         }
       ],
-      payment_methods: {
-        excluded_payment_methods: [],
-        excluded_payment_types: [
-          { id: 'ticket' }       // Boletos em geral
-        ],
-        installments: 4, // Até 4 parcelas
-        default_installments: 1
-      },
+      payment_methods: (() => {
+        // Configuração base
+        let payment_methods = {
+          excluded_payment_methods: [],
+          excluded_payment_types: [
+            { id: 'ticket' }  // Boletos sempre excluídos
+          ],
+          installments: 4,
+          default_installments: 1
+        };
+
+        // Configuração dinâmica baseada na escolha do usuário
+        if (paymentMethod === 'pix') {
+          // Quando PIX: excluir cartões
+          payment_methods.excluded_payment_types.push(
+            { id: 'credit_card' },
+            { id: 'debit_card' }
+          );
+          payment_methods.installments = 1;
+        } else if (paymentMethod === '2x') {
+          // Quando 2x: limitar parcelamento e excluir PIX
+          payment_methods.excluded_payment_types.push(
+            { id: 'bank_transfer' }  // PIX
+          );
+          payment_methods.installments = 2;
+          payment_methods.default_installments = 2;
+        } else if (paymentMethod === '4x') {
+          // Quando 4x: permitir até 4 parcelas e excluir PIX
+          payment_methods.excluded_payment_types.push(
+            { id: 'bank_transfer' }  // PIX
+          );
+          payment_methods.installments = 4;
+          payment_methods.default_installments = 1;
+        }
+
+        return payment_methods;
+      })(),
       back_urls: {
         success: `${process.env.MP_SUCCESS_URL || 'https://oneway-production.up.railway.app/mp-success'}?external_reference=${externalReference}`,
         failure: process.env.MP_CANCEL_URL || 'https://oneway-production.up.railway.app/mp-cancel',
