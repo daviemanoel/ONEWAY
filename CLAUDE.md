@@ -4,11 +4,29 @@ Este arquivo fornece orientações para o Claude Code (claude.ai/code) ao trabal
 
 ## PRINCÍPIOS IMPORTANTES
 - **SEMPRE responder em português brasileiro**
+- **SEMPRE perguntar antes de gerar código** (regra obrigatória)
 - Usar terminologia técnica em português quando possível
 - Manter consistência com o idioma do projeto (site em português)
+- Preferir soluções simples e diretas em vez de múltiplas opções
 
 ## Visão Geral do Projeto
 Este é um site estático para o evento de conferência jovem "ONE WAY" (31 de julho - 2 de agosto de 2025). É uma aplicação de página única construída com HTML, CSS e JavaScript vanilla, com backend Node.js/Express para processamento de pagamentos.
+
+### Arquitetura do Sistema
+```
+[Frontend HTML/JS] → [Node.js/Express] → [Mercado Pago API]
+        ↓                    ↓
+[products.json]    [Django REST API] → [PostgreSQL Railway]
+        ↓                    ↓
+[Cache 5min]       [Admin Interface] → [Gestão Completa]
+```
+
+### Status do Projeto: 🚀 **PRODUÇÃO ATIVA**
+- ✅ **Frontend**: Deploy contínuo via Railway
+- ✅ **Backend**: Node.js + Express funcional
+- ✅ **Pagamentos**: Mercado Pago integrado com métodos dinâmicos
+- ✅ **Admin**: Django com PostgreSQL persistente
+- ✅ **E-commerce**: Fluxo completo de pedidos implementado
 
 ## Comandos de Desenvolvimento
 
@@ -38,6 +56,8 @@ Este é um site estático para o evento de conferência jovem "ONE WAY" (31 de j
 - **API Token**: Criar no Django Admin em `/admin/authtoken/tokenproxy/` (integração Node.js)
 - **Consulta MP**: ⚠️ **EM DESENVOLVIMENTO** - Botão implementado mas com problemas de conectividade
 - **Dependências**: Ver `api/requirements.txt`
+- **Models**: Comprador, Pedido com relacionamento 1:N
+- **API REST**: Endpoints para CRUD completo de pedidos
 
 ### Comandos Úteis de Gestão
 - **Testar API**: `curl -H "Authorization: Token SEU_TOKEN" https://api-production-e044.up.railway.app/api/pedidos/`
@@ -149,10 +169,13 @@ index.html (SPA estática)
 - ✅ **Issue #14**: Formulário de dados do comprador (implementado)
 - ✅ **Issue #17**: Fluxo otimizado - sem registros imediatos
 - ✅ **Issue #18**: Criação retroativa na página de sucesso
+- ✅ **Issue #24**: Métodos de pagamento dinâmicos implementados
 - ✅ **Railway Deploy**: PostgreSQL persistente, dados preservados entre deploys
 - ✅ **Comando personalizado**: setup_database para inicialização automática
 - ✅ **Segurança**: Preços sempre vindos do servidor (products.json)
 - ✅ **Admin funcional**: Links MP, consulta status, gestão completa
+- ✅ **Cancelamento automático**: Processamento de pedidos cancelados
+- ✅ **Preços atualizados**: Todas as camisetas com R$ 120,00
 
 ## FLUXO COMPLETO DE PAGAMENTO OTIMIZADO
 
@@ -229,6 +252,7 @@ index.html (SPA estática)
 - **Relatórios**: Dashboard de vendas e métricas
 - **Notificações**: Email automático para compradores
 - **Estoque**: Controle automático de quantidades
+- **Otimizações**: Melhorias de performance e UX
 
 #### Problemas Conhecidos:
 - ❌ **Botão "Consultar Status MP"**: Implementado com JavaScript, CSS e endpoint Django, mas não está funcionando em produção
@@ -236,15 +260,27 @@ index.html (SPA estática)
   - Endpoint: `/consultar-mp/` com autenticação staff_member_required
   - Token MP configurado no Railway
   - Precisa investigar logs detalhados e debugging
+- ⚠️ **Logs de debug**: Adicionados em `server.js` para monitorar configuração de métodos de pagamento
 
 #### Arquitetura Final Implementada:
 ```
-[Frontend HTML/JS] → [Node.js/Express] → [Mercado Pago]
-                            ↓
-                    [Django REST API] → [PostgreSQL Railway]
+[Frontend HTML/JS] → [Node.js/Express] → [Mercado Pago API]
+        ↓                    ↓                    ↓
+[products.json]    [Proxy Endpoints]    [Métodos Dinâmicos]
+        ↓                    ↓                    ↓
+[Cache 5min]       [Django REST API] → [PostgreSQL Railway]
                             ↓
                     [Admin Interface] → [Gestão Completa]
 ```
+
+#### Fluxo de Pagamento Completo:
+1. **Cliente** preenche formulário (nome, email, telefone)
+2. **Seleciona** produto + tamanho + forma de pagamento
+3. **Node.js** cria pedido pendente no Django
+4. **Mercado Pago** recebe preferência com métodos dinâmicos
+5. **Cliente** paga no checkout MP
+6. **Página sucesso** atualiza status do pedido
+7. **Django Admin** permite gestão completa
 
 ## Observações Técnicas Importantes
 
@@ -268,8 +304,8 @@ index.html (SPA estática)
 MERCADOPAGO_ACCESS_TOKEN=APP_USR_xxx  # Token produção MP
 DJANGO_API_URL=https://api-production-e044.up.railway.app/api
 DJANGO_API_TOKEN=xxx  # Token gerado pelo Django
-MP_SUCCESS_URL=https://oneway-production.up.railway.app/mp-success
-MP_CANCEL_URL=https://oneway-production.up.railway.app/mp-cancel
+MP_SUCCESS_URL=https://web-production-2614.up.railway.app/mp-success
+MP_CANCEL_URL=https://web-production-2614.up.railway.app/mp-cancel
 
 # Django (Railway API Service)  
 DATABASE_URL=postgresql://xxx  # Auto-configurado pelo Railway
@@ -286,11 +322,54 @@ MERCADOPAGO_ACCESS_TOKEN=APP_USR_xxx  # Para consultas admin
 - ✅ **Validação dupla**: Frontend + backend + Django
 - ✅ **PostgreSQL**: Banco persistente e seguro
 
+### URLs de Produção
+- **Frontend**: https://web-production-2614.up.railway.app/
+- **Django Admin**: https://api-production-e044.up.railway.app/admin/
+- **API REST**: https://api-production-e044.up.railway.app/api/
+- **Health Check**: https://web-production-2614.up.railway.app/health
+- **MP Health**: https://web-production-2614.up.railway.app/mp-health
+
 ### Limitações Conhecidas (Menores)
-- Cliente pode alterar método no checkout MP (preço permanece correto)
-- Links MP admin podem precisar ajuste conforme painel MP
-- Checkout sem login MP (trade-off: UX vs conversão)
-- Stripe mantido no código (legacy, não usado)
+- ⚠️ Cliente pode alterar método no checkout MP (preço permanece correto)
+- ⚠️ Links MP admin podem precisar ajuste conforme painel MP
+- ⚠️ Checkout sem login MP (trade-off: UX vs conversão)
+- ⚠️ Stripe mantido no código (legacy, não usado)
+- ✅ **Issue #24 resolvida**: Métodos de pagamento agora são dinâmicos
+
+---
+
+## 📋 RESUMO EXECUTIVO
+
+### 🎯 Objetivo do Projeto
+Site de e-commerce para venda de camisetas do evento ONE WAY 2025, com sistema completo de pagamentos via Mercado Pago e gestão administrativa via Django.
+
+### 🚀 Status Atual: **PRODUÇÃO ATIVA**
+- ✅ **Frontend**: Funcionando em produção
+- ✅ **Pagamentos**: Mercado Pago integrado com métodos dinâmicos
+- ✅ **Gestão**: Django Admin operacional
+- ✅ **Banco**: PostgreSQL Railway persistente
+
+### 📊 Estatísticas Técnicas
+- **Linhas de código**: 2000+ (HTML/CSS/JS + Python)
+- **Issues implementadas**: 7 principais (#11, #12, #13, #14, #17, #18, #24)
+- **Commits**: 50+ com implementações incrementais
+- **Arquivos principais**: 15+ arquivos de código
+
+### 🔧 Tecnologias Utilizadas
+- **Frontend**: HTML5, CSS3, JavaScript ES6+
+- **Backend**: Node.js, Express.js
+- **Admin**: Django, Django REST Framework
+- **Banco**: PostgreSQL (Railway)
+- **Pagamentos**: Mercado Pago API
+- **Deploy**: Railway (auto-deploy)
+
+### 💰 Produtos Configurados
+- 4 tipos de camisetas (R$ 120,00 cada)
+- Tamanhos: P, M, G, GG
+- Métodos: PIX (5% desconto), 2x sem juros, 4x com juros
+- Estoque controlado via products.json
+
+---
 
 # important-instruction-reminders
 Do what has been asked; nothing more, nothing less.
