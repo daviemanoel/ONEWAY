@@ -467,6 +467,49 @@ app.get('/api/mp-payment-details/:paymentId', async (req, res) => {
   }
 });
 
+// Endpoint proxy para buscar pedido por external_reference
+app.get('/api/django/pedidos/referencia/:external_reference/', async (req, res) => {
+  try {
+    const { external_reference } = req.params;
+    
+    if (!DJANGO_API_TOKEN) {
+      return res.status(500).json({ 
+        error: 'Configuração Django incompleta' 
+      });
+    }
+    
+    console.log('🔍 Buscando pedido por external_reference:', external_reference);
+    
+    const response = await axios.get(
+      `${DJANGO_API_URL}/pedidos/referencia/${encodeURIComponent(external_reference)}/`,
+      {
+        headers: {
+          'Authorization': `Token ${DJANGO_API_TOKEN}`,
+          'Accept': 'application/json'
+        }
+      }
+    );
+    
+    console.log('✅ Pedido encontrado:', response.data.id);
+    res.json(response.data);
+    
+  } catch (error) {
+    console.error('❌ Erro ao buscar pedido:', error.response?.data || error.message);
+    
+    if (error.response?.status === 404) {
+      res.status(404).json({ 
+        error: 'Pedido não encontrado',
+        external_reference: req.params.external_reference
+      });
+    } else {
+      res.status(500).json({ 
+        error: 'Erro interno ao buscar pedido',
+        details: error.message
+      });
+    }
+  }
+});
+
 // Endpoint proxy para Django API (criar pedidos)
 app.post('/api/django/pedidos/', async (req, res) => {
   try {
