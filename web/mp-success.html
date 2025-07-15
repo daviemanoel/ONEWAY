@@ -309,15 +309,17 @@
             try {
                 console.log('🔄 Atualizando pedido existente para pagamento aprovado...');
                 
-                // Capturar external_reference da URL
+                // Capturar parâmetros da URL
                 const urlParams = new URLSearchParams(window.location.search);
                 const externalReference = urlParams.get('external_reference') || dadosMP.externalReference;
+                const statusReal = urlParams.get('status') || dadosMP.status;
                 
                 if (!externalReference) {
                     throw new Error('external_reference não encontrado na URL');
                 }
                 
                 console.log('🔍 External reference:', externalReference);
+                console.log('📊 Status real:', statusReal);
                 
                 // ETAPA 1: Buscar pedido existente por external_reference
                 console.log('📋 Buscando pedido existente...');
@@ -335,12 +337,8 @@
                 const pedidoExistente = await buscarResponse.json();
                 console.log('✅ Pedido encontrado:', pedidoExistente);
                 
-                // ETAPA 2: Atualizar status do pedido para aprovado
+                // ETAPA 2: Atualizar status do pedido
                 console.log('🔄 Atualizando status do pedido...');
-                
-                // Capturar status real da URL
-                const urlParams = new URLSearchParams(window.location.search);
-                const statusReal = urlParams.get('status') || dadosMP.status;
                 
                 const dadosAtualizacao = {
                     status_pagamento: statusReal, // Usar status real do MP
