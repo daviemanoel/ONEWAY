@@ -100,9 +100,9 @@
 <body>
     <div class="mp-success-container">
         <div class="mp-success-card">
-            <div class="mp-icon">✓</div>
-            <h1 class="mp-title">Pagamento Aprovado!</h1>
-            <p class="mp-message">
+            <div class="mp-icon" id="mp-icon">✓</div>
+            <h1 class="mp-title" id="mp-title">Pagamento Aprovado!</h1>
+            <p class="mp-message" id="mp-message">
                 Sua compra foi processada com sucesso pelo Mercado Pago.
             </p>
             
@@ -164,10 +164,66 @@
             }
         }
         
+        // Função para atualizar título e mensagem baseada no status
+        function atualizarMensagemPorStatus(status, paymentType) {
+            const icon = document.getElementById('mp-icon');
+            const title = document.getElementById('mp-title');
+            const message = document.getElementById('mp-message');
+            
+            if (status === 'approved') {
+                // Pagamento aprovado
+                icon.innerHTML = '✓';
+                icon.style.color = '#00a650';
+                title.textContent = 'Pagamento Aprovado!';
+                message.textContent = 'Sua compra foi processada com sucesso pelo Mercado Pago.';
+                
+            } else if (status === 'pending') {
+                // Pagamento pendente - diferentes mensagens por tipo
+                if (paymentType === 'bank_transfer' || paymentType === 'pix') {
+                    // PIX pendente
+                    icon.innerHTML = '⏳';
+                    icon.style.color = '#ff9800';
+                    title.textContent = 'Pedido Realizado - Aguardando Pagamento PIX';
+                    message.innerHTML = `
+                        <strong>Seu pedido foi registrado!</strong><br>
+                        Complete o pagamento PIX para confirmar sua compra.<br>
+                        <small>Você pode fechar esta página e pagar depois usando os dados do PIX.</small>
+                    `;
+                } else {
+                    // Cartão ou outro método pendente
+                    icon.innerHTML = '⏳';
+                    icon.style.color = '#ff9800';
+                    title.textContent = 'Pedido Realizado - Aguardando Confirmação';
+                    message.innerHTML = `
+                        <strong>Seu pedido foi registrado!</strong><br>
+                        O pagamento está sendo processado pelo Mercado Pago.<br>
+                        <small>Você receberá uma confirmação em breve.</small>
+                    `;
+                }
+                
+            } else if (status === 'in_process') {
+                // Pagamento processando
+                icon.innerHTML = '🔄';
+                icon.style.color = '#2196f3';
+                title.textContent = 'Pagamento Processando';
+                message.textContent = 'Seu pagamento está sendo processado. Aguarde a confirmação.';
+                
+            } else {
+                // Outros status (rejected, cancelled, etc.)
+                icon.innerHTML = '❌';
+                icon.style.color = '#f44336';
+                title.textContent = 'Problema no Pagamento';
+                message.textContent = 'Houve um problema com seu pagamento. Tente novamente.';
+            }
+        }
+
         // Função para exibir os dados capturados
         function exibirDadosPagamento(dados) {
             const paymentDetails = document.getElementById('payment-details');
             let html = '';
+            
+            // Atualizar título e mensagem baseada no status
+            atualizarMensagemPorStatus(dados.status, dados.paymentType);
             
             // Mapear status para mensagens amigáveis
             const statusMessages = {
@@ -184,7 +240,7 @@
                 'debit_card': '💳 Cartão de Débito',
                 'account_money': '💰 Dinheiro em Conta',
                 'ticket': '🎫 Boleto',
-                'bank_transfer': '🏦 Transferência',
+                'bank_transfer': '⚡ PIX',
                 'pix': '⚡ PIX'
             };
             
@@ -215,11 +271,32 @@
             const now = new Date().toLocaleString('pt-BR');
             html += `<p><strong>Processado em:</strong> ${now}</p>`;
             
-            // Adicionar linha separadora e dados originais
+            // Adicionar linha separadora e instruções baseadas no status
             html += '<hr style="margin: 1rem 0; border: 1px solid #eee;">';
-            html += '<p>✓ Pagamento processado com segurança</p>';
-            html += '<p>✓ Você receberá um e-mail de confirmação</p>';
-            html += '<p>✓ Fique atento às instruções de entrega</p>';
+            
+            if (dados.status === 'approved') {
+                html += '<p>✓ Pagamento processado com segurança</p>';
+                html += '<p>✓ Você receberá um e-mail de confirmação</p>';
+                html += '<p>✓ Fique atento às instruções de entrega</p>';
+            } else if (dados.status === 'pending') {
+                if (dados.paymentType === 'bank_transfer' || dados.paymentType === 'pix') {
+                    html += '<p>⏳ PIX gerado - aguardando pagamento</p>';
+                    html += '<p>📱 Use o QR Code ou código do PIX para pagar</p>';
+                    html += '<p>📧 Você receberá confirmação após o pagamento</p>';
+                } else {
+                    html += '<p>⏳ Pagamento sendo processado</p>';
+                    html += '<p>📧 Você receberá um e-mail de confirmação</p>';
+                    html += '<p>🔄 Acompanhe o status do seu pedido</p>';
+                }
+            } else if (dados.status === 'in_process') {
+                html += '<p>🔄 Pagamento em processamento</p>';
+                html += '<p>⏳ Aguarde a confirmação</p>';
+                html += '<p>📧 Você receberá um e-mail em breve</p>';
+            } else {
+                html += '<p>❌ Problema no processamento do pagamento</p>';
+                html += '<p>🔄 Tente novamente ou entre em contato</p>';
+                html += '<p>📞 Suporte disponível para ajudar</p>';
+            }
             
             paymentDetails.innerHTML = html;
             
