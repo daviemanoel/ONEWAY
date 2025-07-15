@@ -45,6 +45,18 @@ const preference = new Preference(mercadoPagoClient);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Função para mapear nome do produto para ID do Django
+function mapearProdutoParaId(productName) {
+  const mapping = {
+    'Camiseta One Way Marrom': 'camiseta-marrom',
+    'Camiseta Jesus Christ': 'camiseta-jesus',
+    'Camiseta One Way Branca': 'camiseta-oneway-branca',
+    'Camiseta The Way': 'camiseta-the-way'
+  };
+  
+  return mapping[productName] || 'camiseta-marrom';
+}
+
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -207,6 +219,64 @@ app.post('/create-mp-checkout', async (req, res) => {
     
     console.log(`✅ Checkout seguro: ${productName} - ${paymentMethod} - R$ ${amount.toFixed(2)}`);
 
+    // NOVO FLUXO: Criar pedido ANTES da preferência MP
+    console.log('💾 ETAPA 1: Criando pedido pendente no Django...');
+    
+    // Gerar external_reference único
+    const externalReference = `${productName}_${size}_${Date.now()}`;
+    
+    // Preparar dados do pedido
+    const pedidoData = {
+      // Dados do comprador
+      nome: nome || '',
+      email: email || '',
+      telefone: telefone || '',
+      
+      // Dados do produto
+      produto: mapearProdutoParaId(productName),
+      tamanho: size,
+      preco: amount,
+      forma_pagamento: paymentMethod === 'pix' ? 'pix' : paymentMethod === '2x' ? '2x' : '4x',
+      
+      // Status inicial
+      status_pagamento: 'pendente',
+      external_reference: externalReference
+    };
+    
+    console.log('📤 Dados do pedido:', pedidoData);
+    
+    // Criar pedido no Django
+    let pedidoCriado;
+    try {
+      if (!DJANGO_API_TOKEN) {
+        throw new Error('Token Django não configurado');
+      }
+      
+      const pedidoResponse = await axios.post(
+        `${DJANGO_API_URL}/pedidos/`,
+        pedidoData,
+        {
+          headers: {
+            'Authorization': `Token ${DJANGO_API_TOKEN}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      pedidoCriado = pedidoResponse.data;
+      console.log('✅ Pedido criado:', pedidoCriado.id);
+      
+    } catch (error) {
+      console.error('❌ Erro ao criar pedido Django:', error.response?.data || error.message);
+      return res.status(500).json({
+        error: 'Erro ao processar pedido. Tente novamente.',
+        details: error.response?.data || error.message
+      });
+    }
+
+    // ETAPA 2: Criar preferência MP com external_reference
+    console.log('🏪 ETAPA 2: Criando preferência Mercado Pago...');
+    
     const preferenceData = {
       items: [
         {
@@ -228,12 +298,12 @@ app.post('/create-mp-checkout', async (req, res) => {
         default_installments: 1
       },
       back_urls: {
-        success: `${process.env.MP_SUCCESS_URL || 'https://oneway-production.up.railway.app/mp-success'}?nome=${encodeURIComponent(nome)}&email=${encodeURIComponent(email)}&telefone=${encodeURIComponent(telefone)}&produto=${encodeURIComponent(productName)}&tamanho=${size}&preco=${amount}&forma_pagamento=${paymentMethod}`,
+        success: `${process.env.MP_SUCCESS_URL || 'https://oneway-production.up.railway.app/mp-success'}?external_reference=${externalReference}`,
         failure: process.env.MP_CANCEL_URL || 'https://oneway-production.up.railway.app/mp-cancel',
-        pending: `${process.env.MP_SUCCESS_URL || 'https://oneway-production.up.railway.app/mp-success'}?nome=${encodeURIComponent(nome)}&email=${encodeURIComponent(email)}&telefone=${encodeURIComponent(telefone)}&produto=${encodeURIComponent(productName)}&tamanho=${size}&preco=${amount}&forma_pagamento=${paymentMethod}`
+        pending: `${process.env.MP_SUCCESS_URL || 'https://oneway-production.up.railway.app/mp-success'}?external_reference=${externalReference}`
       },
       auto_return: 'approved',
-      external_reference: `${productName}_${size}_${Date.now()}`,
+      external_reference: externalReference,
       metadata: {
         // Dados do comprador
         comprador_nome: nome || '',
@@ -245,7 +315,9 @@ app.post('/create-mp-checkout', async (req, res) => {
         price_id: priceId,
         // Dados do pedido
         forma_pagamento: paymentMethod === 'pix' ? 'pix' : paymentMethod === '2x' ? '2x' : '4x',
-        preco_original: amount
+        preco_original: amount,
+        // ID do pedido Django para referência
+        django_pedido_id: pedidoCriado.id
       },
       statement_descriptor: 'ONE WAY 2025',
       expires: true,
@@ -253,18 +325,72 @@ app.post('/create-mp-checkout', async (req, res) => {
       expiration_date_to: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24h
     };
 
-    // REMOVIDO: Criação imediata de registros Django
-    // Os registros serão criados apenas na página de sucesso quando o pagamento for confirmado
+    // Criar preferência no Mercado Pago
+    let mpResponse;
+    try {
+      mpResponse = await preference.create({ body: preferenceData });
+      console.log('✅ Preferência MP criada:', mpResponse.id);
+      
+    } catch (error) {
+      console.error('❌ Erro ao criar preferência MP:', error);
+      
+      // Se falhar na criação da preferência, marcar pedido como erro
+      try {
+        await axios.post(
+          `${DJANGO_API_URL}/pedidos/${pedidoCriado.id}/atualizar_status/`,
+          {
+            status_pagamento: 'erro_mp',
+            observacoes: 'Erro ao criar preferência no Mercado Pago'
+          },
+          {
+            headers: {
+              'Authorization': `Token ${DJANGO_API_TOKEN}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+      } catch (updateError) {
+        console.error('❌ Erro ao atualizar status do pedido:', updateError);
+      }
+      
+      return res.status(500).json({
+        error: 'Erro ao configurar pagamento. Tente novamente.',
+        details: error.message
+      });
+    }
 
-    // Criar apenas a preferência do Mercado Pago
-    const response = await preference.create({ body: preferenceData });
+    // ETAPA 3: Atualizar pedido com preference_id
+    console.log('🔄 ETAPA 3: Atualizando pedido com preference_id...');
     
-    console.log('Preferência MP criada:', response.id);
-    console.log('Dados do comprador incluídos no metadata para criação posterior');
+    try {
+      await axios.post(
+        `${DJANGO_API_URL}/pedidos/${pedidoCriado.id}/atualizar_status/`,
+        {
+          preference_id: mpResponse.id,
+          observacoes: 'Preferência MP criada com sucesso'
+        },
+        {
+          headers: {
+            'Authorization': `Token ${DJANGO_API_TOKEN}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      console.log('✅ Pedido atualizado com preference_id');
+      
+    } catch (error) {
+      console.error('⚠️ Erro ao atualizar pedido (não crítico):', error);
+      // Não bloquear o fluxo se apenas a atualização falhar
+    }
+    
+    console.log('🚀 FLUXO COMPLETO: Pedido criado e preferência MP configurada');
 
     res.json({ 
-      checkout_url: response.init_point,
-      preference_id: response.id 
+      checkout_url: mpResponse.init_point,
+      preference_id: mpResponse.id,
+      pedido_id: pedidoCriado.id,
+      external_reference: externalReference
     });
   } catch (error) {
     console.error('Erro ao criar preferência MP:', error);

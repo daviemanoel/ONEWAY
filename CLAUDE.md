@@ -35,7 +35,7 @@ Este é um site estático para o evento de conferência jovem "ONE WAY" (31 de j
 - **Migrar localmente**: `python manage.py migrate`
 - **Setup completo produção**: `python manage.py setup_database` (comando personalizado)
 - **Admin produção**: https://api-production-e044.up.railway.app/admin/ (admin/oneway2025)
-- **API Token**: `python manage.py create_api_token` (integração Node.js)
+- **API Token**: Criar no Django Admin em `/admin/authtoken/tokenproxy/` (integração Node.js)
 - **Consulta MP**: ⚠️ **EM DESENVOLVIMENTO** - Botão implementado mas com problemas de conectividade
 - **Dependências**: Ver `api/requirements.txt`
 
@@ -160,14 +160,21 @@ index.html (SPA estática)
 
 #### Fluxo de Pagamento Seguro:
 ```
-1. Cliente preenche formulário (nome, email, telefone)
-2. Seleciona produto + tamanho + forma de pagamento
-3. Clica "Pagar" → Cria preferência MP (SEM registro no banco)
-4. Redireciona para Mercado Pago
-5. Cliente paga no MP
-6. MP redireciona para mp-success.html COM dados do comprador na URL
-7. Página detecta status=approved → Cria registros automaticamente
-8. Exibe confirmação visual + ID do pedido
+1. Cliente navega pelo site e escolhe produto + tamanho
+2. Clica no botão "Comprar" do produto desejado
+3. Modal abre → Preenche formulário obrigatório (nome, email, telefone)
+4. Escolhe forma de pagamento (PIX -5%, 2x ou 4x)
+5. Clica "Pagar" → Cria preferência MP (SEM registro no banco)
+6. Redireciona para checkout do Mercado Pago
+7. No Mercado Pago:
+   - Se paga → Redireciona para mp-success.html
+   - Se cancela → Redireciona para mp-cancel.html
+8. Em mp-success.html:
+   - Detecta status=approved → Cria registros no Django
+   - Exibe confirmação visual + ID do pedido
+9. Em mp-cancel.html:
+   - Exibe mensagem de cancelamento
+   - Oferece botão para voltar ao site
 ```
 
 #### Issues Implementadas e Funcionais:

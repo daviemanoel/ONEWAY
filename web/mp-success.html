@@ -154,9 +154,12 @@
                 
                 exibirDadosPagamento(dadosMP);
                 
-                // Se pagamento aprovado, criar registros no banco
+                // Se pagamento aprovado, atualizar pedido existente
                 if (status === 'approved') {
-                    criarRegistrosPagamento(dadosMP);
+                    console.log('✅ PAGAMENTO APROVADO - INICIANDO ATUALIZAÇÃO DO PEDIDO');
+                    atualizarPedidoExistente(dadosMP);
+                } else {
+                    console.log('⚠️ PAGAMENTO NÃO APROVADO - STATUS:', status);
                 }
             }
         }
@@ -224,96 +227,70 @@
             console.log('Dados do pagamento capturados:', dados);
         }
         
-        // Função para criar registros no banco após pagamento aprovado
-        async function criarRegistrosPagamento(dadosMP) {
+        // Função para atualizar pedido existente após pagamento aprovado
+        async function atualizarPedidoExistente(dadosMP) {
             try {
-                console.log('🔄 Criando registros para pagamento aprovado...');
+                console.log('🔄 Atualizando pedido existente para pagamento aprovado...');
                 
-                // Capturar dados do comprador da URL (mais confiável!)
+                // Capturar external_reference da URL
                 const urlParams = new URLSearchParams(window.location.search);
-                const dadosComprador = {
-                    nome: urlParams.get('nome'),
-                    email: urlParams.get('email'), 
-                    telefone: urlParams.get('telefone'),
-                    produto: urlParams.get('produto'),
-                    tamanho: urlParams.get('tamanho'),
-                    preco: urlParams.get('preco'),
-                    forma_pagamento: urlParams.get('forma_pagamento')
-                };
+                const externalReference = urlParams.get('external_reference') || dadosMP.externalReference;
                 
-                console.log('📋 Dados capturados da URL:', dadosComprador);
-                
-                // Se não tem dados na URL, tentar buscar do MP (fallback)
-                if (!dadosComprador.nome || !dadosComprador.email) {
-                    console.log('⚠️ Dados não encontrados na URL, buscando no MP...');
-                    
-                    const url = `/api/mp-payment-details/${dadosMP.paymentId}?preference_id=${dadosMP.preferenceId}`;
-                    const metadataResponse = await fetch(url);
-                    
-                    if (!metadataResponse.ok) {
-                        throw new Error('Erro ao buscar detalhes do pagamento no MP');
-                    }
-                    
-                    const { metadata } = await metadataResponse.json();
-                    
-                    if (!metadata || !metadata.comprador_nome) {
-                        throw new Error('Dados do comprador não encontrados');
-                    }
-                    
-                    // Usar dados do metadata MP
-                    dadosComprador.nome = metadata.comprador_nome;
-                    dadosComprador.email = metadata.comprador_email;
-                    dadosComprador.telefone = metadata.comprador_telefone;
-                    dadosComprador.produto = metadata.product_name;
-                    dadosComprador.tamanho = metadata.size;
-                    dadosComprador.preco = metadata.preco_original;
-                    dadosComprador.forma_pagamento = metadata.forma_pagamento;
+                if (!externalReference) {
+                    throw new Error('external_reference não encontrado na URL');
                 }
                 
-                // Criar pedido no Django
-                const pedidoData = {
-                    // Dados do comprador (já capturados acima)
-                    nome: dadosComprador.nome,
-                    email: dadosComprador.email,
-                    telefone: dadosComprador.telefone,
-                    
-                    // Dados do produto - mapear nome para ID
-                    produto: mapearProdutoParaId(dadosComprador.produto),
-                    tamanho: dadosComprador.tamanho,
-                    preco: parseFloat(dadosComprador.preco),
-                    forma_pagamento: dadosComprador.forma_pagamento,
-                    
-                    // Dados Mercado Pago
+                console.log('🔍 External reference:', externalReference);
+                
+                // ETAPA 1: Buscar pedido existente por external_reference
+                console.log('📋 Buscando pedido existente...');
+                
+                const buscarResponse = await fetch(`/api/django/pedidos/referencia/${externalReference}/`);
+                
+                if (!buscarResponse.ok) {
+                    if (buscarResponse.status === 404) {
+                        throw new Error('Pedido não encontrado no sistema');
+                    } else {
+                        throw new Error('Erro ao buscar pedido existente');
+                    }
+                }
+                
+                const pedidoExistente = await buscarResponse.json();
+                console.log('✅ Pedido encontrado:', pedidoExistente);
+                
+                // ETAPA 2: Atualizar status do pedido para aprovado
+                console.log('🔄 Atualizando status do pedido...');
+                
+                const dadosAtualizacao = {
+                    status_pagamento: 'approved',
                     payment_id: dadosMP.paymentId,
-                    external_reference: dadosMP.externalReference,
-                    preference_id: dadosMP.preferenceId,
                     merchant_order_id: dadosMP.merchantOrderId,
-                    status_pagamento: 'approved'
+                    observacoes: `Pagamento aprovado via ${dadosMP.paymentType || 'MP'} em ${new Date().toLocaleString('pt-BR')}`
                 };
                 
-                console.log('📤 Enviando dados para Django:', pedidoData);
+                console.log('📤 Dados para atualização:', dadosAtualizacao);
                 
-                const djangoResponse = await fetch('/api/django/pedidos/', {
+                const atualizarResponse = await fetch(`/api/django/pedidos/${pedidoExistente.id}/atualizar_status/`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify(pedidoData)
+                    body: JSON.stringify(dadosAtualizacao)
                 });
                 
-                if (djangoResponse.ok) {
-                    const pedidoCriado = await djangoResponse.json();
-                    console.log('✅ Pedido criado com sucesso:', pedidoCriado);
-                    exibirSucessoCriacao(pedidoCriado);
+                if (atualizarResponse.ok) {
+                    const pedidoAtualizado = await atualizarResponse.json();
+                    console.log('✅ Pedido atualizado com sucesso:', pedidoAtualizado);
+                    exibirSucessoAtualizacao(pedidoAtualizado);
                 } else {
-                    const errorData = await djangoResponse.json();
-                    console.error('❌ Erro Django:', errorData);
+                    const errorData = await atualizarResponse.json();
+                    console.error('❌ Erro ao atualizar pedido:', errorData);
                     
-                    // Verificar se é duplicata (já processado)
-                    if (errorData.error && errorData.error.includes('já existe')) {
+                    // Verificar se já foi processado
+                    if (errorData.error && errorData.error.includes('já processado')) {
                         exibirJaProcessado();
                     } else {
-                        throw new Error(errorData.error || 'Erro ao criar pedido');
+                        throw new Error(errorData.error || 'Erro ao atualizar pedido');
                     }
                 }
                 
@@ -335,18 +312,24 @@
             return mapping[productName] || 'camiseta-marrom';
         }
         
-        // Função para exibir sucesso na criação
-        function exibirSucessoCriacao(pedido) {
+        // Função para exibir sucesso na atualização
+        function exibirSucessoAtualizacao(pedido) {
             const paymentDetails = document.getElementById('payment-details');
             const sucessoHtml = `
                 <div style="background: #d4edda; border: 1px solid #c3e6cb; padding: 1rem; border-radius: 5px; margin-bottom: 1rem;">
-                    <h4 style="color: #155724; margin: 0 0 0.5rem 0;">🎉 Pedido Registrado!</h4>
+                    <h4 style="color: #155724; margin: 0 0 0.5rem 0;">🎉 Pedido Atualizado!</h4>
                     <p style="color: #155724; margin: 0;"><strong>ID do Pedido:</strong> #${pedido.id}</p>
                     <p style="color: #155724; margin: 0;"><strong>Comprador:</strong> ${pedido.comprador?.nome || pedido.nome}</p>
+                    <p style="color: #155724; margin: 0;"><strong>Status:</strong> ${pedido.status_pagamento}</p>
                 </div>
                 ${paymentDetails.innerHTML}
             `;
             paymentDetails.innerHTML = sucessoHtml;
+        }
+        
+        // Função para exibir sucesso na criação (mantida para compatibilidade)
+        function exibirSucessoCriacao(pedido) {
+            return exibirSucessoAtualizacao(pedido);
         }
         
         // Função para exibir que já foi processado

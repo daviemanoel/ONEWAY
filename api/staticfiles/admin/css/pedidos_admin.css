@@ -1,0 +1,243 @@
+/**
+ * CSS customizado para Django Admin - Gestão de Pedidos ONE WAY
+ * Estilos específicos para melhorar UX do sistema de pedidos
+ */
+
+/* Botões de consulta Mercado Pago */
+.consultar-mp-btn {
+    background: #009EE3 !important;
+    color: white !important;
+    border: none !important;
+    padding: 6px 12px !important;
+    border-radius: 4px !important;
+    cursor: pointer !important;
+    font-size: 11px !important;
+    font-weight: bold !important;
+    transition: all 0.3s ease !important;
+    text-decoration: none !important;
+    display: inline-block !important;
+}
+
+.consultar-mp-btn:hover {
+    background: #007bb8 !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+}
+
+.consultar-mp-btn:active {
+    transform: translateY(0) !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Status coloridos mais visíveis */
+.field-status_display_admin span {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Links do Mercado Pago */
+.mp-link {
+    background: #009EE3 !important;
+    color: white !important;
+    padding: 4px 8px !important;
+    border-radius: 4px !important;
+    text-decoration: none !important;
+    display: inline-block !important;
+    font-size: 11px !important;
+    font-weight: bold !important;
+    transition: background 0.3s ease !important;
+}
+
+.mp-link:hover {
+    background: #007bb8 !important;
+    color: white !important;
+    text-decoration: none !important;
+}
+
+/* Preços com desconto PIX */
+.field-preco_final span[style*="color: green"] {
+    background: rgba(40, 167, 69, 0.1);
+    padding: 4px 6px;
+    border-radius: 4px;
+    border-left: 3px solid #28a745;
+}
+
+/* Ícones de forma de pagamento */
+.field-forma_pagamento_display {
+    font-size: 13px;
+}
+
+/* Melhorar legibilidade dos campos readonly */
+.readonly {
+    background-color: #f8f9fa !important;
+    border: 1px solid #e9ecef !important;
+    color: #495057 !important;
+}
+
+/* Fieldsets colapsados - estilo melhorado */
+.collapse .form-row {
+    background: #f8f9fa;
+    border-radius: 4px;
+    padding: 8px;
+    margin: 4px 0;
+}
+
+/* Actions do admin - espaçamento melhorado */
+.actions {
+    padding: 15px 0;
+    border-top: 1px solid #ddd;
+    background: #f8f9fa;
+}
+
+.actions select, .actions button {
+    margin-right: 10px;
+}
+
+/* Tabela de pedidos - zebra stripes mais suaves */
+#result_list tbody tr:nth-child(even) {
+    background: #fafbfc;
+}
+
+#result_list tbody tr:hover {
+    background: #e3f2fd !important;
+}
+
+/* Filtros laterais - melhor visual */
+#changelist-filter h3 {
+    background: #009EE3;
+    color: white;
+    padding: 8px 10px;
+    margin: 0 0 10px 0;
+    border-radius: 4px 4px 0 0;
+}
+
+#changelist-filter li a {
+    padding: 4px 10px;
+    display: block;
+    border-radius: 2px;
+    transition: background 0.2s ease;
+}
+
+#changelist-filter li a:hover {
+    background: #e3f2fd;
+    text-decoration: none;
+}
+
+#changelist-filter li.selected a {
+    background: #009EE3;
+    color: white;
+    font-weight: bold;
+}
+
+/* Campos de busca - melhor destaque */
+#changelist-search input[type="text"] {
+    border: 2px solid #e9ecef;
+    border-radius: 4px;
+    padding: 8px 12px;
+    transition: border-color 0.3s ease;
+}
+
+#changelist-search input[type="text"]:focus {
+    border-color: #009EE3;
+    box-shadow: 0 0 0 0.2rem rgba(0, 158, 227, 0.25);
+    outline: none;
+}
+
+/* Breadcrumbs - estilo mais moderno */
+.breadcrumbs {
+    background: linear-gradient(90deg, #009EE3, #007bb8);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 0;
+}
+
+.breadcrumbs a {
+    color: rgba(255, 255, 255, 0.8);
+    text-decoration: none;
+}
+
+.breadcrumbs a:hover {
+    color: white;
+    text-decoration: underline;
+}
+
+/* Botões de ação - estilo consistente */
+.default, input[type="submit"].default, .submit-row input.default {
+    background: #009EE3 !important;
+    border-color: #007bb8 !important;
+}
+
+.default:hover, input[type="submit"].default:hover, .submit-row input.default:hover {
+    background: #007bb8 !important;
+}
+
+/* Mensagens do admin - melhor visibilidade */
+.messagelist .success {
+    background: #d4edda;
+    border-color: #c3e6cb;
+    color: #155724;
+    border-left: 4px solid #28a745;
+}
+
+.messagelist .error {
+    background: #f8d7da;
+    border-color: #f5c6cb;
+    color: #721c24;
+    border-left: 4px solid #dc3545;
+}
+
+.messagelist .warning {
+    background: #fff3cd;
+    border-color: #ffeaa7;
+    color: #856404;
+    border-left: 4px solid #ffc107;
+}
+
+.messagelist .info {
+    background: #d1ecf1;
+    border-color: #bee5eb;
+    color: #0c5460;
+    border-left: 4px solid #17a2b8;
+}
+
+/* Responsividade para mobile */
+@media (max-width: 768px) {
+    .consultar-mp-btn, .mp-link {
+        font-size: 10px !important;
+        padding: 3px 6px !important;
+    }
+    
+    #changelist-filter {
+        width: 100%;
+        margin-bottom: 20px;
+    }
+    
+    .results {
+        overflow-x: auto;
+    }
+    
+    #result_list {
+        min-width: 800px;
+    }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .readonly {
+        background-color: #2b2b2b !important;
+        border-color: #3c3c3c !important;
+        color: #e8e8e8 !important;
+    }
+    
+    #result_list tbody tr:nth-child(even) {
+        background: #2a2a2a;
+    }
+    
+    #result_list tbody tr:hover {
+        background: #1a3a5c !important;
+    }
+}
