@@ -45,7 +45,6 @@
       "price": 120.00,
       "preco_custo": 55.00,
       "image": "./img/camisetas/Camiseta_jesus.jpeg",
-      "video": "./videos/camiseta-jesus-preview.mp4",
       "sizes": {
         "P": {
           "available": true,
@@ -79,7 +78,6 @@
       "price": 120.00,
       "preco_custo": 51.50,
       "image": "./img/camisetas/Camiseta_onewayBranca.jpeg",
-      "video": "./videos/camiseta-oneway-branca-preview.mp4",
       "sizes": {
         "P": {
           "available": true,
@@ -113,7 +111,6 @@
       "price": 120.00,
       "preco_custo": 49.50,
       "image": "./img/camisetas/Camiseta_theway.jpeg",
-      "video": "./videos/camiseta-the-way-preview.mp4",
       "sizes": {
         "P": {
           "available": true,
