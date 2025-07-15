@@ -125,7 +125,7 @@
                 Seu pagamento foi cancelado e nenhum valor foi cobrado.
             </p>
             
-            <div class="mp-options">
+            <div class="mp-options" id="cancel-details">
                 <h3>Teve algum problema? Tente estas opções:</h3>
                 <p>💳 Verifique os dados do cartão</p>
                 <p>🔄 Tente um método de pagamento diferente</p>
@@ -146,6 +146,95 @@
             </div>
         </div>
     </div>
+
+    <script>
+        // Função para processar cancelamento automaticamente
+        async function processarCancelamento() {
+            try {
+                console.log('🚫 Iniciando processamento de cancelamento...');
+                
+                // Capturar external_reference da URL
+                const urlParams = new URLSearchParams(window.location.search);
+                const externalReference = urlParams.get('external_reference');
+                
+                if (!externalReference) {
+                    console.log('⚠️ Nenhum external_reference encontrado na URL');
+                    return;
+                }
+                
+                console.log('🔍 External reference:', externalReference);
+                
+                // ETAPA 1: Buscar pedido existente
+                console.log('📋 Buscando pedido para cancelamento...');
+                
+                const buscarResponse = await fetch(`/api/django/pedidos/referencia/${encodeURIComponent(externalReference)}/`);
+                
+                if (!buscarResponse.ok) {
+                    if (buscarResponse.status === 404) {
+                        console.log('❌ Pedido não encontrado para cancelamento');
+                        return;
+                    } else {
+                        throw new Error('Erro ao buscar pedido para cancelamento');
+                    }
+                }
+                
+                const pedidoExistente = await buscarResponse.json();
+                console.log('✅ Pedido encontrado para cancelamento:', pedidoExistente);
+                
+                // ETAPA 2: Atualizar status para cancelled
+                console.log('🚫 Atualizando status para cancelado...');
+                
+                const dadosAtualizacao = {
+                    status_pagamento: 'cancelled',
+                    observacoes: `Cancelado pelo usuário no Mercado Pago em ${new Date().toLocaleString('pt-BR')}`
+                };
+                
+                console.log('📤 Dados para cancelamento:', dadosAtualizacao);
+                
+                const atualizarResponse = await fetch(`/api/django/pedidos/${pedidoExistente.id}/atualizar_status/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(dadosAtualizacao)
+                });
+                
+                if (atualizarResponse.ok) {
+                    const pedidoCancelado = await atualizarResponse.json();
+                    console.log('✅ Pedido cancelado com sucesso:', pedidoCancelado);
+                    exibirDetalhesCancel(pedidoCancelado);
+                } else {
+                    const errorData = await atualizarResponse.json();
+                    console.error('❌ Erro ao cancelar pedido:', errorData);
+                }
+                
+            } catch (error) {
+                console.error('❌ Erro ao processar cancelamento:', error);
+            }
+        }
+        
+        // Função para exibir detalhes do cancelamento
+        function exibirDetalhesCancel(pedido) {
+            const cancelDetails = document.getElementById('cancel-details');
+            const detalhesHtml = `
+                <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 1rem; border-radius: 5px; margin-bottom: 1rem;">
+                    <h4 style="color: #856404; margin: 0 0 0.5rem 0;">🚫 Pedido Cancelado</h4>
+                    <p style="color: #856404; margin: 0;"><strong>ID do Pedido:</strong> #${pedido.id}</p>
+                    <p style="color: #856404; margin: 0;"><strong>Produto:</strong> ${pedido.produto}</p>
+                    <p style="color: #856404; margin: 0;"><strong>Comprador:</strong> ${pedido.comprador?.nome || 'N/A'}</p>
+                    <p style="color: #856404; margin: 0;"><strong>Status:</strong> ${pedido.status_display}</p>
+                </div>
+                <h3>Teve algum problema? Tente estas opções:</h3>
+                <p>💳 Verifique os dados do cartão</p>
+                <p>🔄 Tente um método de pagamento diferente</p>
+                <p>📧 Entre em contato conosco se precisar de ajuda</p>
+            `;
+            cancelDetails.innerHTML = detalhesHtml;
+        }
+        
+        // Executar processamento quando a página carregar
+        document.addEventListener('DOMContentLoaded', processarCancelamento);
+    </script>
 </body>
 
 </html>
