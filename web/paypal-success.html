@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pagamento PayPal - ONE WAY 2025</title>
+    <link rel="stylesheet" href="./Css/style.css">
+    <style>
+        .success-container {
+            max-width: 600px;
+            margin: 100px auto;
+            padding: 40px;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+        
+        .status-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            display: block;
+        }
+        
+        .success { color: #28a745; }
+        .loading { color: #ffc107; }
+        .error { color: #dc3545; }
+        
+        .status-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .status-message {
+            font-size: 16px;
+            margin-bottom: 20px;
+            color: #666;
+        }
+        
+        .order-details {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: left;
+        }
+        
+        .order-details h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+        
+        .order-details p {
+            margin: 5px 0;
+            color: #555;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 12px 30px;
+            background: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 10px;
+            transition: background 0.3s;
+        }
+        
+        .btn:hover {
+            background: #0056b3;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+        }
+        
+        .btn-secondary:hover {
+            background: #545b62;
+        }
+        
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="success-container">
+        <!-- Estado de Loading -->
+        <div id="loading-state">
+            <div class="status-icon">🔄</div>
+            <h2 class="status-title">Processando seu pagamento...</h2>
+            <div class="loading-spinner"></div>
+            <p class="status-message">Aguarde enquanto confirmamos seu pagamento PayPal.</p>
+        </div>
+        
+        <!-- Estado de Sucesso -->
+        <div id="success-state" class="hidden">
+            <div class="status-icon success">✅</div>
+            <h2 class="status-title">Pagamento Aprovado!</h2>
+            <p class="status-message">Seu pagamento foi processado com sucesso via PayPal.</p>
+            
+            <div class="order-details">
+                <h3>Detalhes do Pedido</h3>
+                <p><strong>Produto:</strong> <span id="product-name">-</span></p>
+                <p><strong>Tamanho:</strong> <span id="product-size">-</span></p>
+                <p><strong>Valor:</strong> <span id="product-price">-</span></p>
+                <p><strong>Pedido ID:</strong> <span id="order-id">-</span></p>
+                <p><strong>Transaction ID:</strong> <span id="transaction-id">-</span></p>
+                <p><strong>Forma de Pagamento:</strong> PayPal</p>
+            </div>
+            
+            <p class="status-message">
+                <strong>Próximos passos:</strong><br>
+                Você receberá um email de confirmação em breve.<br>
+                Seu produto será enviado conforme informado no evento.
+            </p>
+            
+            <a href="/" class="btn">Voltar ao Site</a>
+        </div>
+        
+        <!-- Estado de Erro -->
+        <div id="error-state" class="hidden">
+            <div class="status-icon error">❌</div>
+            <h2 class="status-title">Erro no Pagamento</h2>
+            <p class="status-message">Não foi possível processar seu pagamento PayPal.</p>
+            
+            <div class="order-details">
+                <h3>Detalhes do Erro</h3>
+                <p id="error-message">Erro desconhecido</p>
+            </div>
+            
+            <p class="status-message">
+                <strong>O que fazer:</strong><br>
+                Entre em contato conosco pelo WhatsApp ou email.<br>
+                Informe o número do pedido para agilizar o atendimento.
+            </p>
+            
+            <a href="/" class="btn">Voltar ao Site</a>
+            <a href="/#contato" class="btn btn-secondary">Contato</a>
+        </div>
+    </div>
+
+    <script>
+        // Função para extrair parâmetros da URL
+        function getUrlParams() {
+            const params = new URLSearchParams(window.location.search);
+            return {
+                token: params.get('token'),
+                PayerID: params.get('PayerID'),
+                external_reference: params.get('external_reference'),
+                pedido_id: params.get('pedido_id')
+            };
+        }
+        
+        // Função para mostrar estado específico
+        function showState(stateName) {
+            const states = ['loading-state', 'success-state', 'error-state'];
+            states.forEach(state => {
+                const element = document.getElementById(state);
+                if (element) {
+                    element.classList.add('hidden');
+                }
+            });
+            
+            const targetState = document.getElementById(stateName);
+            if (targetState) {
+                targetState.classList.remove('hidden');
+            }
+        }
+        
+        // Função para capturar pagamento PayPal
+        async function capturePayPalPayment() {
+            const params = getUrlParams();
+            
+            console.log('🅿️ Capturando pagamento PayPal...', params);
+            
+            if (!params.token) {
+                throw new Error('Token PayPal não encontrado na URL');
+            }
+            
+            try {
+                const response = await fetch('/capture-paypal-order', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        orderID: params.token,
+                        external_reference: params.external_reference,
+                        pedido_id: params.pedido_id
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success && data.status === 'COMPLETED') {
+                    // Sucesso - mostrar detalhes
+                    document.getElementById('order-id').textContent = data.pedido_id || 'N/A';
+                    document.getElementById('transaction-id').textContent = data.transaction_id || data.payment_id || 'N/A';
+                    document.getElementById('product-name').textContent = 'Camiseta ONE WAY';
+                    document.getElementById('product-size').textContent = 'M'; // Seria ideal pegar da URL
+                    document.getElementById('product-price').textContent = 'R$ 120,00';
+                    
+                    showState('success-state');
+                    
+                    console.log('✅ Pagamento PayPal capturado com sucesso');
+                    
+                } else {
+                    throw new Error(data.message || 'Pagamento não foi completado');
+                }
+                
+            } catch (error) {
+                console.error('❌ Erro ao capturar pagamento:', error);
+                throw error;
+            }
+        }
+        
+        // Função para processar pagamento
+        async function processPayment() {
+            try {
+                await capturePayPalPayment();
+            } catch (error) {
+                console.error('❌ Erro no processamento:', error);
+                
+                // Mostrar erro
+                document.getElementById('error-message').textContent = error.message || 'Erro desconhecido';
+                showState('error-state');
+            }
+        }
+        
+        // Inicializar quando página carregar
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('🚀 Iniciando processamento PayPal...');
+            
+            // Verificar se tem parâmetros PayPal
+            const params = getUrlParams();
+            
+            if (!params.token) {
+                document.getElementById('error-message').textContent = 'Parâmetros PayPal não encontrados na URL';
+                showState('error-state');
+                return;
+            }
+            
+            // Processar pagamento
+            await processPayment();
+        });
+    </script>
+</body>
+</html>

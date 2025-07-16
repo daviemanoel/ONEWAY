@@ -71,6 +71,15 @@ Este é um site estático para o evento de conferência jovem "ONE WAY" (31 de j
 - **Recuperação DB**: `python fix_db.py` (em caso de problemas)
 - **Health checks**: `/health` (Node.js), `/mp-health` (Mercado Pago), `/admin/` (Django)
 
+### Comandos do Sistema de Estoque (Planejados - Issues #32-38)
+- **Migrar produtos**: `python manage.py migrar_produtos` (Issue #34)
+- **Sincronizar estoque**: `python manage.py sincronizar_estoque` (Issue #36)
+- **Associar pedidos legacy**: `python manage.py associar_pedidos_legacy` (Issue #34)
+- **Gerar products.json**: `python manage.py gerar_products_json` (Issue #36)
+- **Validar estoque**: `python manage.py validar_estoque` (Issue #38)
+- **Relatório estoque**: `python manage.py relatorio_estoque` (Issue #38)
+- **Cron automático**: `*/5 * * * * python manage.py sincronizar_estoque` (Issue #38)
+
 ## Arquitetura e Componentes Principais
 
 ### Estrutura de Arquivos
@@ -261,12 +270,84 @@ index.html (SPA estática)
    - Refatoração de external_reference
 
 #### Próximas Implementações:
+
+### 🚀 **PRIORIDADE ALTA: Sistema de Controle de Estoque**
+
+**Issue Principal**: **[#32 - Sistema de controle de estoque com models Django](https://github.com/daviemanoel/ONEWAY/issues/32)**
+
+**Roadmap de Implementação:**
+
+#### **📋 Fase 1: Foundation (Issue #33)**
+- **[#33 - Models Produto e ProdutoTamanho](https://github.com/daviemanoel/ONEWAY/issues/33)** 🔄 **PLANEJADO**
+  - Criar models Django para produtos e tamanhos
+  - Migration segura com campos nullable
+  - Manter compatibilidade com sistema atual
+
+#### **📋 Fase 2: Data Migration (Issues #34-35)**
+- **[#34 - Migração de dados products.json → Django](https://github.com/daviemanoel/ONEWAY/issues/34)** 🔄 **PLANEJADO**
+  - Script para popular models com dados existentes
+  - Comando Django para migração idempotente
+  - Associação de pedidos legacy aos novos models
+
+- **[#35 - Interface admin Django](https://github.com/daviemanoel/ONEWAY/issues/35)** 🔄 **PLANEJADO**
+  - Admin interface para gerenciar produtos e estoque
+  - Edição inline de tamanhos e quantidades
+  - Ações em lote para sincronização
+
+#### **📋 Fase 3: Integration (Issues #36-37)**
+- **[#36 - Comando sincronização híbrido](https://github.com/daviemanoel/ONEWAY/issues/36)** 🔄 **PLANEJADO**
+  - Comando Django para sincronizar estoque automaticamente
+  - Suporte a pedidos novos e legacy
+  - Geração automática do products.json
+
+- **[#37 - Frontend com IDs numéricos](https://github.com/daviemanoel/ONEWAY/issues/37)** 🔄 **PLANEJADO**
+  - Modificar frontend para usar IDs numéricos do Django
+  - Validação de estoque em tempo real
+  - Manter compatibilidade com sistema atual
+
+#### **📋 Fase 4: Production (Issue #38)**
+- **[#38 - Deploy Railway com automação](https://github.com/daviemanoel/ONEWAY/issues/38)** 🔄 **PLANEJADO**
+  - Cron jobs para sincronização automática
+  - Monitoramento e alertas de estoque
+  - Backup e rollback plan
+
+#### **🎯 Objetivos do Sistema de Estoque:**
+1. **Controle automático** de estoque baseado em pedidos aprovados
+2. **Sincronização** entre Django e products.json
+3. **Compatibilidade total** com sistema atual (zero downtime)
+4. **IDs numéricos** para produto+tamanho
+5. **Validação** em tempo real no checkout
+6. **Automação** via cron jobs e webhooks
+
+#### **🔧 Estrutura Técnica Proposta:**
+```python
+# Models Django
+class Produto(models.Model):
+    nome = models.CharField(max_length=200)
+    slug = models.SlugField(unique=True)
+    preco = models.DecimalField(max_digits=10, decimal_places=2)
+    preco_custo = models.DecimalField(max_digits=10, decimal_places=2)
+    ativo = models.BooleanField(default=True)
+    json_key = models.CharField(max_length=100)  # Compatibilidade
+
+class ProdutoTamanho(models.Model):
+    produto = models.ForeignKey(Produto, related_name='tamanhos')
+    tamanho = models.CharField(max_length=5, choices=TAMANHOS_CHOICES)
+    estoque = models.IntegerField(default=0)
+    disponivel = models.BooleanField(default=True)
+
+class Pedido(models.Model):
+    # ... campos existentes ...
+    produto_tamanho = models.ForeignKey(ProdutoTamanho, null=True, blank=True)
+    estoque_decrementado = models.BooleanField(default=False)
+```
+
+#### **🚀 Outras Implementações:**
 - ⚠️ **URGENTE: Fix botão Consultar MP** - Resolver conectividade com API MP
 - **[Issue #15](https://github.com/daviemanoel/ONEWAY/issues/15)**: Webhook MP para automação total (não crítico)
 - **[Issue #26](https://github.com/daviemanoel/ONEWAY/issues/26)**: Atualização da documentação ✅ **EM ANDAMENTO**
 - **Relatórios**: Dashboard de vendas e métricas
 - **Notificações**: Email automático para compradores
-- **Estoque**: Controle automático de quantidades
 - **Otimizações**: Melhorias de performance e UX
 
 #### Problemas Conhecidos:
@@ -311,6 +392,27 @@ payment_methods.excluded_payment_types = [
                             ↓
                     [Admin Interface] → [Gestão Completa]
 ```
+
+#### Arquitetura Futura com Sistema de Estoque (Issues #32-38):
+```
+[Frontend HTML/JS] → [Node.js/Express] → [Mercado Pago API]
+        ↓                    ↓                    ↓
+[products.json] ← [Sync Auto]    [Proxy Endpoints]    [Métodos Dinâmicos]
+        ↓                    ↓                    ↓
+[Cache 5min]       [Django REST API] → [PostgreSQL Railway]
+                            ↓                    ↓
+                    [Admin Interface] → [Produto + ProdutoTamanho Models]
+                            ↓                    ↓
+                    [Cron Jobs] → [Controle Automático de Estoque]
+```
+
+**Melhorias Planejadas:**
+- 🔄 **Sincronização Automática**: products.json gerado pelo Django
+- 📊 **Controle Real-time**: Estoque atualizado com pedidos aprovados
+- 🆔 **IDs Numéricos**: Produto+tamanho com identificadores únicos
+- 🔁 **Sistema Híbrido**: Suporte a pedidos legacy e novos
+- ⚡ **Performance**: Validação de estoque em tempo real
+- 🤖 **Automação**: Cron jobs para sincronização contínua
 
 #### Fluxo de Pagamento Completo:
 1. **Cliente** preenche formulário (nome, email, telefone)
@@ -399,6 +501,8 @@ Site de e-commerce para venda de camisetas do evento ONE WAY 2025, com sistema c
 ### 📊 Estatísticas Técnicas
 - **Linhas de código**: 3.477+ core (HTML/CSS/JS) + 1.500+ Python
 - **Issues implementadas**: 15+ completas (#11-14, #17-19, #22-28)
+- **Issues planejadas**: 6 para sistema de estoque (#32-38)
+- **Total issues**: 31+ criadas desde o início do projeto
 - **Dependências**: Node.js 17MB otimizado, Python 15+ packages
 - **Scripts**: test_db.py (125 linhas), server.js (685 linhas), index.html (744 linhas)
 - **Arquivos CSS**: style.css (2.048 linhas) + modais customizados
@@ -413,9 +517,10 @@ Site de e-commerce para venda de camisetas do evento ONE WAY 2025, com sistema c
 
 ### 💰 Produtos Configurados
 - 4 tipos de camisetas (R$ 120,00 cada)
-- Tamanhos: P, M, G, GG
+- Tamanhos: P, M, G, GG (com controle individual de estoque)
 - Métodos: PIX (5% desconto), 2x sem juros, 4x com juros
-- Estoque controlado via products.json
+- **Estoque atual**: Controlado via products.json
+- **Estoque futuro**: Sistema automático Django + PostgreSQL (Issues #32-38)
 
 ---
 

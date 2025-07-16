@@ -36,6 +36,7 @@ class Pedido(models.Model):
         ('pix', 'PIX (5% desconto)'),
         ('2x', 'Cartão 2x sem juros'),
         ('4x', 'Cartão até 4x'),
+        ('paypal', 'PayPal'),
         ('credit_card', 'Cartão de Crédito'),
         ('debit_card', 'Cartão de Débito'),
         ('ticket', 'Boleto'),
@@ -59,10 +60,10 @@ class Pedido(models.Model):
     preco = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Preço")
     forma_pagamento = models.CharField(max_length=20, choices=FORMA_PAGAMENTO_CHOICES, verbose_name="Forma de Pagamento")
     
-    # Dados Mercado Pago
+    # Dados Mercado Pago / PayPal
     external_reference = models.CharField(max_length=100, unique=True, verbose_name="Referência Externa")
-    payment_id = models.CharField(max_length=50, null=True, blank=True, verbose_name="ID Pagamento MP")
-    preference_id = models.CharField(max_length=100, null=True, blank=True, verbose_name="ID Preferência MP")
+    payment_id = models.CharField(max_length=50, null=True, blank=True, verbose_name="ID Pagamento MP/PayPal")
+    preference_id = models.CharField(max_length=100, null=True, blank=True, verbose_name="ID Preferência MP/Ordem PayPal")
     merchant_order_id = models.CharField(max_length=50, null=True, blank=True, verbose_name="ID Ordem Comerciante")
     
     # Status e Controle

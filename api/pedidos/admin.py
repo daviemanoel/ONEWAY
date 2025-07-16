@@ -68,7 +68,7 @@ class PedidoAdmin(admin.ModelAdmin):
         ('Informações do Pedido', {
             'fields': ('comprador', 'produto', 'tamanho', 'preco', 'forma_pagamento')
         }),
-        ('Dados Mercado Pago', {
+        ('Dados Mercado Pago / PayPal', {
             'fields': (
                 'external_reference', 
                 'payment_id', 
@@ -110,6 +110,7 @@ class PedidoAdmin(admin.ModelAdmin):
             'pix': '⚡',
             '2x': '💳',
             '4x': '💳',
+            'paypal': '🅿️',
             'credit_card': '💳',
             'debit_card': '💳',
             'ticket': '🎫',
@@ -147,22 +148,24 @@ class PedidoAdmin(admin.ModelAdmin):
     status_mercadopago.short_description = 'Status no MP'
     
     def link_mercadopago(self, obj):
-        """Link direto para o pagamento no painel do MP"""
+        """Link direto para o pagamento no painel do MP/PayPal"""
         if obj.payment_id:
-            # Tentar múltiplos formatos de URL do MP
-            # Formato 1: activities com payment_id
-            url_activities = f"https://www.mercadopago.com.br/activities/{obj.payment_id}"
-            
-            # Formato 2: activities/detail com payment_id  
-            url_detail = f"https://www.mercadopago.com.br/activities/detail/{obj.payment_id}"
-            
-            # Por padrão usar o formato activities simples
-            return format_html(
-                '<a href="{}" target="_blank" style="background: #009EE3; color: white; padding: 4px 8px; border-radius: 4px; text-decoration: none; display: inline-block;">🔗 Ver no MP</a>',
-                url_activities
-            )
+            if obj.forma_pagamento == 'paypal':
+                # Link para PayPal (Transaction ID)
+                url_paypal = f"https://www.paypal.com/activity/payment/{obj.payment_id}"
+                return format_html(
+                    '<a href="{}" target="_blank" style="background: #0070ba; color: white; padding: 4px 8px; border-radius: 4px; text-decoration: none; display: inline-block;">🔗 Ver no PayPal</a>',
+                    url_paypal
+                )
+            else:
+                # Link para Mercado Pago
+                url_activities = f"https://www.mercadopago.com.br/activities/{obj.payment_id}"
+                return format_html(
+                    '<a href="{}" target="_blank" style="background: #009EE3; color: white; padding: 4px 8px; border-radius: 4px; text-decoration: none; display: inline-block;">🔗 Ver no MP</a>',
+                    url_activities
+                )
         return "Payment ID não disponível"
-    link_mercadopago.short_description = 'Link MP'
+    link_mercadopago.short_description = 'Link Pagamento'
     
     # Actions personalizadas
     def consultar_status_mp(self, request, queryset):

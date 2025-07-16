@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pagamento Cancelado - ONE WAY 2025</title>
+    <link rel="stylesheet" href="./Css/style.css">
+    <style>
+        .cancel-container {
+            max-width: 600px;
+            margin: 100px auto;
+            padding: 40px;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+        
+        .status-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            display: block;
+            color: #ffc107;
+        }
+        
+        .status-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .status-message {
+            font-size: 16px;
+            margin-bottom: 20px;
+            color: #666;
+            line-height: 1.6;
+        }
+        
+        .info-box {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: left;
+        }
+        
+        .info-box h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+        
+        .info-box p {
+            margin: 10px 0;
+            color: #555;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 12px 30px;
+            background: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 10px;
+            transition: background 0.3s;
+        }
+        
+        .btn:hover {
+            background: #0056b3;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+        }
+        
+        .btn-secondary:hover {
+            background: #545b62;
+        }
+        
+        .btn-success {
+            background: #28a745;
+        }
+        
+        .btn-success:hover {
+            background: #218838;
+        }
+        
+        .highlight {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #ffc107;
+            margin: 20px 0;
+        }
+        
+        .highlight strong {
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <div class="cancel-container">
+        <div class="status-icon">⚠️</div>
+        <h2 class="status-title">Pagamento Cancelado</h2>
+        <p class="status-message">
+            Você cancelou o pagamento no PayPal.<br>
+            Nenhuma cobrança foi realizada.
+        </p>
+        
+        <div class="highlight">
+            <strong>Não se preocupe!</strong> Seu pedido não foi perdido.<br>
+            Você pode tentar novamente a qualquer momento.
+        </div>
+        
+        <div class="info-box">
+            <h3>💡 Outras Opções de Pagamento</h3>
+            <p><strong>PIX:</strong> Pagamento instantâneo com 5% de desconto</p>
+            <p><strong>PayPal:</strong> Cartão de crédito com segurança PayPal</p>
+            <p><strong>Parcelamento:</strong> Opções disponíveis via PayPal</p>
+        </div>
+        
+        <div class="info-box">
+            <h3>📞 Precisa de Ajuda?</h3>
+            <p>Se você teve algum problema durante o pagamento, entre em contato conosco:</p>
+            <p><strong>WhatsApp:</strong> (11) 99999-9999</p>
+            <p><strong>Email:</strong> contato@oneway.com.br</p>
+            <p><strong>Horário:</strong> Segunda a sexta, 9h às 18h</p>
+        </div>
+        
+        <div class="info-box">
+            <h3>🔒 Segurança PayPal</h3>
+            <p>O PayPal oferece proteção ao comprador e não armazena dados do seu cartão em nossos servidores.</p>
+            <p>Seus dados financeiros ficam seguros com criptografia de ponta a ponta.</p>
+        </div>
+        
+        <a href="/" class="btn btn-success">Tentar Novamente</a>
+        <a href="/#contato" class="btn btn-secondary">Entrar em Contato</a>
+    </div>
+
+    <script>
+        // Log para debugging
+        console.log('📄 Página de cancelamento PayPal carregada');
+        console.log('🔗 URL atual:', window.location.href);
+        
+        // Extrair parâmetros da URL para análise
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+        
+        if (token) {
+            console.log('🎫 Token PayPal cancelado:', token);
+        }
+        
+        // Análise opcional: registrar cancelamento para métricas
+        document.addEventListener('DOMContentLoaded', () => {
+            // Aqui poderia ser enviado um evento para analytics
+            console.log('📊 Cancelamento PayPal registrado');
+            
+            // Opcional: enviar dados para analytics
+            if (typeof gtag !== 'undefined') {
+                gtag('event', 'payment_cancelled', {
+                    'payment_method': 'paypal',
+                    'currency': 'BRL'
+                });
+            }
+        });
+        
+        // Função para voltar ao checkout
+        function retryCheckout() {
+            // Limpar histórico e voltar para página inicial
+            window.location.href = '/';
+        }
+        
+        // Adicionar evento de teclado para melhor UX
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                retryCheckout();
+            }
+        });
+    </script>
+</body>
+</html>

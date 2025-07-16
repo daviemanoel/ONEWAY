@@ -282,9 +282,33 @@
             });
         }
 
+        // Variável global para configuração de pagamentos
+        let paymentConfig = {
+            cartao: 'PAYPAL',
+            pix: 'MERCADOPAGO'
+        };
+
+        // Carregar configuração de pagamentos
+        async function loadPaymentConfig() {
+            try {
+                const response = await fetch('/api/payment-config');
+                const data = await response.json();
+                paymentConfig = data.config;
+                console.log('🔧 Configuração de pagamentos carregada:', paymentConfig);
+                return paymentConfig;
+            } catch (error) {
+                console.error('❌ Erro ao carregar configuração de pagamentos:', error);
+                console.log('⚠️ Usando configuração padrão:', paymentConfig);
+                return paymentConfig;
+            }
+        }
+
         // Carregar produtos do JSON
         async function loadProducts() {
             try {
+                // Carregar configuração de pagamentos primeiro
+                await loadPaymentConfig();
+                
                 const response = await fetch('./products.json');
                 const data = await response.json();
                 
@@ -356,8 +380,7 @@
                                     <label>Forma de pagamento:</label>
                                     <select class="payment-method">
                                         <option value="pix">PIX - 5% de Desconto</option>
-                                        <option value="2x">até 2X Cartão de Crédito (Sem Juros)</option>
-                                        <option value="4x">até 4X Cartão de Crédito</option>
+                                        <option value="cartao">Cartão de Crédito</option>
                                     </select>
                                 </div>
                                 <button class="product-btn" data-product-id="${product.id}">Comprar Agora</button>
@@ -430,7 +453,7 @@
                             productName: productName,
                             size: size,
                             paymentMethod: paymentMethod,
-                            installments: paymentMethod === 'pix' ? 1 : parseInt(paymentMethod),
+                            installments: paymentMethod === 'pix' ? 1 : (paymentMethod === 'cartao' ? 1 : parseInt(paymentMethod)),
                             price: productPrice // Só para exibição no modal - backend ignora
                         });
                     } catch (error) {
@@ -502,9 +525,7 @@
                 
             const paymentMethodText = checkoutData.paymentMethod === 'pix' 
                 ? 'PIX (5% de desconto)' 
-                : checkoutData.paymentMethod === '2x' 
-                    ? 'Cartão de Crédito 2x sem juros'
-                    : 'Cartão de Crédito até 4x';
+                : 'Cartão de Crédito';
                     
             document.getElementById('price-summary-text').innerHTML = 
                 checkoutData.paymentMethod === 'pix' 
@@ -610,7 +631,36 @@
             checkoutButton.textContent = 'Processando...';
 
             try {
-                const response = await fetch('/create-mp-checkout', {
+                // Determinar qual endpoint usar baseado na configuração dinâmica
+                let endpoint;
+                let paymentProvider;
+                
+                if (currentCheckoutData.paymentMethod === 'pix') {
+                    // PIX sempre usa o provedor configurado (geralmente Mercado Pago)
+                    if (paymentConfig.pix === 'MERCADOPAGO') {
+                        endpoint = '/create-mp-checkout';
+                        paymentProvider = 'Mercado Pago';
+                    } else {
+                        throw new Error('PIX não suportado pelo provedor configurado');
+                    }
+                } else if (currentCheckoutData.paymentMethod === 'cartao') {
+                    // Cartão usa o provedor configurado (PayPal ou Mercado Pago)
+                    if (paymentConfig.cartao === 'PAYPAL') {
+                        endpoint = '/create-paypal-order';
+                        paymentProvider = 'PayPal';
+                    } else if (paymentConfig.cartao === 'MERCADOPAGO') {
+                        endpoint = '/create-mp-checkout';
+                        paymentProvider = 'Mercado Pago';
+                    } else {
+                        throw new Error('Provedor de cartão não configurado');
+                    }
+                } else {
+                    throw new Error('Método de pagamento inválido');
+                }
+
+                console.log(`🔄 Processando com ${paymentProvider}... (configuração: ${JSON.stringify(paymentConfig)})`);
+
+                const response = await fetch(endpoint, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -626,10 +676,12 @@
                 
                 const data = await response.json();
                 
-                if (data.checkout_url) {
-                    // Fechar modal e redirecionar para o checkout Mercado Pago
+                if (data.checkout_url || data.approval_url) {
+                    // Fechar modal e redirecionar para o checkout
                     closeCheckoutModal();
-                    window.location.href = data.checkout_url;
+                    const redirectUrl = data.checkout_url || data.approval_url;
+                    console.log(`✅ Redirecionando para ${paymentProvider}:`, redirectUrl);
+                    window.location.href = redirectUrl;
                 } else {
                     throw new Error(data.error || 'Erro ao processar pagamento');
                 }
@@ -638,7 +690,7 @@
                 
                 // Verificar se é erro de token
                 if (error.message.includes('invalid_token') || error.message.includes('bad_request')) {
-                    alert('⚠️ Sistema em modo de desenvolvimento\n\nPara testar com pagamento real, configure um token válido do Mercado Pago.\n\nOs dados do pedido foram salvos com sucesso no sistema!');
+                    alert('⚠️ Sistema em modo de desenvolvimento\n\nPara testar com pagamento real, configure um token válido.\n\nOs dados do pedido foram salvos com sucesso no sistema!');
                 } else {
                     alert('Erro ao processar pagamento. Tente novamente.');
                 }

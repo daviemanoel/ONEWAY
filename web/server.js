@@ -42,6 +42,72 @@ const mercadoPagoClient = new MercadoPagoConfig({
 });
 const preference = new Preference(mercadoPagoClient);
 
+// Configurar PayPal
+const https = require('https');
+const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID;
+const PAYPAL_CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET;
+const PAYPAL_BASE_URL = process.env.PAYPAL_ENVIRONMENT === 'sandbox' 
+  ? 'https://api.sandbox.paypal.com' 
+  : 'https://api.paypal.com';
+
+// Função para obter token PayPal
+async function getPayPalAccessToken() {
+  const auth = Buffer.from(`${PAYPAL_CLIENT_ID}:${PAYPAL_CLIENT_SECRET}`).toString('base64');
+  
+  return new Promise((resolve, reject) => {
+    const options = {
+      hostname: PAYPAL_BASE_URL.replace('https://', ''),
+      port: 443,
+      path: '/v1/oauth2/token',
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Accept-Language': 'en_US',
+        'Authorization': `Basic ${auth}`,
+        'Content-Type': 'application/x-www-form-urlencoded'
+      }
+    };
+    
+    const req = https.request(options, (res) => {
+      let data = '';
+      res.on('data', (chunk) => data += chunk);
+      res.on('end', () => {
+        if (res.statusCode === 200) {
+          const tokenData = JSON.parse(data);
+          resolve(tokenData.access_token);
+        } else {
+          reject(new Error(`PayPal auth failed: ${res.statusCode}`));
+        }
+      });
+    });
+    
+    req.on('error', reject);
+    req.write('grant_type=client_credentials');
+    req.end();
+  });
+}
+
+// Função para fazer request HTTP PayPal
+function makePayPalRequest(options, postData = null) {
+  return new Promise((resolve, reject) => {
+    const req = https.request(options, (res) => {
+      let data = '';
+      res.on('data', (chunk) => data += chunk);
+      res.on('end', () => {
+        resolve({
+          statusCode: res.statusCode,
+          headers: res.headers,
+          body: data
+        });
+      });
+    });
+    
+    req.on('error', reject);
+    if (postData) req.write(postData);
+    req.end();
+  });
+}
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -128,6 +194,15 @@ app.get('/mp-success', (req, res) => {
 
 app.get('/mp-cancel', (req, res) => {
   res.sendFile(path.join(__dirname, 'mp-cancel.html'));
+});
+
+// Páginas de checkout PayPal
+app.get('/paypal-success', (req, res) => {
+  res.sendFile(path.join(__dirname, 'paypal-success.html'));
+});
+
+app.get('/paypal-cancel', (req, res) => {
+  res.sendFile(path.join(__dirname, 'paypal-cancel.html'));
 });
 
 // Endpoint para criar sessão de checkout Stripe
@@ -676,6 +751,459 @@ app.post('/api/django/pedidos/', async (req, res) => {
       });
     }
   }
+});
+
+// Endpoint para criar ordem PayPal
+app.post('/create-paypal-order', async (req, res) => {
+  try {
+    const { productName, size, nome, email, telefone } = req.body;
+    
+    console.log('🅿️ Criando ordem PayPal para cartão...');
+    console.log('📦 Produto:', productName, 'Tamanho:', size);
+    console.log('👤 Cliente:', nome, email, telefone);
+    
+    // Validar dados obrigatórios
+    if (!productName || !size || !nome || !email || !telefone) {
+      return res.status(400).json({
+        error: 'Dados obrigatórios: productName, size, nome, email, telefone'
+      });
+    }
+    
+    // Validar credenciais PayPal
+    if (!PAYPAL_CLIENT_ID || !PAYPAL_CLIENT_SECRET) {
+      return res.status(500).json({
+        error: 'Credenciais PayPal não configuradas'
+      });
+    }
+    
+    // SEGURANÇA: Buscar preço real do catálogo no servidor
+    let productsData;
+    try {
+      productsData = getProductsCatalog();
+    } catch (error) {
+      return res.status(500).json({ 
+        error: 'Serviço temporariamente indisponível. Tente novamente.' 
+      });
+    }
+
+    // Encontrar produto pelo nome exato
+    const product = Object.values(productsData.products)
+      .find(p => p.title === productName);
+    
+    if (!product) {
+      console.warn(`Produto não encontrado: "${productName}"`);
+      return res.status(400).json({ 
+        error: 'Produto não encontrado. Atualize a página e tente novamente.' 
+      });
+    }
+
+    // FONTE ÚNICA DA VERDADE: preço sempre do servidor
+    const amount = parseFloat(product.price);
+    
+    if (isNaN(amount) || amount <= 0) {
+      console.error(`Preço inválido: ${productName} = ${product.price}`);
+      return res.status(500).json({ 
+        error: 'Configuração inválida do produto. Contate o suporte.' 
+      });
+    }
+    
+    console.log(`✅ Preço validado: R$ ${amount.toFixed(2)}`);
+    
+    // ETAPA 1: Criar pedido pendente no Django
+    console.log('💾 ETAPA 1: Criando pedido pendente no Django...');
+    
+    const externalReference = `PAYPAL-${Date.now()}`;
+    
+    const pedidoData = {
+      nome,
+      email,
+      telefone,
+      produto: mapearProdutoParaId(productName),
+      tamanho: size,
+      preco: amount,
+      forma_pagamento: 'paypal',
+      status_pagamento: 'pending',
+      external_reference: externalReference,
+      observacoes: 'Pedido PayPal - aguardando pagamento'
+    };
+    
+    console.log('📤 Dados do pedido:', pedidoData);
+    
+    let pedidoCriado;
+    try {
+      const pedidoResponse = await axios.post(
+        `${DJANGO_API_URL}/pedidos/`,
+        pedidoData,
+        {
+          headers: {
+            'Authorization': `Token ${DJANGO_API_TOKEN}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      pedidoCriado = pedidoResponse.data;
+      console.log('✅ Pedido criado no Django:', pedidoCriado.id);
+      
+    } catch (error) {
+      console.error('❌ Erro ao criar pedido Django:', error.response?.data || error.message);
+      return res.status(500).json({
+        error: 'Erro ao processar pedido. Tente novamente.',
+        details: error.response?.data || error.message
+      });
+    }
+    
+    // ETAPA 2: Obter token PayPal
+    console.log('🔑 ETAPA 2: Obtendo token PayPal...');
+    
+    let accessToken;
+    try {
+      accessToken = await getPayPalAccessToken();
+      console.log('✅ Token PayPal obtido');
+    } catch (error) {
+      console.error('❌ Erro ao obter token PayPal:', error.message);
+      return res.status(500).json({
+        error: 'Erro de autenticação PayPal. Tente novamente.',
+        details: error.message
+      });
+    }
+    
+    // ETAPA 3: Criar ordem no PayPal
+    console.log('🏪 ETAPA 3: Criando ordem PayPal...');
+    
+    const orderData = {
+      intent: 'CAPTURE',
+      purchase_units: [
+        {
+          amount: {
+            currency_code: 'BRL',
+            value: amount.toFixed(2)
+          },
+          description: `${productName} - Tamanho ${size}`,
+          custom_id: externalReference
+        }
+      ],
+      application_context: {
+        brand_name: 'ONE WAY 2025',
+        locale: 'pt-BR',
+        landing_page: 'NO_PREFERENCE',
+        shipping_preference: 'NO_SHIPPING',
+        user_action: 'PAY_NOW',
+        return_url: `${process.env.BASE_URL || 'https://oneway.mevamfranca.com.br'}/paypal-success?external_reference=${externalReference}&pedido_id=${pedidoCriado.id}`,
+        cancel_url: `${process.env.BASE_URL || 'https://oneway.mevamfranca.com.br'}/paypal-cancel`
+      }
+    };
+    
+    const orderOptions = {
+      hostname: PAYPAL_BASE_URL.replace('https://', ''),
+      port: 443,
+      path: '/v2/checkout/orders',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+        'Accept': 'application/json',
+        'Prefer': 'return=representation'
+      }
+    };
+    
+    try {
+      const orderResponse = await makePayPalRequest(orderOptions, JSON.stringify(orderData));
+      
+      if (orderResponse.statusCode === 201) {
+        const orderResult = JSON.parse(orderResponse.body);
+        console.log('✅ Ordem PayPal criada:', orderResult.id);
+        
+        // ETAPA 4: Atualizar pedido com order ID
+        console.log('🔄 ETAPA 4: Atualizando pedido com order ID...');
+        
+        try {
+          await axios.post(
+            `${DJANGO_API_URL}/pedidos/${pedidoCriado.id}/atualizar_status/`,
+            {
+              preference_id: orderResult.id,
+              observacoes: 'Ordem PayPal criada - aguardando pagamento'
+            },
+            {
+              headers: {
+                'Authorization': `Token ${DJANGO_API_TOKEN}`,
+                'Content-Type': 'application/json'
+              }
+            }
+          );
+          
+          console.log('✅ Pedido atualizado com order ID');
+          
+        } catch (updateError) {
+          console.error('⚠️ Erro ao atualizar pedido (não crítico):', updateError.message);
+        }
+        
+        // Encontrar link de aprovação
+        const approveLink = orderResult.links?.find(link => link.rel === 'approve');
+        
+        if (approveLink) {
+          console.log('🚀 FLUXO COMPLETO: Pedido criado e ordem PayPal configurada');
+          
+          res.json({
+            success: true,
+            order_id: orderResult.id,
+            approval_url: approveLink.href,
+            pedido_id: pedidoCriado.id,
+            external_reference: externalReference
+          });
+        } else {
+          throw new Error('Link de aprovação não encontrado');
+        }
+        
+      } else {
+        console.error('❌ Erro ao criar ordem PayPal:', orderResponse.statusCode, orderResponse.body);
+        return res.status(500).json({
+          error: 'Erro ao criar ordem PayPal',
+          details: orderResponse.body
+        });
+      }
+      
+    } catch (error) {
+      console.error('❌ Erro na comunicação com PayPal:', error.message);
+      return res.status(500).json({
+        error: 'Erro ao processar pagamento PayPal',
+        details: error.message
+      });
+    }
+    
+  } catch (error) {
+    console.error('❌ Erro geral no create-paypal-order:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor',
+      message: error.message
+    });
+  }
+});
+
+// Endpoint para capturar pagamento PayPal
+app.post('/capture-paypal-order', async (req, res) => {
+  try {
+    const { orderID, external_reference, pedido_id } = req.body;
+    
+    console.log('🅿️ Capturando pagamento PayPal...');
+    console.log('📦 Order ID:', orderID);
+    console.log('🔗 External Reference:', external_reference);
+    console.log('🆔 Pedido ID:', pedido_id);
+    
+    // Validar dados obrigatórios
+    if (!orderID) {
+      return res.status(400).json({
+        error: 'Order ID é obrigatório'
+      });
+    }
+    
+    // Validar credenciais PayPal
+    if (!PAYPAL_CLIENT_ID || !PAYPAL_CLIENT_SECRET) {
+      return res.status(500).json({
+        error: 'Credenciais PayPal não configuradas'
+      });
+    }
+    
+    // ETAPA 1: Obter token PayPal
+    console.log('🔑 ETAPA 1: Obtendo token PayPal...');
+    
+    let accessToken;
+    try {
+      accessToken = await getPayPalAccessToken();
+      console.log('✅ Token PayPal obtido');
+    } catch (error) {
+      console.error('❌ Erro ao obter token PayPal:', error.message);
+      return res.status(500).json({
+        error: 'Erro de autenticação PayPal. Tente novamente.',
+        details: error.message
+      });
+    }
+    
+    // ETAPA 2: Capturar pagamento no PayPal
+    console.log('💳 ETAPA 2: Capturando pagamento PayPal...');
+    
+    const captureOptions = {
+      hostname: PAYPAL_BASE_URL.replace('https://', ''),
+      port: 443,
+      path: `/v2/checkout/orders/${orderID}/capture`,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+        'Accept': 'application/json',
+        'Prefer': 'return=representation'
+      }
+    };
+    
+    try {
+      const captureResponse = await makePayPalRequest(captureOptions, '{}');
+      
+      if (captureResponse.statusCode === 201) {
+        const captureResult = JSON.parse(captureResponse.body);
+        console.log('✅ Pagamento PayPal capturado:', captureResult.id);
+        console.log('💰 Status:', captureResult.status);
+        
+        // Verificar se o pagamento foi realmente completado
+        if (captureResult.status === 'COMPLETED') {
+          console.log('🎉 Pagamento confirmado como COMPLETED');
+          
+          // ETAPA 3: Atualizar status no Django
+          console.log('🔄 ETAPA 3: Atualizando status no Django...');
+          
+          // Buscar pedido por external_reference se não tiver pedido_id
+          let pedidoParaAtualizar = pedido_id;
+          
+          if (!pedidoParaAtualizar && external_reference) {
+            try {
+              const pedidoResponse = await axios.get(
+                `${DJANGO_API_URL}/pedidos/referencia/${encodeURIComponent(external_reference)}/`,
+                {
+                  headers: {
+                    'Authorization': `Token ${DJANGO_API_TOKEN}`,
+                    'Accept': 'application/json'
+                  }
+                }
+              );
+              
+              pedidoParaAtualizar = pedidoResponse.data.id;
+              console.log('✅ Pedido encontrado por external_reference:', pedidoParaAtualizar);
+              
+            } catch (error) {
+              console.error('❌ Erro ao buscar pedido por external_reference:', error.message);
+            }
+          }
+          
+          // Atualizar status do pedido para aprovado
+          if (pedidoParaAtualizar) {
+            try {
+              // Extrair payment_id da resposta de captura
+              const paymentId = captureResult.purchase_units?.[0]?.payments?.captures?.[0]?.id || captureResult.id;
+              
+              await axios.post(
+                `${DJANGO_API_URL}/pedidos/${pedidoParaAtualizar}/atualizar_status/`,
+                {
+                  status_pagamento: 'approved',
+                  payment_id: paymentId,
+                  observacoes: `Pagamento PayPal capturado com sucesso. Transaction ID: ${paymentId}`
+                },
+                {
+                  headers: {
+                    'Authorization': `Token ${DJANGO_API_TOKEN}`,
+                    'Content-Type': 'application/json'
+                  }
+                }
+              );
+              
+              console.log('✅ Status do pedido atualizado para aprovado');
+              
+            } catch (error) {
+              console.error('❌ Erro ao atualizar status do pedido:', error.response?.data || error.message);
+              // Não bloquear o fluxo se apenas a atualização falhar
+            }
+          }
+          
+          // Retornar sucesso
+          res.json({
+            success: true,
+            status: 'COMPLETED',
+            transaction_id: captureResult.id,
+            payment_id: captureResult.purchase_units?.[0]?.payments?.captures?.[0]?.id || captureResult.id,
+            pedido_id: pedidoParaAtualizar,
+            message: 'Pagamento processado com sucesso!'
+          });
+          
+        } else {
+          console.warn('⚠️ Pagamento não completado:', captureResult.status);
+          res.status(400).json({
+            success: false,
+            status: captureResult.status,
+            message: 'Pagamento não foi completado',
+            details: captureResult
+          });
+        }
+        
+      } else {
+        console.error('❌ Erro ao capturar pagamento PayPal:', captureResponse.statusCode, captureResponse.body);
+        
+        // Tentar parsear erro do PayPal
+        let errorDetails = captureResponse.body;
+        try {
+          const errorData = JSON.parse(captureResponse.body);
+          errorDetails = errorData.details || errorData.message || errorData;
+        } catch (parseError) {
+          // Manter erro original se não conseguir parsear
+        }
+        
+        return res.status(500).json({
+          success: false,
+          error: 'Erro ao capturar pagamento PayPal',
+          status_code: captureResponse.statusCode,
+          details: errorDetails
+        });
+      }
+      
+    } catch (error) {
+      console.error('❌ Erro na comunicação com PayPal:', error.message);
+      return res.status(500).json({
+        success: false,
+        error: 'Erro ao processar captura PayPal',
+        details: error.message
+      });
+    }
+    
+  } catch (error) {
+    console.error('❌ Erro geral no capture-paypal-order:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro interno do servidor',
+      message: error.message
+    });
+  }
+});
+
+// Endpoint para configuração de métodos de pagamento
+app.get('/api/payment-config', (req, res) => {
+  const config = {
+    cartao: process.env.FORMA_PAGAMENTO_CARTAO || 'PAYPAL',
+    pix: process.env.FORMA_PAGAMENTO_PIX || 'MERCADOPAGO'
+  };
+  
+  console.log('🔧 Configuração de pagamentos solicitada:', config);
+  
+  // Validar configurações
+  const validProviders = ['MERCADOPAGO', 'PAYPAL'];
+  
+  if (!validProviders.includes(config.cartao)) {
+    console.warn(`⚠️ Provedor inválido para cartão: ${config.cartao}. Usando PAYPAL como padrão.`);
+    config.cartao = 'PAYPAL';
+  }
+  
+  if (!validProviders.includes(config.pix)) {
+    console.warn(`⚠️ Provedor inválido para PIX: ${config.pix}. Usando MERCADOPAGO como padrão.`);
+    config.pix = 'MERCADOPAGO';
+  }
+  
+  // Verificar se PIX está configurado para PayPal (não suportado)
+  if (config.pix === 'PAYPAL') {
+    console.warn('⚠️ PIX não é suportado pelo PayPal. Forçando MERCADOPAGO para PIX.');
+    config.pix = 'MERCADOPAGO';
+  }
+  
+  // Verificar se os provedores estão configurados
+  const status = {
+    mercadopago_configured: !!process.env.MERCADOPAGO_ACCESS_TOKEN,
+    paypal_configured: !!(process.env.PAYPAL_CLIENT_ID && process.env.PAYPAL_CLIENT_SECRET),
+    django_configured: !!process.env.DJANGO_API_TOKEN
+  };
+  
+  console.log('🔍 Status dos provedores:', status);
+  
+  res.json({
+    config,
+    status,
+    timestamp: new Date().toISOString(),
+    version: '1.0.0'
+  });
 });
 
 // Health check específico Mercado Pago
