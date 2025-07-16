@@ -898,7 +898,7 @@ app.post('/create-paypal-order', async (req, res) => {
       application_context: {
         brand_name: 'ONE WAY 2025',
         locale: 'pt-BR',
-        landing_page: 'GUEST_CHECKOUT', // Força guest checkout sem conta
+        landing_page: 'BILLING', // Página de cobrança permite guest checkout
         shipping_preference: 'NO_SHIPPING',
         user_action: 'PAY_NOW',
         return_url: `${process.env.BASE_URL || 'https://oneway.mevamfranca.com.br'}/paypal-success?external_reference=${externalReference}&pedido_id=${pedidoCriado.id}`,
