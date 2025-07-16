@@ -49,12 +49,22 @@ const PORT = process.env.PORT || 3000;
 function mapearProdutoParaId(productName) {
   const mapping = {
     'Camiseta One Way Marrom': 'camiseta-marrom',
-    'Camiseta Jesus Christ': 'camiseta-jesus',
-    'Camiseta One Way Branca': 'camiseta-oneway-branca',
+    'Camiseta Jesus': 'camiseta-jesus',
+    'Camiseta ONE WAY Off White': 'camiseta-oneway-branca',
     'Camiseta The Way': 'camiseta-the-way'
   };
   
-  return mapping[productName] || 'camiseta-marrom';
+  const produtoMapeado = mapping[productName];
+  
+  if (!produtoMapeado) {
+    console.error(`❌ ERRO: Produto não encontrado no mapeamento: "${productName}"`);
+    console.error('Produtos válidos:', Object.keys(mapping));
+    // Lançar erro em vez de retornar valor padrão incorreto
+    throw new Error(`Produto não encontrado: ${productName}`);
+  }
+  
+  console.log(`✅ Produto mapeado: "${productName}" -> "${produtoMapeado}"`);
+  return produtoMapeado;
 }
 
 // Middleware
@@ -161,7 +171,7 @@ app.post('/create-checkout-session', async (req, res) => {
 // Endpoint para criar preferência de pagamento Mercado Pago
 app.post('/create-mp-checkout', async (req, res) => {
   try {
-    const { priceId, productName, size, paymentMethod, installments, nome, email, telefone } = req.body;
+    const { productId, priceId, productName, size, paymentMethod, installments, nome, email, telefone } = req.body;
 
     if (!priceId) {
       return res.status(400).json({ 
@@ -218,13 +228,21 @@ app.post('/create-mp-checkout', async (req, res) => {
     }
     
     console.log(`✅ Checkout seguro: ${productName} - ${paymentMethod} - R$ ${amount.toFixed(2)}`);
+    console.log(`🔍 Debug - ProductId: ${productId}, Product: ${product.id}`);
+    console.log(`🖼️ Imagem do produto: ${product.image}`);
 
     // NOVO FLUXO: Criar pedido ANTES da preferência MP
     console.log('💾 ETAPA 1: Criando pedido pendente no Django...');
     
     // Gerar external_reference único sem espaços
-    const produtoId = mapearProdutoParaId(productName).replace('camiseta-', '').replace('-', '').toUpperCase();
-    const externalReference = `ONEWAY-${produtoId}-${size}-${Date.now()}`;
+    let produtoIdRef;
+    try {
+      produtoIdRef = mapearProdutoParaId(productName).replace('camiseta-', '').replace('-', '').toUpperCase();
+    } catch (error) {
+      // Se falhar no mapeamento, usar o productId numérico
+      produtoIdRef = productId || 'UNKNOWN';
+    }
+    const externalReference = `ONEWAY-${produtoIdRef}-${size}-${Date.now()}`;
     
     // Preparar dados do pedido
     const pedidoData = {
@@ -234,7 +252,30 @@ app.post('/create-mp-checkout', async (req, res) => {
       telefone: telefone || '',
       
       // Dados do produto
-      produto: mapearProdutoParaId(productName),
+      produto: productId ? (() => {
+        // Mapear ID numérico para string do Django
+        const idMapping = {
+          '1': 'camiseta-marrom',
+          '2': 'camiseta-jesus',
+          '3': 'camiseta-oneway-branca',
+          '4': 'camiseta-the-way'
+        };
+        
+        const produtoMapeado = idMapping[productId];
+        if (!produtoMapeado) {
+          console.error(`❌ ProductId inválido: ${productId}`);
+          throw new Error(`ProductId inválido: ${productId}`);
+        }
+        return produtoMapeado;
+      })() : (() => {
+        // Fallback: tentar mapear pelo nome
+        try {
+          return mapearProdutoParaId(productName);
+        } catch (error) {
+          console.error('❌ Falha no mapeamento do produto:', error.message);
+          throw new Error('Produto inválido - verifique os dados enviados');
+        }
+      })(),
       tamanho: size,
       preco: amount,
       forma_pagamento: paymentMethod === 'pix' ? 'pix' : paymentMethod === '2x' ? '2x' : '4x',
@@ -283,7 +324,7 @@ app.post('/create-mp-checkout', async (req, res) => {
         {
           title: `${productName} - Tamanho ${size}`,
           description: 'Camiseta ONE WAY 2025',
-          picture_url: 'https://oneway.mevamfranca.com.br/img/camisetas/camiseta_marrom.jpeg',
+          picture_url: product.image ? `https://oneway.mevamfranca.com.br${product.image.replace('./', '/')}` : 'https://oneway.mevamfranca.com.br/img/camisetas/camiseta_marrom.jpeg',
           category_id: 'fashion',
           quantity: 1,
           currency_id: 'BRL',
@@ -349,6 +390,7 @@ app.post('/create-mp-checkout', async (req, res) => {
         comprador_email: email || '',
         comprador_telefone: telefone || '',
         // Dados do produto
+        product_id: productId || '',
         product_name: productName || '',
         size: size || '',
         price_id: priceId,
