@@ -761,9 +761,14 @@ app.post('/create-paypal-order', async (req, res) => {
     console.log('🅿️ Criando ordem PayPal para cartão...');
     console.log('📦 Produto:', productName, 'Tamanho:', size);
     console.log('👤 Cliente:', nome, email, telefone);
+    console.log('🔧 DEBUG: PayPal Environment:', process.env.PAYPAL_ENVIRONMENT);
+    console.log('🔧 DEBUG: PayPal Base URL:', PAYPAL_BASE_URL);
+    console.log('🔧 DEBUG: Client ID exists:', !!PAYPAL_CLIENT_ID);
+    console.log('🔧 DEBUG: Client Secret exists:', !!PAYPAL_CLIENT_SECRET);
     
     // Validar dados obrigatórios
     if (!productName || !size || !nome || !email || !telefone) {
+      console.error('❌ DEBUG: Dados obrigatórios faltando');
       return res.status(400).json({
         error: 'Dados obrigatórios: productName, size, nome, email, telefone'
       });
@@ -771,16 +776,22 @@ app.post('/create-paypal-order', async (req, res) => {
     
     // Validar credenciais PayPal
     if (!PAYPAL_CLIENT_ID || !PAYPAL_CLIENT_SECRET) {
+      console.error('❌ DEBUG: Credenciais PayPal não configuradas');
       return res.status(500).json({
         error: 'Credenciais PayPal não configuradas'
       });
     }
     
+    console.log('✅ DEBUG: Validações iniciais passaram');
+    
     // SEGURANÇA: Buscar preço real do catálogo no servidor
+    console.log('📋 DEBUG: Carregando catálogo de produtos...');
     let productsData;
     try {
       productsData = getProductsCatalog();
+      console.log('✅ DEBUG: Catálogo carregado com sucesso');
     } catch (error) {
+      console.error('❌ DEBUG: Erro ao carregar catálogo:', error.message);
       return res.status(500).json({ 
         error: 'Serviço temporariamente indisponível. Tente novamente.' 
       });
@@ -859,9 +870,10 @@ app.post('/create-paypal-order', async (req, res) => {
     let accessToken;
     try {
       accessToken = await getPayPalAccessToken();
-      console.log('✅ Token PayPal obtido');
+      console.log('✅ DEBUG: Token PayPal obtido com sucesso');
     } catch (error) {
-      console.error('❌ Erro ao obter token PayPal:', error.message);
+      console.error('❌ DEBUG: Erro ao obter token PayPal:', error.message);
+      console.error('❌ DEBUG: Stack trace:', error.stack);
       return res.status(500).json({
         error: 'Erro de autenticação PayPal. Tente novamente.',
         details: error.message
@@ -897,6 +909,8 @@ app.post('/create-paypal-order', async (req, res) => {
       }
     };
     
+    console.log('📤 DEBUG: Dados da ordem PayPal:', JSON.stringify(orderData, null, 2));
+    
     const orderOptions = {
       hostname: PAYPAL_BASE_URL.replace('https://', ''),
       port: 443,
@@ -911,11 +925,15 @@ app.post('/create-paypal-order', async (req, res) => {
     };
     
     try {
+      console.log('🔄 DEBUG: Fazendo requisição para PayPal...');
       const orderResponse = await makePayPalRequest(orderOptions, JSON.stringify(orderData));
+      
+      console.log('📥 DEBUG: Resposta PayPal - Status:', orderResponse.statusCode);
+      console.log('📥 DEBUG: Resposta PayPal - Body:', orderResponse.body);
       
       if (orderResponse.statusCode === 201) {
         const orderResult = JSON.parse(orderResponse.body);
-        console.log('✅ Ordem PayPal criada:', orderResult.id);
+        console.log('✅ DEBUG: Ordem PayPal criada com sucesso:', orderResult.id);
         
         // ETAPA 4: Atualizar pedido com order ID
         console.log('🔄 ETAPA 4: Atualizando pedido com order ID...');
@@ -959,7 +977,8 @@ app.post('/create-paypal-order', async (req, res) => {
         }
         
       } else {
-        console.error('❌ Erro ao criar ordem PayPal:', orderResponse.statusCode, orderResponse.body);
+        console.error('❌ DEBUG: Erro ao criar ordem PayPal - Status:', orderResponse.statusCode);
+        console.error('❌ DEBUG: Erro ao criar ordem PayPal - Body:', orderResponse.body);
         return res.status(500).json({
           error: 'Erro ao criar ordem PayPal',
           details: orderResponse.body
@@ -967,7 +986,8 @@ app.post('/create-paypal-order', async (req, res) => {
       }
       
     } catch (error) {
-      console.error('❌ Erro na comunicação com PayPal:', error.message);
+      console.error('❌ DEBUG: Erro na comunicação com PayPal:', error.message);
+      console.error('❌ DEBUG: Stack trace:', error.stack);
       return res.status(500).json({
         error: 'Erro ao processar pagamento PayPal',
         details: error.message
@@ -975,10 +995,12 @@ app.post('/create-paypal-order', async (req, res) => {
     }
     
   } catch (error) {
-    console.error('❌ Erro geral no create-paypal-order:', error);
+    console.error('❌ DEBUG: Erro geral no create-paypal-order:', error.message);
+    console.error('❌ DEBUG: Stack trace:', error.stack);
     res.status(500).json({
       error: 'Erro interno do servidor',
-      message: error.message
+      message: error.message,
+      stack: error.stack
     });
   }
 });
