@@ -886,11 +886,14 @@ app.post('/create-paypal-order', async (req, res) => {
       application_context: {
         brand_name: 'ONE WAY 2025',
         locale: 'pt-BR',
-        landing_page: 'NO_PREFERENCE',
+        landing_page: 'GUEST_CHECKOUT', // Força guest checkout sem conta
         shipping_preference: 'NO_SHIPPING',
         user_action: 'PAY_NOW',
         return_url: `${process.env.BASE_URL || 'https://oneway.mevamfranca.com.br'}/paypal-success?external_reference=${externalReference}&pedido_id=${pedidoCriado.id}`,
         cancel_url: `${process.env.BASE_URL || 'https://oneway.mevamfranca.com.br'}/paypal-cancel`
+      },
+      payment_method: {
+        payee_preferred: 'IMMEDIATE_PAYMENT_REQUIRED' // Pagamento imediato sem conta
       }
     };
     
