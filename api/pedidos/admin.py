@@ -2,7 +2,8 @@ from django.contrib import admin
 from django.utils.html import format_html
 from django.urls import reverse
 from django.utils.safestring import mark_safe
-from .models import Comprador, Pedido
+from decimal import Decimal
+from .models import Comprador, Pedido, ItemPedido
 import requests
 from django.conf import settings
 import os
@@ -25,14 +26,28 @@ class CompradorAdmin(admin.ModelAdmin):
     total_pedidos.short_description = 'Total de Pedidos'
 
 
+class ItemPedidoInline(admin.TabularInline):
+    """Inline para exibir e editar itens do pedido"""
+    model = ItemPedido
+    extra = 0
+    fields = ['produto', 'tamanho', 'quantidade', 'preco_unitario', 'subtotal_display']
+    readonly_fields = ['subtotal_display']
+    
+    def subtotal_display(self, obj):
+        if obj.id:
+            return f'R$ {obj.subtotal:.2f}'
+        return '-'
+    subtotal_display.short_description = 'Subtotal'
+
+
 @admin.register(Pedido)
 class PedidoAdmin(admin.ModelAdmin):
+    inlines = [ItemPedidoInline]
     list_display = [
         'id', 
         'comprador_link', 
-        'produto_display', 
-        'tamanho', 
-        'preco_final',
+        'resumo_pedido', 
+        'total_display',
         'forma_pagamento_display',
         'status_display_admin',
         'status_mercadopago',
@@ -91,19 +106,33 @@ class PedidoAdmin(admin.ModelAdmin):
         return format_html('<a href="{}">{}</a>', url, obj.comprador.nome)
     comprador_link.short_description = 'Comprador'
     
-    def produto_display(self, obj):
-        return obj.get_produto_display()
-    produto_display.short_description = 'Produto'
+    def resumo_pedido(self, obj):
+        """Mostra resumo dos itens do pedido"""
+        if obj.itens.exists():
+            # Nova estrutura com múltiplos itens
+            itens = obj.itens.all()
+            if itens.count() == 1:
+                item = itens.first()
+                return f"{item.get_produto_display()} ({item.tamanho}) x{item.quantidade}"
+            else:
+                return f"{itens.count()} itens - {sum(item.quantidade for item in itens)} produtos"
+        else:
+            # Pedido antigo - estrutura legada
+            return f"{obj.get_produto_display()} ({obj.tamanho})"
+    resumo_pedido.short_description = 'Produtos'
     
-    def preco_final(self, obj):
-        valor = obj.valor_com_desconto
-        if obj.forma_pagamento == 'pix' and valor < obj.preco:
+    def total_display(self, obj):
+        """Mostra o total do pedido"""
+        total = obj.total_pedido
+        if obj.forma_pagamento == 'pix':
+            # Mostrar valor com desconto
+            total_sem_desconto = total / Decimal('0.95')
             return format_html(
                 '<span style="color: green;"><s>R$ {}</s><br/>R$ {}</span>',
-                f'{obj.preco:.2f}', f'{valor:.2f}'
+                f'{total_sem_desconto:.2f}', f'{total:.2f}'
             )
-        return f'R$ {valor:.2f}'
-    preco_final.short_description = 'Preço Final'
+        return f'R$ {total:.2f}'
+    total_display.short_description = 'Total'
     
     def forma_pagamento_display(self, obj):
         icons = {

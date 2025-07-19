@@ -113,3 +113,64 @@ class Pedido(models.Model):
             timestamp = timezone.now().strftime('%Y%m%d%H%M%S')
             self.external_reference = f"ONEWAY-{self.id or 'NEW'}-{timestamp}"
         super().save(*args, **kwargs)
+    
+    @property
+    def total_pedido(self):
+        """Calcula o total do pedido baseado nos itens (para nova estrutura)"""
+        if hasattr(self, 'itens'):
+            total = sum(item.subtotal for item in self.itens.all())
+            # Aplicar desconto PIX se necessário
+            if self.forma_pagamento == 'pix':
+                return total * Decimal('0.95')
+            return total
+        # Fallback para pedidos antigos
+        return self.valor_com_desconto
+
+
+class ItemPedido(models.Model):
+    """Modelo para representar cada item dentro de um pedido"""
+    PRODUTOS_CHOICES = Pedido.PRODUTOS_CHOICES
+    TAMANHOS_CHOICES = Pedido.TAMANHOS_CHOICES
+    
+    pedido = models.ForeignKey(
+        Pedido, 
+        on_delete=models.CASCADE, 
+        related_name='itens',
+        verbose_name="Pedido"
+    )
+    produto = models.CharField(
+        max_length=100, 
+        choices=PRODUTOS_CHOICES, 
+        verbose_name="Produto"
+    )
+    tamanho = models.CharField(
+        max_length=5, 
+        choices=TAMANHOS_CHOICES, 
+        verbose_name="Tamanho"
+    )
+    quantidade = models.PositiveIntegerField(
+        default=1,
+        verbose_name="Quantidade"
+    )
+    preco_unitario = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        verbose_name="Preço Unitário"
+    )
+    
+    class Meta:
+        verbose_name = "Item do Pedido"
+        verbose_name_plural = "Itens do Pedido"
+        unique_together = [['pedido', 'produto', 'tamanho']]
+    
+    def __str__(self):
+        return f"{self.quantidade}x {self.get_produto_display()} ({self.tamanho})"
+    
+    @property
+    def subtotal(self):
+        """Calcula o subtotal do item"""
+        return self.preco_unitario * self.quantidade
+    
+    def save(self, *args, **kwargs):
+        # Validar preço contra products.json seria ideal aqui
+        super().save(*args, **kwargs)
