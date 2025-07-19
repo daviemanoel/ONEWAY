@@ -12,12 +12,13 @@ import requests
 import json
 import os
 from django.conf import settings
-from .models import Comprador, Pedido
+from .models import Comprador, Pedido, ItemPedido
 from .serializers import (
     CompradorSerializer, 
     PedidoSerializer, 
     CriarPedidoSerializer,
-    AtualizarStatusSerializer
+    AtualizarStatusSerializer,
+    ItemPedidoSerializer
 )
 
 
@@ -27,6 +28,14 @@ class CompradorViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = CompradorSerializer
     authentication_classes = [TokenAuthentication]
     
+    permission_classes = [IsAuthenticated]
+
+
+class ItemPedidoViewSet(viewsets.ModelViewSet):
+    """ViewSet para gerenciar itens de pedido"""
+    queryset = ItemPedido.objects.all()
+    serializer_class = ItemPedidoSerializer
+    authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
 

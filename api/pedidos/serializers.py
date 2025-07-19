@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Comprador, Pedido
+from .models import Comprador, Pedido, ItemPedido
 
 
 class CompradorSerializer(serializers.ModelSerializer):
@@ -75,6 +75,18 @@ class CriarPedidoSerializer(serializers.Serializer):
         )
         
         return pedido
+
+
+class ItemPedidoSerializer(serializers.ModelSerializer):
+    subtotal = serializers.ReadOnlyField()
+    
+    class Meta:
+        model = ItemPedido
+        fields = [
+            'id', 'pedido', 'produto', 'tamanho', 'quantidade', 
+            'preco_unitario', 'subtotal'
+        ]
+        read_only_fields = ['id']
 
 
 class AtualizarStatusSerializer(serializers.Serializer):
