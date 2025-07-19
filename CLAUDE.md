@@ -16,18 +16,19 @@ Este é um site de e-commerce para o evento "ONE WAY 2025" (31 de julho - 2 de a
 ### Arquitetura do Sistema
 ```
 [Frontend HTML/JS] → [Node.js/Express] → [Mercado Pago + PayPal APIs]
-        ↓                    ↓
+        ↓                    ↓                     ↓
 [products.json]    [Django REST API] → [PostgreSQL Railway]
-        ↓                    ↓
-[Cache 5min]       [Admin Interface] → [Gestão Completa]
+        ↓                    ↓                     ↓ 
+[Cache 5min]   [Admin Interface + Presencial] → [Gestão Completa]
 ```
 
 ### Status: 🚀 **PRODUÇÃO ATIVA**
 - ✅ **Frontend**: https://oneway.mevamfranca.com.br
 - ✅ **Admin Django**: https://api.oneway.mevamfranca.com.br/admin (admin/oneway2025)
-- ✅ **Pagamentos**: Mercado Pago + PayPal configuração dinâmica
+- ✅ **Pagamentos**: Mercado Pago + PayPal + Presencial
 - ✅ **Banco**: PostgreSQL Railway persistente
 - ✅ **Carrinho**: Sistema completo de múltiplos itens
+- ✅ **Pagamento Presencial**: Igreja com confirmação administrativa
 
 ## Comandos de Desenvolvimento
 
@@ -89,22 +90,23 @@ curl -H "Authorization: Token SEU_TOKEN" https://api.oneway.mevamfranca.com.br/a
 ### Estrutura de Arquivos
 ```
 ONEWAY/
-├── web/                     # Frontend + Backend Node.js
-│   ├── index.html          # SPA com carrinho (1400+ linhas)
-│   ├── Css/style.css       # Sistema design + carrinho (2400+ linhas)
-│   ├── server.js           # Backend Express + API carrinho (1400+ linhas)
-│   ├── products.json       # Base dados produtos
-│   ├── mp-success.html     # Página retorno Mercado Pago
-│   ├── paypal-success.html # Página retorno PayPal
-│   └── img/                # Assets organizados (JPEG)
-└── api/                    # Django Admin System
-    ├── oneway_admin/       # Configurações Django
-    ├── pedidos/            # App principal (models, admin, serializers)
-    │   ├── models.py       # Pedido + ItemPedido
-    │   ├── admin.py        # Interface com inline para itens
-    │   └── migrations/     # Inclui migração de dados
-    ├── manage.py           # Django CLI
-    └── requirements.txt    # Dependências Python
+├── web/                       # Frontend + Backend Node.js
+│   ├── index.html            # SPA com carrinho + presencial (1550+ linhas)
+│   ├── Css/style.css         # Sistema design + carrinho (2400+ linhas)
+│   ├── server.js             # Backend + APIs completas (1480+ linhas)
+│   ├── products.json         # Base dados produtos
+│   ├── mp-success.html       # Página retorno Mercado Pago
+│   ├── paypal-success.html   # Página retorno PayPal
+│   ├── presencial-success.html # Página confirmação presencial
+│   └── img/                  # Assets organizados (JPEG)
+└── api/                      # Django Admin System
+    ├── oneway_admin/         # Configurações Django
+    ├── pedidos/              # App principal (models, admin, serializers)
+    │   ├── models.py         # Pedido + ItemPedido + Presencial
+    │   ├── admin.py          # Interface + action presencial
+    │   └── migrations/       # Inclui migração de dados
+    ├── manage.py             # Django CLI
+    └── requirements.txt      # Dependências Python
 ```
 
 ### Sistema de Pagamentos Dinâmico
@@ -115,6 +117,7 @@ O sistema suporta múltiplos provedores através de configuração dinâmica:
 ```bash
 FORMA_PAGAMENTO_CARTAO=MERCADOPAGO  # ou PAYPAL
 FORMA_PAGAMENTO_PIX=MERCADOPAGO     # sempre MP (PIX exclusivo)
+# Pagamento presencial sempre disponível (sem configuração externa)
 ```
 
 **Fluxo de Pagamento:**
@@ -122,13 +125,14 @@ FORMA_PAGAMENTO_PIX=MERCADOPAGO     # sempre MP (PIX exclusivo)
 2. Carrinho persiste com localStorage
 3. Ícone flutuante mostra contador de itens
 4. Painel lateral para gerenciar quantidades
-5. Seleção de método de pagamento no carrinho
+5. Seleção de método de pagamento no carrinho:
+   - **PIX** → Mercado Pago (5% desconto)
+   - **Cartão** → Mercado Pago ou PayPal (dinâmico)
+   - **Presencial** → Reserva com confirmação na igreja ⭐ **NOVO**
 6. Modal coleta dados (nome, email, telefone)
-7. Sistema roteia para provedor baseado na configuração
-8. PIX → Mercado Pago (5% desconto)
-9. Cartão → Mercado Pago ou PayPal (dinâmico)
-10. Página de retorno cria pedido no Django
-11. Admin permite gestão completa de múltiplos itens
+7. Sistema roteia conforme método escolhido
+8. Página de retorno/confirmação cria pedido no Django
+9. Admin permite gestão completa + confirmação presencial
 
 ### Models Django Principais
 
@@ -138,11 +142,12 @@ FORMA_PAGAMENTO_PIX=MERCADOPAGO     # sempre MP (PIX exclusivo)
 **Pedido:**
 - Relacionamento 1:N com Comprador
 - produto (4 camisetas), tamanho (P,M,G,GG), preco (legado)
-- forma_pagamento (pix, 2x, 4x, paypal, etc.)
+- forma_pagamento (pix, 2x, 4x, paypal, presencial, etc.) ⭐ **NOVO**
 - external_reference (único), payment_id, preference_id
 - status_pagamento (pending, approved, rejected, etc.)
 - Logs completos com timestamps
 - Método total_pedido calcula valor baseado nos itens
+- Action admin para confirmação presencial ⭐ **NOVO**
 
 **ItemPedido:** ⭐ **NOVO**
 - Relacionamento ManyToOne com Pedido
@@ -193,6 +198,46 @@ cart = {
   ]
 }
 ```
+
+### Sistema de Pagamento Presencial ⭐ **NOVO**
+
+Sistema completo para reserva e pagamento na igreja implementado:
+
+**Frontend (JavaScript):**
+- Opção "Pagamento Presencial" no seletor de métodos
+- Modal específico com instruções detalhadas
+- Avisos sobre prazo de 48h para confirmação
+- Validação obrigatória de dados pessoais
+- Integração total com carrinho de múltiplos itens
+
+**Backend (Node.js):**
+- Endpoint `/api/cart/checkout-presencial` dedicado
+- Criação automática de pedidos com status "pending"
+- Geração de external_reference único para rastreamento
+- Validação de preços e disponibilidade
+- Logs detalhados para auditoria administrativa
+
+**Django Admin:**
+- Action "Confirmar Pagamento Presencial" para staff
+- Filtro específico "Pedidos Presenciais Pendentes"
+- Mudança automática pending → approved
+- Interface integrada com sistema ItemPedido
+- Controle completo de confirmações
+
+**Fluxo Completo:**
+1. Cliente seleciona "Pagamento Presencial" no carrinho
+2. Sistema gera pedido com status "pending" 
+3. Cliente recebe número do pedido na página de confirmação
+4. Cliente vai na igreja em até 48h com o número
+5. Staff confirma pagamento via Django Admin
+6. Status muda automaticamente para "approved"
+
+**Benefícios:**
+- ✅ Zero taxas de gateway de pagamento
+- ✅ Alternativa confiável ao PayPal problemático
+- ✅ Atende membros que preferem pagamento físico
+- ✅ Mantém relacionamento presencial igreja-membro
+- ✅ Controle administrativo total via Django
 
 ### Sistema products.json
 
@@ -260,9 +305,9 @@ MERCADOPAGO_ACCESS_TOKEN=APP_USR_xxx
 ### Status Implementação
 - ✅ **Issues #11-14, #17-19, #22-28**: Fluxo Mercado Pago completo
 - ✅ **Issues #39-44**: Integração PayPal com configuração dinâmica
-- ✅ **Issues #46-53**: Sistema carrinho de compras completo ⭐ **NOVO**
+- ✅ **Issues #46-53**: Sistema carrinho de compras completo
+- ✅ **Issue #45**: Pagamento presencial na igreja implementado ⭐ **NOVO**
 - 🔄 **Issues #32-38**: Sistema controle estoque (planejado)
-- ⏳ **Issue #45**: Pagamento presencial na igreja (planejado)
 
 ### Metodologia Issues
 - **code-complete**: Código implementado, mas não testado
@@ -273,6 +318,7 @@ MERCADOPAGO_ACCESS_TOKEN=APP_USR_xxx
 ### Problemas Conhecidos
 - ❌ **Botão "Consultar Status MP"**: Implementado mas não funcional
 - ⚠️ **PayPal guest checkout**: Pode forçar criação conta (limitação API)
+- ⚠️ **Pagamento presencial**: Pedidos não confirmados em 48h ficam pendentes (manual)
 
 ## Tecnologias e Dependências
 
@@ -284,12 +330,12 @@ MERCADOPAGO_ACCESS_TOKEN=APP_USR_xxx
 **Deploy:** Railway (auto-deploy, custom domains)  
 
 **Estatísticas:**
-- ~7500 linhas código total (HTML/CSS/JS + Python)
-- 53+ issues criadas (8 fechadas hoje ✅)
-- Sistema carrinho + dual pagamentos operacional
+- ~8000 linhas código total (HTML/CSS/JS + Python)
+- 54+ issues criadas (9 fechadas com sucesso ✅)
+- Sistema triplo pagamentos operacional (MP + PayPal + Presencial)
 - PostgreSQL persistente com zero downtime
 - Migração automática de dados sem perda
-- 100% funcionalidades do carrinho implementadas ⭐
+- 100% funcionalidades carrinho + presencial implementadas ⭐
 
 ---
 
