@@ -27,6 +27,7 @@ Este é um site de e-commerce para o evento "ONE WAY 2025" (31 de julho - 2 de a
 - ✅ **Admin Django**: https://api.oneway.mevamfranca.com.br/admin (admin/oneway2025)
 - ✅ **Pagamentos**: Mercado Pago + PayPal configuração dinâmica
 - ✅ **Banco**: PostgreSQL Railway persistente
+- ✅ **Carrinho**: Sistema completo de múltiplos itens
 
 ## Comandos de Desenvolvimento
 
@@ -89,9 +90,9 @@ curl -H "Authorization: Token SEU_TOKEN" https://api.oneway.mevamfranca.com.br/a
 ```
 ONEWAY/
 ├── web/                     # Frontend + Backend Node.js
-│   ├── index.html          # SPA principal (798 linhas)
-│   ├── Css/style.css       # Sistema design (2048 linhas)
-│   ├── server.js           # Backend Express (1300+ linhas)
+│   ├── index.html          # SPA com carrinho (1400+ linhas)
+│   ├── Css/style.css       # Sistema design + carrinho (2400+ linhas)
+│   ├── server.js           # Backend Express + API carrinho (1400+ linhas)
 │   ├── products.json       # Base dados produtos
 │   ├── mp-success.html     # Página retorno Mercado Pago
 │   ├── paypal-success.html # Página retorno PayPal
@@ -99,6 +100,9 @@ ONEWAY/
 └── api/                    # Django Admin System
     ├── oneway_admin/       # Configurações Django
     ├── pedidos/            # App principal (models, admin, serializers)
+    │   ├── models.py       # Pedido + ItemPedido
+    │   ├── admin.py        # Interface com inline para itens
+    │   └── migrations/     # Inclui migração de dados
     ├── manage.py           # Django CLI
     └── requirements.txt    # Dependências Python
 ```
@@ -114,13 +118,17 @@ FORMA_PAGAMENTO_PIX=MERCADOPAGO     # sempre MP (PIX exclusivo)
 ```
 
 **Fluxo de Pagamento:**
-1. Cliente escolhe produto + tamanho + método
-2. Modal coleta dados (nome, email, telefone)
-3. Sistema roteia para provedor baseado na configuração
-4. PIX → Mercado Pago (5% desconto)
-5. Cartão → Mercado Pago ou PayPal (dinâmico)
-6. Página de retorno cria pedido no Django
-7. Admin permite gestão completa
+1. Cliente adiciona produtos ao carrinho
+2. Carrinho persiste com localStorage
+3. Ícone flutuante mostra contador de itens
+4. Painel lateral para gerenciar quantidades
+5. Seleção de método de pagamento no carrinho
+6. Modal coleta dados (nome, email, telefone)
+7. Sistema roteia para provedor baseado na configuração
+8. PIX → Mercado Pago (5% desconto)
+9. Cartão → Mercado Pago ou PayPal (dinâmico)
+10. Página de retorno cria pedido no Django
+11. Admin permite gestão completa de múltiplos itens
 
 ### Models Django Principais
 
@@ -129,11 +137,62 @@ FORMA_PAGAMENTO_PIX=MERCADOPAGO     # sempre MP (PIX exclusivo)
 
 **Pedido:**
 - Relacionamento 1:N com Comprador
-- produto (4 camisetas), tamanho (P,M,G,GG), preco
+- produto (4 camisetas), tamanho (P,M,G,GG), preco (legado)
 - forma_pagamento (pix, 2x, 4x, paypal, etc.)
 - external_reference (único), payment_id, preference_id
 - status_pagamento (pending, approved, rejected, etc.)
 - Logs completos com timestamps
+- Método total_pedido calcula valor baseado nos itens
+
+**ItemPedido:** ⭐ **NOVO**
+- Relacionamento ManyToOne com Pedido
+- produto, tamanho, quantidade, preco_unitario
+- Propriedade subtotal calculada automaticamente
+- Unique constraint por (pedido, produto, tamanho)
+- Migração automática de pedidos existentes
+
+### Sistema de Carrinho de Compras ⭐ **NOVO**
+
+Sistema completo implementado com:
+
+**Frontend (JavaScript):**
+- Classe `ShoppingCart` com gerenciamento de estado
+- Ícone flutuante com contador de itens
+- Painel lateral responsivo e minimalista
+- Persistência com localStorage
+- Controles de quantidade (+/-)
+- Seleção de método de pagamento
+- Aplicação automática de desconto PIX
+- Notificações de item adicionado
+
+**Backend (Node.js):**
+- Endpoint `/api/cart/checkout` para múltiplos itens
+- Validação de preços contra products.json (segurança)
+- Verificação de disponibilidade por tamanho
+- Cálculo automático de totais
+- Aplicação de desconto PIX nos preços unitários
+
+**Django Admin:**
+- Modelo `ItemPedido` com inline
+- Exibição de resumo dos itens
+- Cálculo automático de totais
+- Migração de pedidos legados preservada
+
+**Estrutura do Carrinho:**
+```javascript
+cart = {
+  items: [
+    {
+      productId: 'camiseta-marrom',
+      title: 'Camiseta One Way Marrom',
+      size: 'M',
+      quantity: 2,
+      price: 120.00,
+      image: './img/...'
+    }
+  ]
+}
+```
 
 ### Sistema products.json
 
@@ -201,6 +260,7 @@ MERCADOPAGO_ACCESS_TOKEN=APP_USR_xxx
 ### Status Implementação
 - ✅ **Issues #11-14, #17-19, #22-28**: Fluxo Mercado Pago completo
 - ✅ **Issues #39-44**: Integração PayPal com configuração dinâmica
+- ✅ **Issues #46-53**: Sistema carrinho de compras completo ⭐ **NOVO**
 - 🔄 **Issues #32-38**: Sistema controle estoque (planejado)
 - ⏳ **Issue #45**: Pagamento presencial na igreja (planejado)
 
@@ -224,10 +284,12 @@ MERCADOPAGO_ACCESS_TOKEN=APP_USR_xxx
 **Deploy:** Railway (auto-deploy, custom domains)  
 
 **Estatísticas:**
-- ~6000 linhas código total (HTML/CSS/JS + Python)
-- 45+ issues criadas
-- Sistema dual pagamentos operacional
+- ~7500 linhas código total (HTML/CSS/JS + Python)
+- 53+ issues criadas (8 fechadas hoje ✅)
+- Sistema carrinho + dual pagamentos operacional
 - PostgreSQL persistente com zero downtime
+- Migração automática de dados sem perda
+- 100% funcionalidades do carrinho implementadas ⭐
 
 ---
 
