@@ -1442,6 +1442,34 @@ app.post('/api/cart/checkout', async (req, res) => {
       // Pedido já foi criado, mas sem itens - não é crítico para o fluxo de pagamento
     }
     
+    // Se for pagamento presencial, retornar URL especial
+    if (paymentMethod === 'presencial') {
+      console.log('💒 Processando pagamento presencial...');
+      
+      // Atualizar observações do pedido
+      try {
+        await axios.post(`${DJANGO_API_URL}/pedidos/${pedidoId}/atualizar_status/`, {
+          observacoes: 'Pagamento Presencial - Aguardando pagamento na secretaria da igreja. Prazo: 48 horas.'
+        }, {
+          headers: { 
+            'Authorization': `Token ${DJANGO_API_TOKEN}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        console.log('✅ Pedido marcado como pagamento presencial');
+      } catch (error) {
+        console.error('⚠️ Erro ao atualizar observações (não crítico):', error.message);
+      }
+      
+      // Retornar URL para página de confirmação presencial
+      return res.json({
+        success: true,
+        redirect_url: `/presencial-success?pedido_id=${pedidoId}&ref=${external_reference}`,
+        pedido_id: pedidoId,
+        external_reference: external_reference
+      });
+    }
+    
     // Determinar provedor de pagamento baseado na configuração
     const formaPagamentoCartao = process.env.FORMA_PAGAMENTO_CARTAO || 'MERCADOPAGO';
     const formaPagamentoPix = process.env.FORMA_PAGAMENTO_PIX || 'MERCADOPAGO';

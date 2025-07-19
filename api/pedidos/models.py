@@ -43,6 +43,7 @@ class Pedido(models.Model):
         ('ticket', 'Boleto'),
         ('bank_transfer', 'Transferência'),
         ('account_money', 'Dinheiro em Conta'),
+        ('presencial', 'Pagamento Presencial'),
     ]
     
     STATUS_CHOICES = [

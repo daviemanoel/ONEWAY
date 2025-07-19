@@ -2271,6 +2271,30 @@ img {
   background-color: #fafafa;
 }
 
+/* Aviso de pagamento presencial */
+.payment-warning {
+  background-color: #fff8dc;
+  border: 1px solid #f0b429;
+  border-radius: 8px;
+  padding: 12px;
+  margin: 15px 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: #7c6200;
+}
+
+.payment-warning span {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.payment-warning p {
+  margin: 0;
+  line-height: 1.4;
+}
+
 .cart-total, .cart-pix-total {
   display: flex;
   justify-content: space-between;

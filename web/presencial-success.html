@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pedido Reservado - ONE WAY 2025</title>
+    <link rel="stylesheet" type="text/css" href="./Css/style.css">
+    <link rel="icon" type="image/png" href="./img/2.png">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        .presencial-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 2rem;
+            text-align: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .presencial-card {
+            background: rgba(255, 255, 255, 0.98);
+            padding: 3rem;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+            max-width: 600px;
+            width: 100%;
+        }
+        .presencial-icon {
+            font-size: 5rem;
+            color: #f0b429;
+            margin-bottom: 1.5rem;
+            animation: bounce 2s infinite;
+        }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        .presencial-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 1rem;
+            font-family: 'Montserrat', sans-serif;
+        }
+        .presencial-message {
+            font-size: 1.1rem;
+            color: #666;
+            margin-bottom: 1.5rem;
+            line-height: 1.6;
+            font-family: 'Montserrat', sans-serif;
+        }
+        .presencial-info {
+            background: #fff8dc;
+            border: 2px solid #f0b429;
+            padding: 1.5rem;
+            border-radius: 10px;
+            margin: 1.5rem 0;
+            text-align: left;
+        }
+        .presencial-info h3 {
+            font-size: 1.2rem;
+            color: #333;
+            margin-bottom: 1rem;
+            font-weight: 600;
+            text-align: center;
+        }
+        .presencial-info p {
+            font-size: 1rem;
+            color: #666;
+            margin: 0.5rem 0;
+        }
+        .presencial-info strong {
+            color: #333;
+        }
+        .pedido-numero {
+            background: #f0b429;
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 10px;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin: 1.5rem 0;
+            display: inline-block;
+            font-family: 'Montserrat', sans-serif;
+        }
+        .warning-box {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 1rem;
+            border-radius: 10px;
+            margin: 1rem 0;
+        }
+        .warning-box p {
+            margin: 0;
+            color: #856404;
+            font-size: 0.95rem;
+        }
+        .presencial-button {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 1rem 2.5rem;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s ease;
+            margin-top: 1rem;
+            font-family: 'Montserrat', sans-serif;
+        }
+        .presencial-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+        .items-list {
+            text-align: left;
+            margin: 1rem 0;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .items-list .item {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .items-list .item:last-child {
+            border-bottom: none;
+        }
+        .total-price {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #333;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 2px solid #f0b429;
+        }
+        @media (max-width: 768px) {
+            .presencial-card {
+                padding: 2rem 1.5rem;
+            }
+            .presencial-title {
+                font-size: 1.6rem;
+            }
+            .pedido-numero {
+                font-size: 1.2rem;
+                padding: 0.8rem 1.5rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="presencial-container">
+        <div class="presencial-card">
+            <div class="presencial-icon">💒</div>
+            <h1 class="presencial-title">Pedido Reservado com Sucesso!</h1>
+            
+            <div id="pedido-numero" class="pedido-numero">
+                Pedido #<span id="numero-pedido">-</span>
+            </div>
+            
+            <p class="presencial-message">
+                Seu pedido foi registrado e está aguardando o pagamento presencial.
+            </p>
+            
+            <div class="presencial-info">
+                <h3>📍 Informações para Pagamento</h3>
+                <p><strong>Local:</strong> Secretaria da Mevam Franca</p>
+                <p><strong>Endereço:</strong> Rua Major Claudiano, 1488 - Centro, Franca/SP</p>
+                <p><strong>Horário:</strong> Segunda a Sexta, das 8h às 17h</p>
+                <p><strong>Prazo:</strong> 48 horas para efetuar o pagamento</p>
+                <p><strong>O que levar:</strong> Número do pedido (anote ou tire print desta tela)</p>
+            </div>
+            
+            <div class="warning-box">
+                <p>⚠️ <strong>Importante:</strong> Seu produto só será garantido após a confirmação do pagamento. Pedidos não pagos em 48 horas serão automaticamente cancelados.</p>
+            </div>
+            
+            <div class="items-list" id="items-list" style="display: none;">
+                <h4>Resumo do Pedido:</h4>
+                <div id="items-container"></div>
+                <div class="total-price">
+                    Total a Pagar: <span id="total-price">R$ 0,00</span>
+                </div>
+            </div>
+            
+            <p class="presencial-message">
+                <strong>Dúvidas?</strong><br>
+                Entre em contato pelo WhatsApp: (16) 99999-9999
+            </p>
+            
+            <a href="/" class="presencial-button">Voltar à Loja</a>
+        </div>
+    </div>
+
+    <script>
+        // Função para capturar parâmetros da URL
+        async function capturarParametros() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const pedidoId = urlParams.get('pedido_id');
+            const externalReference = urlParams.get('ref');
+            
+            if (pedidoId) {
+                // Exibir número do pedido
+                document.getElementById('numero-pedido').textContent = pedidoId;
+                
+                // Buscar detalhes do pedido
+                await buscarDetalhesPedido(pedidoId);
+            }
+            
+            // Log para debugging
+            console.log('Pedido Presencial:', { pedidoId, externalReference });
+        }
+        
+        // Função para buscar detalhes do pedido
+        async function buscarDetalhesPedido(pedidoId) {
+            try {
+                // Buscar pedido
+                const pedidoResponse = await fetch(`/api/django/pedidos/${pedidoId}/`);
+                if (!pedidoResponse.ok) {
+                    console.error('Erro ao buscar pedido');
+                    return;
+                }
+                
+                const pedido = await pedidoResponse.json();
+                console.log('Pedido encontrado:', pedido);
+                
+                // Verificar se é um pedido de carrinho
+                const isCarrinho = pedido.external_reference && pedido.external_reference.includes('CART');
+                
+                if (isCarrinho) {
+                    // Buscar itens do pedido
+                    const itensResponse = await fetch(`/api/django/itempedidos/?pedido=${pedidoId}`);
+                    if (itensResponse.ok) {
+                        const itensData = await itensResponse.json();
+                        const itens = itensData.results || itensData;
+                        exibirItensPedido(itens, pedido);
+                    }
+                } else {
+                    // Pedido único - exibir item único
+                    exibirItemUnico(pedido);
+                }
+                
+            } catch (error) {
+                console.error('Erro ao buscar detalhes:', error);
+            }
+        }
+        
+        // Exibir itens do carrinho
+        function exibirItensPedido(itens, pedido) {
+            const itemsList = document.getElementById('items-list');
+            const itemsContainer = document.getElementById('items-container');
+            const totalPriceElement = document.getElementById('total-price');
+            
+            if (!itens || itens.length === 0) return;
+            
+            // Mapear nomes dos produtos
+            const produtoNomes = {
+                'camiseta-marrom': 'Camiseta One Way Marrom',
+                'camiseta-jesus': 'Camiseta Jesus',
+                'camiseta-oneway-branca': 'Camiseta ONE WAY Off White',
+                'camiseta-the-way': 'Camiseta The Way'
+            };
+            
+            let html = '';
+            let total = 0;
+            
+            itens.forEach(item => {
+                const nomeAmigavel = produtoNomes[item.produto] || item.produto;
+                const subtotal = item.preco_unitario * item.quantidade;
+                total += subtotal;
+                
+                html += `
+                    <div class="item">
+                        <strong>${nomeAmigavel}</strong> - Tamanho ${item.tamanho}<br>
+                        ${item.quantidade}x R$ ${item.preco_unitario.toFixed(2).replace('.', ',')} = 
+                        R$ ${subtotal.toFixed(2).replace('.', ',')}
+                    </div>
+                `;
+            });
+            
+            itemsContainer.innerHTML = html;
+            totalPriceElement.textContent = `R$ ${total.toFixed(2).replace('.', ',')}`;
+            itemsList.style.display = 'block';
+        }
+        
+        // Exibir item único
+        function exibirItemUnico(pedido) {
+            const itemsList = document.getElementById('items-list');
+            const itemsContainer = document.getElementById('items-container');
+            const totalPriceElement = document.getElementById('total-price');
+            
+            // Mapear nomes dos produtos
+            const produtoNomes = {
+                'camiseta-marrom': 'Camiseta One Way Marrom',
+                'camiseta-jesus': 'Camiseta Jesus',
+                'camiseta-oneway-branca': 'Camiseta ONE WAY Off White',
+                'camiseta-the-way': 'Camiseta The Way'
+            };
+            
+            const nomeAmigavel = produtoNomes[pedido.produto] || pedido.produto;
+            
+            itemsContainer.innerHTML = `
+                <div class="item">
+                    <strong>${nomeAmigavel}</strong> - Tamanho ${pedido.tamanho}<br>
+                    1x R$ ${pedido.preco.toFixed(2).replace('.', ',')}
+                </div>
+            `;
+            
+            totalPriceElement.textContent = `R$ ${pedido.preco.toFixed(2).replace('.', ',')}`;
+            itemsList.style.display = 'block';
+        }
+        
+        // Executar quando a página carregar
+        document.addEventListener('DOMContentLoaded', capturarParametros);
+    </script>
+</body>
+
+</html>

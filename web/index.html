@@ -956,6 +956,7 @@
                 const pixTotalElement = document.getElementById('cart-pix-total');
                 const checkoutBtn = document.getElementById('checkout-btn');
                 const paymentSelect = document.getElementById('cart-payment-select');
+                const paymentWarning = document.getElementById('payment-presencial-warning');
 
                 const total = this.getTotal();
                 const pixTotal = this.getPixTotal();
@@ -963,6 +964,11 @@
 
                 if (totalElement) {
                     totalElement.textContent = `R$ ${total.toFixed(2).replace('.', ',')}`;
+                }
+                
+                // Mostrar/esconder aviso de pagamento presencial
+                if (paymentWarning) {
+                    paymentWarning.style.display = selectedMethod === 'presencial' ? 'flex' : 'none';
                 }
 
                 if (pixTotalElement) {
@@ -1178,6 +1184,11 @@
                             <strong>Subtotal: R$ ${total.toFixed(2).replace('.', ',')}</strong><br>
                             <span style="color: #28a745; font-weight: bold;">Total PIX (5% OFF): R$ ${pixTotal.toFixed(2).replace('.', ',')}</span>
                         `;
+                    } else if (selectedMethod === 'presencial') {
+                        priceText.innerHTML = `
+                            <strong>Total: R$ ${total.toFixed(2).replace('.', ',')}</strong><br>
+                            <span style="color: #f0b429;">⚠️ Pagamento na secretaria da igreja</span>
+                        `;
                     } else {
                         priceText.innerHTML = `
                             <strong>Total Cartão: R$ ${total.toFixed(2).replace('.', ',')}</strong>
@@ -1229,8 +1240,17 @@
                         // Limpar carrinho
                         this.clear();
                         
-                        // Redirecionar para pagamento
-                        window.location.href = data.paymentUrl;
+                        // Redirecionar baseado no tipo de resposta
+                        if (data.redirect_url) {
+                            // Pagamento presencial ou outros casos especiais
+                            window.location.href = data.redirect_url;
+                        } else if (data.paymentUrl) {
+                            // Mercado Pago/PayPal
+                            window.location.href = data.paymentUrl;
+                        } else {
+                            console.error('❌ URL de redirecionamento não encontrada');
+                            alert('Erro ao processar pagamento. Tente novamente.');
+                        }
                     } else {
                         console.error('❌ Erro no checkout:', data);
                         alert(data.error || 'Erro ao processar checkout. Tente novamente.');
@@ -1314,7 +1334,12 @@
                 <select id="cart-payment-select">
                     <option value="pix">PIX (5% desconto)</option>
                     <option value="credit_card">Cartão de Crédito</option>
+                    <option value="presencial">Pagamento Presencial</option>
                 </select>
+            </div>
+            <div id="payment-presencial-warning" class="payment-warning" style="display: none;">
+                <span>⚠️</span>
+                <p>Pagamento na secretaria da igreja em até 48h. Produto não garantido até confirmação do pagamento.</p>
             </div>
             <button class="checkout-btn" id="checkout-btn">Finalizar Compra</button>
         </div>
