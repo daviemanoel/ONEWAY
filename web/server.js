@@ -1312,7 +1312,15 @@ app.post('/api/cart/checkout', async (req, res) => {
       }
       
       // SEGURANÇA: Validar preço contra catálogo do servidor
-      const product = productsData.products[productId];
+      // Buscar produto por ID dentro do objeto products
+      let product = null;
+      for (const [key, prod] of Object.entries(productsData.products)) {
+        if (prod.id === productId) {
+          product = prod;
+          break;
+        }
+      }
+      
       if (!product) {
         return res.status(400).json({
           error: `Produto não encontrado: ${productId}`
@@ -1398,12 +1406,24 @@ app.post('/api/cart/checkout', async (req, res) => {
     const timestamp = Date.now();
     const external_reference = `ONEWAY-CART-${timestamp}`;
     
+    // Função para encontrar chave do produto pelo ID
+    function findProductKeyById(productId) {
+      for (const [key, product] of Object.entries(productsData.products)) {
+        if (product.id === productId) {
+          return key;
+        }
+      }
+      return null;
+    }
+    
     // Criar pedido no Django
     let pedidoId;
     try {
+      const firstProductKey = findProductKeyById(validatedItems[0].productId);
+      
       const pedidoResponse = await axios.post(`${DJANGO_API_URL}/pedidos/`, {
         comprador: compradorId,
-        produto: validatedItems[0].productId, // Compatibilidade com modelo antigo
+        produto: firstProductKey, // Usar chave do produto para Django
         tamanho: validatedItems[0].size,
         preco: finalPrice,
         forma_pagamento: paymentMethod,
@@ -1428,9 +1448,11 @@ app.post('/api/cart/checkout', async (req, res) => {
     // Criar ItemPedido para cada item do carrinho
     try {
       for (const item of validatedItems) {
+        const productKey = findProductKeyById(item.productId);
+        
         await axios.post(`${DJANGO_API_URL}/itempedidos/`, {
           pedido: pedidoId,
-          produto: item.productId,
+          produto: productKey, // Usar chave do produto para Django
           tamanho: item.size,
           quantidade: item.quantity,
           preco_unitario: item.priceUnit

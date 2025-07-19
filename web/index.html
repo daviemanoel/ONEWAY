@@ -794,7 +794,16 @@
 
             // Adicionar item ao carrinho
             addItem(productId, size) {
-                const product = productsData.products[productId];
+                // Buscar produto pelo ID dentro do objeto products
+                let product = null;
+                
+                for (const [key, prod] of Object.entries(productsData.products)) {
+                    if (prod.id === productId) {
+                        product = prod;
+                        break;
+                    }
+                }
+                
                 if (!product) {
                     console.error('Produto não encontrado:', productId);
                     return false;
