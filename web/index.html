@@ -1027,18 +1027,26 @@
 
             // Atualizar botões "Adicionar ao Carrinho"
             updateAddToCartButtons() {
-                document.querySelectorAll('.add-to-cart').forEach(button => {
+                const buttons = document.querySelectorAll('.add-to-cart');
+                console.log(`🔧 updateAddToCartButtons: Encontrados ${buttons.length} botões`);
+                
+                buttons.forEach((button, index) => {
+                    console.log(`🔧 Processando botão ${index + 1}:`, button);
+                    
                     // Remover listeners anteriores
                     const newButton = button.cloneNode(true);
                     button.parentNode.replaceChild(newButton, button);
 
                     // Adicionar novo listener
                     newButton.addEventListener('click', (e) => {
+                        console.log('🛒 Botão carrinho clicado!', e);
                         e.preventDefault();
                         
                         const productCard = newButton.closest('.product-card');
                         const selectedSizeBtn = productCard.querySelector('.size-btn.active');
                         const productId = newButton.dataset.productId;
+
+                        console.log('🛒 Dados do clique:', { productCard, selectedSizeBtn, productId });
 
                         if (!selectedSizeBtn) {
                             alert('Por favor, selecione um tamanho disponível.');
@@ -1053,6 +1061,7 @@
 
                         // Adicionar ao carrinho
                         const success = this.addItem(productId, size);
+                        console.log('🛒 Resultado addItem:', success);
                         
                         // Restaurar botão
                         setTimeout(() => {
@@ -1060,6 +1069,8 @@
                             newButton.textContent = 'Adicionar ao Carrinho';
                         }, 500);
                     });
+                    
+                    console.log(`✅ Event listener adicionado ao botão ${index + 1}`);
                 });
             }
 
@@ -1198,7 +1209,18 @@
                     cart = new ShoppingCart();
                     console.log('🛒 Carrinho inicializado');
                 }
-            }, 1000);
+                
+                // Verificar se os botões existem e aplicar event listeners
+                const buttons = document.querySelectorAll('.add-to-cart');
+                console.log(`🔍 Encontrados ${buttons.length} botões add-to-cart`);
+                
+                if (buttons.length > 0 && cart) {
+                    cart.updateAddToCartButtons();
+                    console.log('🔄 Event listeners aplicados aos botões');
+                } else {
+                    console.warn('⚠️ Nenhum botão add-to-cart encontrado ou carrinho não inicializado');
+                }
+            }, 2000); // Aumentar o tempo para garantir que produtos carregaram
         });
         
         // Função para re-inicializar carrinho após renderização de produtos
