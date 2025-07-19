@@ -1491,12 +1491,19 @@ async function createMercadoPagoPreference(req, res, data) {
   
   try {
     // Preparar items para Mercado Pago
-    const mpItems = items.map(item => ({
-      title: `${item.title} - Tamanho ${item.size}`,
-      quantity: item.quantity,
-      unit_price: item.priceUnit,
-      currency_id: 'BRL'
-    }));
+    const mpItems = items.map(item => {
+      // Aplicar desconto PIX se necessário
+      const unitPrice = paymentMethod === 'pix' ? 
+        item.priceUnit * 0.95 : // 5% desconto para PIX
+        item.priceUnit;
+      
+      return {
+        title: `${item.title} - Tamanho ${item.size}`,
+        quantity: item.quantity,
+        unit_price: parseFloat(unitPrice.toFixed(2)), // Arredondar para 2 casas decimais
+        currency_id: 'BRL'
+      };
+    });
     
     // Configurar métodos de pagamento
     let payment_methods = {};
