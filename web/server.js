@@ -1362,45 +1362,8 @@ app.post('/api/cart/checkout', async (req, res) => {
     console.log(`💰 Total: R$ ${totalPrice.toFixed(2)}`);
     console.log(`💰 Final: R$ ${finalPrice.toFixed(2)} (${paymentMethod})`);
     
-    // Criar comprador no Django
-    let compradorId;
-    try {
-      const compradorResponse = await axios.post(`${DJANGO_API_URL}/compradores/`, {
-        nome: buyer.name,
-        email: buyer.email,
-        telefone: buyer.phone
-      }, {
-        headers: { 
-          'Authorization': `Token ${DJANGO_API_TOKEN}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      compradorId = compradorResponse.data.id;
-      console.log(`✅ Comprador criado/encontrado: ID ${compradorId}`);
-    } catch (error) {
-      if (error.response && error.response.status === 400) {
-        // Comprador já existe, buscar pelo email
-        try {
-          const buscarResponse = await axios.get(`${DJANGO_API_URL}/compradores/?email=${buyer.email}`, {
-            headers: { 'Authorization': `Token ${DJANGO_API_TOKEN}` }
-          });
-          
-          if (buscarResponse.data.results && buscarResponse.data.results.length > 0) {
-            compradorId = buscarResponse.data.results[0].id;
-            console.log(`✅ Comprador encontrado: ID ${compradorId}`);
-          } else {
-            throw new Error('Comprador não encontrado após tentativa de criação');
-          }
-        } catch (searchError) {
-          console.error('❌ Erro ao buscar comprador:', searchError.message);
-          throw searchError;
-        }
-      } else {
-        console.error('❌ Erro ao criar comprador:', error.message);
-        throw error;
-      }
-    }
+    // O comprador será criado automaticamente pelo CriarPedidoSerializer
+    console.log(`👤 Comprador será criado no Django: ${buyer.name} (${buyer.email})`);
     
     // Gerar external_reference único para o pedido
     const timestamp = Date.now();
@@ -1416,14 +1379,18 @@ app.post('/api/cart/checkout', async (req, res) => {
       return null;
     }
     
-    // Criar pedido no Django
+    // Criar pedido no Django usando CriarPedidoSerializer
     let pedidoId;
     try {
       const firstProductKey = findProductKeyById(validatedItems[0].productId);
       
       const pedidoResponse = await axios.post(`${DJANGO_API_URL}/pedidos/`, {
-        comprador: compradorId,
-        produto: firstProductKey, // Usar chave do produto para Django
+        // Dados do comprador (serão processados automaticamente)
+        nome: buyer.name,
+        email: buyer.email,
+        telefone: buyer.phone,
+        // Dados do pedido principal (usando primeiro item para compatibilidade)
+        produto: firstProductKey,
         tamanho: validatedItems[0].size,
         preco: finalPrice,
         forma_pagamento: paymentMethod,
