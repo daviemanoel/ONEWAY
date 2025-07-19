@@ -2242,10 +2242,11 @@ img {
 }
 
 .cart-item-price {
-  font-size: 16px;
-  font-weight: 600;
-  color: #de4242;
-  margin-top: 5px;
+  font-size: 20px;
+  font-weight: 700;
+  font-family: "Montserrat", sans-serif;
+  color: #333;
+  margin-top: 8px;
 }
 
 /* Carrinho vazio */
@@ -2264,7 +2265,7 @@ img {
 
 /* Footer do carrinho */
 .cart-footer {
-  padding: 20px;
+  padding: 20px 20px 30px 20px;
   border-top: 1px solid #eee;
   background-color: #fafafa;
 }
@@ -2361,6 +2362,19 @@ img {
   .cart-item-image {
     width: 100%;
     height: 200px;
+  }
+  
+  /* Footer do carrinho no mobile com mais espaçamento */
+  .cart-footer {
+    padding: 20px 20px 40px 20px;
+    padding-bottom: max(40px, env(safe-area-inset-bottom, 20px));
+  }
+  
+  /* Botão maior no mobile */
+  .checkout-btn {
+    padding: 18px 15px;
+    font-size: 18px;
+    margin-bottom: 10px;
   }
 }
 
