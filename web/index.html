@@ -285,11 +285,14 @@
             */
         }
 
-        // Variável global para configuração de pagamentos
+        // Variáveis globais
         let paymentConfig = {
             cartao: 'PAYPAL',
             pix: 'MERCADOPAGO'
         };
+        
+        // Dados dos produtos (global para o carrinho)
+        let productsData = null;
 
         // Carregar configuração de pagamentos
         async function loadPaymentConfig() {
@@ -314,6 +317,10 @@
                 
                 const response = await fetch('./products.json');
                 const data = await response.json();
+                
+                // Armazenar dados globalmente para o carrinho
+                productsData = data;
+                console.log('📦 Dados dos produtos carregados:', productsData);
                 
                 // Converter objeto em array e ordenar por ID
                 const productsArray = Object.values(data.products).sort((a, b) => parseInt(a.id) - parseInt(b.id));
@@ -396,6 +403,9 @@
                 // Reinicializar funcionalidades após carregar produtos
                 initSizeButtons();
                 initImageGallery();
+                
+                // Inicializar carrinho após produtos carregarem
+                initializeCartAfterProducts();
                 
             } catch (error) {
                 console.error('Erro ao carregar produtos:', error);
