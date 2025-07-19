@@ -337,6 +337,30 @@
                 const pedidoExistente = await buscarResponse.json();
                 console.log('✅ Pedido encontrado:', pedidoExistente);
                 
+                // ETAPA 1.5: Se for carrinho, buscar itens do pedido
+                let itensPedido = [];
+                const isCarrinho = externalReference.includes('CART');
+                
+                if (isCarrinho) {
+                    try {
+                        console.log('🛒 Pedido de carrinho detectado, buscando itens...');
+                        const itensResponse = await fetch(`/api/django/itempedidos/?pedido=${pedidoExistente.id}`);
+                        
+                        if (itensResponse.ok) {
+                            const itensData = await itensResponse.json();
+                            itensPedido = itensData.results || itensData;
+                            console.log('✅ Itens do pedido encontrados:', itensPedido);
+                            
+                            // Atualizar exibição para mostrar múltiplos itens
+                            exibirItensCarrinho(itensPedido, pedidoExistente);
+                        } else {
+                            console.warn('⚠️ Não foi possível buscar itens do pedido');
+                        }
+                    } catch (error) {
+                        console.warn('⚠️ Erro ao buscar itens do pedido:', error);
+                    }
+                }
+                
                 // ETAPA 2: Atualizar status do pedido
                 console.log('🔄 Atualizando status do pedido...');
                 
@@ -424,6 +448,87 @@
             paymentDetails.innerHTML = infoHtml;
         }
         
+        // Função para exibir itens do carrinho
+        function exibirItensCarrinho(itens, pedido) {
+            const paymentDetails = document.getElementById('payment-details');
+            
+            if (!itens || itens.length === 0) {
+                return; // Usar exibição padrão
+            }
+            
+            let itensHtml = `
+                <div style="background: #e8f5e8; border: 1px solid #c3e6cb; padding: 1rem; border-radius: 5px; margin-bottom: 1rem;">
+                    <h4 style="color: #155724; margin: 0 0 1rem 0;">🛒 Itens do Pedido #${pedido.id}</h4>
+            `;
+            
+            let totalCarrinho = 0;
+            
+            itens.forEach((item, index) => {
+                const subtotal = item.preco_unitario * item.quantidade;
+                totalCarrinho += subtotal;
+                
+                // Mapear produto ID para nome amigável
+                const produtoNomes = {
+                    'camiseta-marrom': 'Camiseta One Way Marrom',
+                    'camiseta-jesus': 'Camiseta Jesus',
+                    'camiseta-oneway-branca': 'Camiseta ONE WAY Off White',
+                    'camiseta-the-way': 'Camiseta The Way'
+                };
+                
+                const nomeAmigavel = produtoNomes[item.produto] || item.produto;
+                
+                itensHtml += `
+                    <div style="border-bottom: ${index < itens.length - 1 ? '1px solid #ddd' : 'none'}; padding-bottom: 0.5rem; margin-bottom: 0.5rem;">
+                        <p style="margin: 0; color: #155724;">
+                            <strong>${nomeAmigavel}</strong> - Tamanho ${item.tamanho}
+                        </p>
+                        <p style="margin: 0; color: #666; font-size: 0.9rem;">
+                            ${item.quantidade}x R$ ${item.preco_unitario.toFixed(2).replace('.', ',')} = 
+                            R$ ${subtotal.toFixed(2).replace('.', ',')}
+                        </p>
+                    </div>
+                `;
+            });
+            
+            // Verificar se há desconto PIX
+            const precoTotal = parseFloat(pedido.preco);
+            const desconto = totalCarrinho - precoTotal;
+            
+            itensHtml += `
+                <div style="border-top: 2px solid #28a745; padding-top: 0.5rem; margin-top: 1rem;">
+                    <p style="margin: 0; color: #155724; font-size: 1.1rem;">
+                        <strong>Subtotal: R$ ${totalCarrinho.toFixed(2).replace('.', ',')}</strong>
+                    </p>
+            `;
+            
+            if (desconto > 0.01) { // Se há desconto significativo
+                itensHtml += `
+                    <p style="margin: 0; color: #28a745; font-size: 0.9rem;">
+                        Desconto PIX (5%): -R$ ${desconto.toFixed(2).replace('.', ',')}
+                    </p>
+                    <p style="margin: 0; color: #155724; font-size: 1.2rem;">
+                        <strong>Total Pago: R$ ${precoTotal.toFixed(2).replace('.', ',')}</strong>
+                    </p>
+                `;
+            }
+            
+            itensHtml += `
+                    </div>
+                </div>
+            `;
+            
+            // Adicionar informações de status
+            itensHtml += `
+                <div style="margin-top: 1rem;">
+                    <p>✓ Pagamento processado com segurança</p>
+                    <p>✓ Você receberá um e-mail de confirmação</p>
+                    <p>✓ Fique atento às instruções de entrega</p>
+                </div>
+            `;
+            
+            paymentDetails.innerHTML = itensHtml;
+        }
+
         // Função para exibir erro
         function exibirErroProcessamento(errorMessage) {
             const paymentDetails = document.getElementById('payment-details');

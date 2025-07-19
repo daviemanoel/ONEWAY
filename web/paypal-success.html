@@ -214,9 +214,9 @@
                     // Sucesso - mostrar detalhes
                     document.getElementById('order-id').textContent = data.pedido_id || 'N/A';
                     document.getElementById('transaction-id').textContent = data.transaction_id || data.payment_id || 'N/A';
-                    document.getElementById('product-name').textContent = 'Camiseta ONE WAY';
-                    document.getElementById('product-size').textContent = 'M'; // Seria ideal pegar da URL
-                    document.getElementById('product-price').textContent = 'R$ 120,00';
+                    
+                    // Verificar se é carrinho e buscar itens
+                    await exibirDetalhesPayPal(data, params);
                     
                     showState('success-state');
                     
@@ -232,6 +232,95 @@
             }
         }
         
+        // Função para exibir detalhes do PayPal (carrinho ou produto único)
+        async function exibirDetalhesPayPal(data, params) {
+            try {
+                const isCarrinho = params.external_reference && params.external_reference.includes('CART');
+                
+                if (isCarrinho && data.pedido_id) {
+                    console.log('🛒 Pedido de carrinho PayPal detectado');
+                    
+                    // Buscar itens do pedido
+                    const itensResponse = await fetch(`/api/django/itempedidos/?pedido=${data.pedido_id}`);
+                    
+                    if (itensResponse.ok) {
+                        const itensData = await itensResponse.json();
+                        const itens = itensData.results || itensData;
+                        
+                        if (itens && itens.length > 0) {
+                            exibirItensCarrinhoPayPal(itens, data);
+                            return;
+                        }
+                    }
+                }
+                
+                // Fallback: exibição padrão para produto único
+                document.getElementById('product-name').textContent = 'Camiseta ONE WAY';
+                document.getElementById('product-size').textContent = 'M';
+                document.getElementById('product-price').textContent = 'R$ 120,00';
+                
+            } catch (error) {
+                console.warn('⚠️ Erro ao buscar detalhes do pedido:', error);
+                
+                // Fallback: exibição padrão
+                document.getElementById('product-name').textContent = 'Camiseta ONE WAY';
+                document.getElementById('product-size').textContent = '-';
+                document.getElementById('product-price').textContent = '-';
+            }
+        }
+
+        // Função para exibir itens do carrinho PayPal
+        function exibirItensCarrinhoPayPal(itens, data) {
+            const orderDetails = document.querySelector('.order-details');
+            
+            let totalCarrinho = 0;
+            
+            let html = `
+                <h3>🛒 Detalhes do Pedido - Carrinho</h3>
+                <p><strong>Pedido ID:</strong> ${data.pedido_id || 'N/A'}</p>
+                <p><strong>Transaction ID:</strong> ${data.transaction_id || data.payment_id || 'N/A'}</p>
+                <p><strong>Forma de Pagamento:</strong> PayPal</p>
+                <hr style="margin: 15px 0;">
+                <h4>Produtos Comprados:</h4>
+            `;
+            
+            // Mapear produto ID para nome amigável
+            const produtoNomes = {
+                'camiseta-marrom': 'Camiseta One Way Marrom',
+                'camiseta-jesus': 'Camiseta Jesus',
+                'camiseta-oneway-branca': 'Camiseta ONE WAY Off White',
+                'camiseta-the-way': 'Camiseta The Way'
+            };
+            
+            itens.forEach((item, index) => {
+                const subtotal = item.preco_unitario * item.quantidade;
+                totalCarrinho += subtotal;
+                
+                const nomeAmigavel = produtoNomes[item.produto] || item.produto;
+                
+                html += `
+                    <div style="background: #f8f9fa; padding: 10px; margin: 8px 0; border-radius: 5px; border-left: 4px solid #007bff;">
+                        <p style="margin: 2px 0; font-weight: bold; color: #333;">
+                            ${nomeAmigavel} - Tamanho ${item.tamanho}
+                        </p>
+                        <p style="margin: 2px 0; color: #666; font-size: 14px;">
+                            ${item.quantidade}x R$ ${item.preco_unitario.toFixed(2).replace('.', ',')} = 
+                            R$ ${subtotal.toFixed(2).replace('.', ',')}
+                        </p>
+                    </div>
+                `;
+            });
+            
+            html += `
+                <hr style="margin: 15px 0;">
+                <p style="font-size: 18px; font-weight: bold; color: #333;">
+                    <strong>Total Pago: R$ ${totalCarrinho.toFixed(2).replace('.', ',')}</strong>
+                </p>
+            `;
+            
+            orderDetails.innerHTML = html;
+        }
+
         // Função para processar pagamento
         async function processPayment() {
             try {

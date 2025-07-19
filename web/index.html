@@ -749,7 +749,15 @@
 
                 if (allValid) {
                     const formData = new FormData(this);
-                    processCheckout(formData);
+                    
+                    // Verificar se há itens no carrinho
+                    if (cart && cart.items.length > 0) {
+                        // Usar checkout do carrinho
+                        cart.processCartCheckout(formData);
+                    } else {
+                        // Usar checkout individual (legado)
+                        processCheckout(formData);
+                    }
                 } else {
                     alert('Por favor, corrija os erros no formulário.');
                 }
@@ -1112,6 +1120,63 @@
                         <strong>Total: R$ ${total.toFixed(2).replace('.', ',')}</strong><br>
                         <span style="color: #28a745;">PIX (5% OFF): R$ ${pixTotal.toFixed(2).replace('.', ',')}</span>
                     `;
+                }
+            }
+
+            // Processar checkout do carrinho
+            async processCartCheckout(formData) {
+                try {
+                    const buyer = {
+                        name: formData.get('nome'),
+                        email: formData.get('email'),
+                        phone: formData.get('telefone')
+                    };
+
+                    // Preparar itens do carrinho
+                    const items = this.items.map(item => ({
+                        productId: item.productId,
+                        size: item.size,
+                        quantity: item.quantity,
+                        price: item.price
+                    }));
+
+                    // Determinar método de pagamento baseado no carrinho
+                    // Por simplicidade, vamos usar PIX por padrão
+                    // TODO: Adicionar seleção de método de pagamento no modal
+                    const paymentMethod = 'pix';
+
+                    console.log('🛒 Enviando dados do carrinho:', { buyer, items, paymentMethod });
+
+                    const response = await fetch('/api/cart/checkout', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            buyer: buyer,
+                            items: items,
+                            paymentMethod: paymentMethod
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok && data.success) {
+                        console.log('✅ Checkout realizado com sucesso:', data);
+                        
+                        // Limpar carrinho
+                        this.clear();
+                        
+                        // Redirecionar para pagamento
+                        window.location.href = data.paymentUrl;
+                    } else {
+                        console.error('❌ Erro no checkout:', data);
+                        alert(data.error || 'Erro ao processar checkout. Tente novamente.');
+                    }
+
+                } catch (error) {
+                    console.error('❌ Erro ao processar checkout:', error);
+                    alert('Erro de conexão. Verifique sua internet e tente novamente.');
                 }
             }
         }

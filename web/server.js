@@ -1255,6 +1255,434 @@ app.get('/env-check', (req, res) => {
   });
 });
 
+// ========================================
+// ENDPOINT PARA CARRINHO DE COMPRAS
+// ========================================
+
+// Endpoint para processar checkout com múltiplos itens
+app.post('/api/cart/checkout', async (req, res) => {
+  try {
+    const { buyer, items, paymentMethod } = req.body;
+    
+    console.log('🛒 Processando checkout do carrinho...');
+    console.log('👤 Comprador:', buyer);
+    console.log('📦 Itens:', items.length, 'produtos');
+    console.log('💳 Método:', paymentMethod);
+    
+    // Validar dados obrigatórios
+    if (!buyer || !buyer.name || !buyer.email || !buyer.phone) {
+      return res.status(400).json({
+        error: 'Dados do comprador são obrigatórios (name, email, phone)'
+      });
+    }
+    
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({
+        error: 'Carrinho vazio ou inválido'
+      });
+    }
+    
+    if (!paymentMethod) {
+      return res.status(400).json({
+        error: 'Método de pagamento é obrigatório'
+      });
+    }
+    
+    // Carregar catálogo de produtos para validação de preços
+    let productsData;
+    try {
+      productsData = getProductsCatalog();
+    } catch (error) {
+      return res.status(500).json({ 
+        error: 'Serviço temporariamente indisponível. Tente novamente.' 
+      });
+    }
+    
+    // Validar e calcular preços dos itens
+    let totalPrice = 0;
+    const validatedItems = [];
+    
+    for (const item of items) {
+      const { productId, size, quantity, price } = item;
+      
+      if (!productId || !size || !quantity || quantity <= 0) {
+        return res.status(400).json({
+          error: `Item inválido: ${JSON.stringify(item)}`
+        });
+      }
+      
+      // SEGURANÇA: Validar preço contra catálogo do servidor
+      const product = productsData.products[productId];
+      if (!product) {
+        return res.status(400).json({
+          error: `Produto não encontrado: ${productId}`
+        });
+      }
+      
+      const serverPrice = product.price;
+      if (Math.abs(price - serverPrice) > 0.01) {
+        console.warn(`⚠️ PREÇO DIVERGENTE! Cliente: ${price}, Servidor: ${serverPrice}`);
+        return res.status(400).json({
+          error: 'Preços desatualizados. Recarregue a página.'
+        });
+      }
+      
+      // Verificar disponibilidade do tamanho
+      const sizeData = product.sizes[size];
+      if (!sizeData || !sizeData.available) {
+        return res.status(400).json({
+          error: `Tamanho ${size} indisponível para ${product.title}`
+        });
+      }
+      
+      const itemTotal = serverPrice * quantity;
+      totalPrice += itemTotal;
+      
+      validatedItems.push({
+        productId: productId,
+        title: product.title,
+        size: size,
+        quantity: quantity,
+        priceUnit: serverPrice,
+        subtotal: itemTotal
+      });
+    }
+    
+    // Aplicar desconto PIX se necessário
+    const finalPrice = paymentMethod === 'pix' ? totalPrice * 0.95 : totalPrice;
+    
+    console.log(`💰 Total: R$ ${totalPrice.toFixed(2)}`);
+    console.log(`💰 Final: R$ ${finalPrice.toFixed(2)} (${paymentMethod})`);
+    
+    // Criar comprador no Django
+    let compradorId;
+    try {
+      const compradorResponse = await axios.post(`${DJANGO_API_URL}/compradores/`, {
+        nome: buyer.name,
+        email: buyer.email,
+        telefone: buyer.phone
+      }, {
+        headers: { 
+          'Authorization': `Token ${DJANGO_API_TOKEN}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      compradorId = compradorResponse.data.id;
+      console.log(`✅ Comprador criado/encontrado: ID ${compradorId}`);
+    } catch (error) {
+      if (error.response && error.response.status === 400) {
+        // Comprador já existe, buscar pelo email
+        try {
+          const buscarResponse = await axios.get(`${DJANGO_API_URL}/compradores/?email=${buyer.email}`, {
+            headers: { 'Authorization': `Token ${DJANGO_API_TOKEN}` }
+          });
+          
+          if (buscarResponse.data.results && buscarResponse.data.results.length > 0) {
+            compradorId = buscarResponse.data.results[0].id;
+            console.log(`✅ Comprador encontrado: ID ${compradorId}`);
+          } else {
+            throw new Error('Comprador não encontrado após tentativa de criação');
+          }
+        } catch (searchError) {
+          console.error('❌ Erro ao buscar comprador:', searchError.message);
+          throw searchError;
+        }
+      } else {
+        console.error('❌ Erro ao criar comprador:', error.message);
+        throw error;
+      }
+    }
+    
+    // Gerar external_reference único para o pedido
+    const timestamp = Date.now();
+    const external_reference = `ONEWAY-CART-${timestamp}`;
+    
+    // Criar pedido no Django
+    let pedidoId;
+    try {
+      const pedidoResponse = await axios.post(`${DJANGO_API_URL}/pedidos/`, {
+        comprador: compradorId,
+        produto: validatedItems[0].productId, // Compatibilidade com modelo antigo
+        tamanho: validatedItems[0].size,
+        preco: finalPrice,
+        forma_pagamento: paymentMethod,
+        external_reference: external_reference,
+        observacoes: `Carrinho com ${validatedItems.length} itens diferentes`
+      }, {
+        headers: { 
+          'Authorization': `Token ${DJANGO_API_TOKEN}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      pedidoId = pedidoResponse.data.id;
+      console.log(`✅ Pedido criado: ID ${pedidoId}`);
+    } catch (error) {
+      console.error('❌ Erro ao criar pedido:', error.response?.data || error.message);
+      return res.status(500).json({
+        error: 'Erro ao criar pedido. Tente novamente.'
+      });
+    }
+    
+    // Criar ItemPedido para cada item do carrinho
+    try {
+      for (const item of validatedItems) {
+        await axios.post(`${DJANGO_API_URL}/itempedidos/`, {
+          pedido: pedidoId,
+          produto: item.productId,
+          tamanho: item.size,
+          quantidade: item.quantity,
+          preco_unitario: item.priceUnit
+        }, {
+          headers: { 
+            'Authorization': `Token ${DJANGO_API_TOKEN}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        console.log(`✅ ItemPedido criado: ${item.quantity}x ${item.title} (${item.size})`);
+      }
+    } catch (error) {
+      console.error('❌ Erro ao criar itens do pedido:', error.response?.data || error.message);
+      // Pedido já foi criado, mas sem itens - não é crítico para o fluxo de pagamento
+    }
+    
+    // Determinar provedor de pagamento baseado na configuração
+    const formaPagamentoCartao = process.env.FORMA_PAGAMENTO_CARTAO || 'MERCADOPAGO';
+    const formaPagamentoPix = process.env.FORMA_PAGAMENTO_PIX || 'MERCADOPAGO';
+    
+    let paymentProvider;
+    if (paymentMethod === 'pix') {
+      paymentProvider = formaPagamentoPix;
+    } else {
+      paymentProvider = formaPagamentoCartao;
+    }
+    
+    console.log(`🔧 Provedor selecionado: ${paymentProvider} para ${paymentMethod}`);
+    
+    // Criar preferência/ordem no provedor de pagamento
+    if (paymentProvider === 'MERCADOPAGO') {
+      return await createMercadoPagoPreference(req, res, {
+        items: validatedItems,
+        buyer: buyer,
+        paymentMethod: paymentMethod,
+        totalPrice: totalPrice,
+        finalPrice: finalPrice,
+        external_reference: external_reference,
+        pedido_id: pedidoId
+      });
+    } else if (paymentProvider === 'PAYPAL') {
+      return await createPayPalOrder(req, res, {
+        items: validatedItems,
+        buyer: buyer,
+        totalPrice: totalPrice,
+        external_reference: external_reference,
+        pedido_id: pedidoId
+      });
+    } else {
+      return res.status(500).json({
+        error: 'Provedor de pagamento não configurado'
+      });
+    }
+    
+  } catch (error) {
+    console.error('❌ Erro geral no checkout do carrinho:', error.message);
+    console.error('❌ Stack trace:', error.stack);
+    res.status(500).json({
+      error: 'Erro interno do servidor',
+      message: error.message
+    });
+  }
+});
+
+// Função auxiliar para criar preferência Mercado Pago (carrinho)
+async function createMercadoPagoPreference(req, res, data) {
+  const { items, buyer, paymentMethod, totalPrice, finalPrice, external_reference, pedido_id } = data;
+  
+  try {
+    // Preparar items para Mercado Pago
+    const mpItems = items.map(item => ({
+      title: `${item.title} - Tamanho ${item.size}`,
+      quantity: item.quantity,
+      unit_price: item.priceUnit,
+      currency_id: 'BRL'
+    }));
+    
+    // Configurar métodos de pagamento
+    let payment_methods = {};
+    if (paymentMethod === 'pix') {
+      payment_methods = {
+        excluded_payment_methods: [
+          { id: 'credit_card' },
+          { id: 'debit_card' },
+          { id: 'ticket' }
+        ],
+        excluded_payment_types: [
+          { id: 'credit_card' },
+          { id: 'debit_card' },
+          { id: 'ticket' }
+        ]
+      };
+    } else {
+      // Cartão de crédito/débito
+      payment_methods = {
+        excluded_payment_methods: [
+          { id: 'pix' }
+        ],
+        excluded_payment_types: [
+          { id: 'bank_transfer' }
+        ]
+      };
+      
+      if (paymentMethod === '2x') {
+        payment_methods.installments = 2;
+      } else if (paymentMethod === '4x') {
+        payment_methods.installments = 4;
+      }
+    }
+    
+    const preferenceData = {
+      items: mpItems,
+      payer: {
+        name: buyer.name,
+        email: buyer.email,
+        phone: {
+          number: buyer.phone
+        }
+      },
+      payment_methods: payment_methods,
+      back_urls: {
+        success: process.env.MP_SUCCESS_URL || 'http://localhost:3000/mp-success',
+        failure: process.env.MP_CANCEL_URL || 'http://localhost:3000/mp-cancel',
+        pending: process.env.MP_SUCCESS_URL || 'http://localhost:3000/mp-success'
+      },
+      auto_return: 'approved',
+      external_reference: external_reference,
+      metadata: {
+        pedido_id: pedido_id,
+        comprador_nome: buyer.name,
+        comprador_email: buyer.email,
+        comprador_telefone: buyer.phone,
+        forma_pagamento: paymentMethod,
+        total_original: totalPrice,
+        total_final: finalPrice,
+        carrinho_items: items.length
+      }
+    };
+    
+    console.log('🔵 Criando preferência Mercado Pago...');
+    console.log('📦 Items:', mpItems.length, 'produtos');
+    
+    const result = await preference.create({ body: preferenceData });
+    
+    console.log('✅ Preferência criada:', result.id);
+    
+    res.json({
+      success: true,
+      orderId: pedido_id,
+      total: finalPrice,
+      paymentUrl: result.init_point,
+      preferenceId: result.id
+    });
+    
+  } catch (error) {
+    console.error('❌ Erro ao criar preferência MP:', error.message);
+    res.status(500).json({
+      error: 'Erro ao criar preferência de pagamento'
+    });
+  }
+}
+
+// Função auxiliar para criar ordem PayPal (carrinho)
+async function createPayPalOrder(req, res, data) {
+  const { items, buyer, totalPrice, external_reference, pedido_id } = data;
+  
+  try {
+    const accessToken = await getPayPalAccessToken();
+    
+    // Preparar items para PayPal
+    const paypalItems = items.map(item => ({
+      name: `${item.title} - ${item.size}`,
+      quantity: item.quantity.toString(),
+      unit_amount: {
+        currency_code: 'BRL',
+        value: item.priceUnit.toFixed(2)
+      }
+    }));
+    
+    const orderData = {
+      intent: 'CAPTURE',
+      purchase_units: [{
+        amount: {
+          currency_code: 'BRL',
+          value: totalPrice.toFixed(2),
+          breakdown: {
+            item_total: {
+              currency_code: 'BRL',
+              value: totalPrice.toFixed(2)
+            }
+          }
+        },
+        items: paypalItems,
+        custom_id: external_reference,
+        description: `Pedido ONE WAY 2025 - ${items.length} itens`,
+        soft_descriptor: 'ONEWAY2025'
+      }],
+      payer: {
+        name: {
+          given_name: buyer.name.split(' ')[0],
+          surname: buyer.name.split(' ').slice(1).join(' ') || 'Cliente'
+        },
+        email_address: buyer.email
+      }
+    };
+    
+    console.log('🅿️ Criando ordem PayPal...');
+    console.log('📦 Items:', paypalItems.length, 'produtos');
+    
+    const options = {
+      hostname: PAYPAL_BASE_URL.replace('https://', ''),
+      port: 443,
+      path: '/v2/checkout/orders',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+        'PayPal-Request-Id': external_reference
+      }
+    };
+    
+    const response = await makePayPalRequest(options, JSON.stringify(orderData));
+    
+    if (response.statusCode === 201) {
+      const orderResponse = JSON.parse(response.body);
+      const approveLink = orderResponse.links.find(link => link.rel === 'approve');
+      
+      console.log('✅ Ordem PayPal criada:', orderResponse.id);
+      
+      res.json({
+        success: true,
+        orderId: pedido_id,
+        total: totalPrice,
+        paymentUrl: approveLink.href,
+        paypalOrderId: orderResponse.id
+      });
+    } else {
+      console.error('❌ Erro PayPal:', response.statusCode, response.body);
+      res.status(500).json({
+        error: 'Erro ao criar ordem PayPal'
+      });
+    }
+    
+  } catch (error) {
+    console.error('❌ Erro ao criar ordem PayPal:', error.message);
+    res.status(500).json({
+      error: 'Erro ao criar ordem PayPal'
+    });
+  }
+}
+
 // Iniciar servidor
 app.listen(PORT, () => {
   console.log(`🚀 Servidor rodando na porta ${PORT}`);
