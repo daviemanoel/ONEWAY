@@ -962,17 +962,36 @@
                 const totalElement = document.getElementById('cart-total');
                 const pixTotalElement = document.getElementById('cart-pix-total');
                 const checkoutBtn = document.getElementById('checkout-btn');
+                const paymentSelect = document.getElementById('cart-payment-select');
+
+                const total = this.getTotal();
+                const pixTotal = this.getPixTotal();
+                const selectedMethod = paymentSelect ? paymentSelect.value : 'pix';
 
                 if (totalElement) {
-                    totalElement.textContent = `R$ ${this.getTotal().toFixed(2).replace('.', ',')}`;
+                    totalElement.textContent = `R$ ${total.toFixed(2).replace('.', ',')}`;
                 }
 
                 if (pixTotalElement) {
-                    pixTotalElement.textContent = `R$ ${this.getPixTotal().toFixed(2).replace('.', ',')}`;
+                    // Mostrar/esconder linha PIX baseado na seleção
+                    const pixTotalContainer = pixTotalElement.closest('.cart-pix-total');
+                    if (pixTotalContainer) {
+                        if (selectedMethod === 'pix') {
+                            pixTotalContainer.style.display = 'flex';
+                            pixTotalElement.textContent = `R$ ${pixTotal.toFixed(2).replace('.', ',')}`;
+                        } else {
+                            pixTotalContainer.style.display = 'none';
+                        }
+                    }
                 }
 
                 if (checkoutBtn) {
                     checkoutBtn.disabled = this.items.length === 0;
+                    // Atualizar texto do botão com valor final
+                    const finalPrice = selectedMethod === 'pix' ? pixTotal : total;
+                    checkoutBtn.textContent = this.items.length === 0 ? 
+                        'Finalizar Compra' : 
+                        `Finalizar Compra - R$ ${finalPrice.toFixed(2).replace('.', ',')}`;
                 }
             }
 
@@ -1038,6 +1057,12 @@
                 const checkoutBtn = document.getElementById('checkout-btn');
                 if (checkoutBtn) {
                     checkoutBtn.addEventListener('click', () => this.startCheckout());
+                }
+
+                // Seleção de método de pagamento
+                const paymentSelect = document.getElementById('cart-payment-select');
+                if (paymentSelect) {
+                    paymentSelect.addEventListener('change', () => this.updateUI());
                 }
 
                 // Atualizar event listeners dos botões de adicionar ao carrinho
@@ -1152,10 +1177,19 @@
                 if (priceText) {
                     const total = this.getTotal();
                     const pixTotal = this.getPixTotal();
-                    priceText.innerHTML = `
-                        <strong>Total: R$ ${total.toFixed(2).replace('.', ',')}</strong><br>
-                        <span style="color: #28a745;">PIX (5% OFF): R$ ${pixTotal.toFixed(2).replace('.', ',')}</span>
-                    `;
+                    const paymentSelect = document.getElementById('cart-payment-select');
+                    const selectedMethod = paymentSelect ? paymentSelect.value : 'pix';
+                    
+                    if (selectedMethod === 'pix') {
+                        priceText.innerHTML = `
+                            <strong>Subtotal: R$ ${total.toFixed(2).replace('.', ',')}</strong><br>
+                            <span style="color: #28a745; font-weight: bold;">Total PIX (5% OFF): R$ ${pixTotal.toFixed(2).replace('.', ',')}</span>
+                        `;
+                    } else {
+                        priceText.innerHTML = `
+                            <strong>Total Cartão: R$ ${total.toFixed(2).replace('.', ',')}</strong>
+                        `;
+                    }
                 }
             }
 
@@ -1176,10 +1210,9 @@
                         price: item.price
                     }));
 
-                    // Determinar método de pagamento baseado no carrinho
-                    // Por simplicidade, vamos usar PIX por padrão
-                    // TODO: Adicionar seleção de método de pagamento no modal
-                    const paymentMethod = 'pix';
+                    // Determinar método de pagamento baseado na seleção do carrinho
+                    const paymentSelect = document.getElementById('cart-payment-select');
+                    const paymentMethod = paymentSelect ? paymentSelect.value : 'pix';
 
                     console.log('🛒 Enviando dados do carrinho:', { buyer, items, paymentMethod });
 
@@ -1282,6 +1315,13 @@
             <div class="cart-pix-total">
                 <span>PIX (5% OFF):</span>
                 <span id="cart-pix-total">R$ 0,00</span>
+            </div>
+            <div class="cart-payment-method">
+                <label for="cart-payment-select">Forma de Pagamento:</label>
+                <select id="cart-payment-select">
+                    <option value="pix">PIX (5% desconto)</option>
+                    <option value="credit_card">Cartão de Crédito</option>
+                </select>
             </div>
             <button class="checkout-btn" id="checkout-btn">Finalizar Compra</button>
         </div>
