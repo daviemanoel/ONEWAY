@@ -272,7 +272,9 @@
                 });
             });
             
-            // Adicionar evento aos botões de comprar
+            // DESABILITADO: Event listener antigo dos botões
+            // Agora usando sistema de carrinho
+            /*
             document.querySelectorAll('.product-btn').forEach(button => {
                 button.addEventListener('click', function() {
                     
@@ -280,6 +282,7 @@
                     window.open('https://tiketo.com.br/evento/3063', '_blank');
                 });
             });
+            */
         }
 
         // Variável global para configuração de pagamentos
@@ -416,7 +419,9 @@
                 });
             });
             
-            // Adicionar evento aos botões de comprar (dual payment)
+            // DESABILITADO: Event listener antigo de dual payment
+            // Agora usando sistema de carrinho
+            /*
             document.querySelectorAll('.product-btn').forEach(button => {
                 button.addEventListener('click', async function() {
                     
@@ -466,6 +471,7 @@
                     }
                 });
             });
+            */
         }
 
 
@@ -1184,18 +1190,27 @@
         // Inicializar carrinho
         let cart;
         
-        // Aguardar carregamento dos produtos antes de inicializar carrinho
-        const originalRenderProducts = renderProducts;
-        renderProducts = function() {
-            originalRenderProducts();
-            
-            // Inicializar carrinho após renderizar produtos
+        // Inicializar carrinho quando DOM estiver carregado
+        document.addEventListener('DOMContentLoaded', function() {
+            // Aguardar um pouco para garantir que os produtos foram renderizados
+            setTimeout(() => {
+                if (!cart) {
+                    cart = new ShoppingCart();
+                    console.log('🛒 Carrinho inicializado');
+                }
+            }, 1000);
+        });
+        
+        // Função para re-inicializar carrinho após renderização de produtos
+        function initializeCartAfterProducts() {
             if (!cart) {
                 cart = new ShoppingCart();
+                console.log('🛒 Carrinho inicializado após produtos');
             } else {
                 cart.updateAddToCartButtons();
+                console.log('🛒 Botões do carrinho atualizados');
             }
-        };
+        }
 
     </script>
 
