@@ -2290,7 +2290,7 @@ img {
 .checkout-btn {
   width: 100%;
   padding: 15px;
-  background: linear-gradient(135deg, #006dff 0%, #0056cc 100%);
+  background: linear-gradient(135deg, #ff7a00 0%, #e6690a 100%);
   color: white;
   border: none;
   border-radius: 12px;
@@ -2300,13 +2300,13 @@ img {
   cursor: pointer;
   transition: all 0.3s ease;
   margin-top: 15px;
-  box-shadow: 0 8px 25px rgba(0, 109, 255, 0.4);
+  box-shadow: 0 8px 25px rgba(255, 122, 0, 0.4);
 }
 
 .checkout-btn:hover {
-  background: linear-gradient(135deg, #0056cc 0%, #003d99 100%);
+  background: linear-gradient(135deg, #e6690a 0%, #cc5c09 100%);
   transform: translateY(-2px);
-  box-shadow: 0 12px 30px rgba(0, 109, 255, 0.6);
+  box-shadow: 0 12px 30px rgba(255, 122, 0, 0.6);
 }
 
 .checkout-btn:disabled {
@@ -2378,38 +2378,53 @@ img {
 }
 
 .cart-payment-method {
-  margin: 15px 0;
+  margin: 20px 0;
+  padding: 15px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 12px;
+  border: 2px solid #ff7a00;
 }
 
 .cart-payment-method label {
   display: block;
   font-family: "Montserrat", sans-serif;
-  font-weight: 600;
-  color: #333;
-  margin-bottom: 8px;
-  font-size: 14px;
+  font-weight: 700;
+  color: #ff7a00;
+  margin-bottom: 12px;
+  font-size: 16px;
+  text-align: center;
 }
 
 .cart-payment-method select {
   width: 100%;
-  padding: 12px;
-  border: 2px solid #ddd;
-  border-radius: 8px;
+  padding: 16px 12px;
+  border: 3px solid #ff7a00;
+  border-radius: 12px;
   font-family: "Montserrat", sans-serif;
-  font-size: 14px;
+  font-size: 16px;
+  font-weight: 600;
   background-color: white;
   cursor: pointer;
-  transition: border-color 0.3s ease;
+  transition: all 0.3s ease;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ff7a00' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 20px;
+  padding-right: 45px;
 }
 
 .cart-payment-method select:focus {
   outline: none;
-  border-color: #006dff;
-  box-shadow: 0 0 0 3px rgba(0, 109, 255, 0.1);
+  border-color: #e6690a;
+  box-shadow: 0 0 0 4px rgba(255, 122, 0, 0.2);
+  transform: scale(1.02);
 }
 
 .cart-payment-method select:hover {
-  border-color: #006dff;
+  border-color: #e6690a;
+  box-shadow: 0 4px 12px rgba(255, 122, 0, 0.3);
+  transform: translateY(-1px);
 }
 
 /* Botões de quantidade no carrinho */
