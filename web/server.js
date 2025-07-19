@@ -1417,12 +1417,17 @@ app.post('/api/cart/checkout', async (req, res) => {
       for (const item of validatedItems) {
         const productKey = findProductKeyById(item.productId);
         
+        // Aplicar desconto PIX no preço unitário se necessário
+        const precoUnitarioFinal = paymentMethod === 'pix' ? 
+          parseFloat((item.priceUnit * 0.95).toFixed(2)) : // 5% desconto para PIX
+          item.priceUnit;
+        
         await axios.post(`${DJANGO_API_URL}/itempedidos/`, {
           pedido: pedidoId,
           produto: productKey, // Usar chave do produto para Django
           tamanho: item.size,
           quantidade: item.quantity,
-          preco_unitario: item.priceUnit
+          preco_unitario: precoUnitarioFinal
         }, {
           headers: { 
             'Authorization': `Token ${DJANGO_API_TOKEN}`,
