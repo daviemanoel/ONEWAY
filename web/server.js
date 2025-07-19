@@ -205,6 +205,11 @@ app.get('/paypal-cancel', (req, res) => {
   res.sendFile(path.join(__dirname, 'paypal-cancel.html'));
 });
 
+// Página de sucesso para pagamento presencial
+app.get('/presencial-success', (req, res) => {
+  res.sendFile(path.join(__dirname, 'presencial-success.html'));
+});
+
 // Endpoint para criar sessão de checkout Stripe
 app.post('/create-checkout-session', async (req, res) => {
   try {
