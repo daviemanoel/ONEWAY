@@ -2342,6 +2342,27 @@ img {
   box-shadow: none;
 }
 
+/* Link para continuar comprando */
+.continue-shopping-link {
+  display: block;
+  text-align: center;
+  margin-top: 15px;
+  color: #764ba2;
+  text-decoration: none;
+  font-family: "Montserrat", sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  padding: 10px;
+  border-radius: 8px;
+}
+
+.continue-shopping-link:hover {
+  color: #667eea;
+  background-color: rgba(118, 75, 162, 0.05);
+  text-decoration: underline;
+}
+
 /* Overlay */
 .cart-overlay {
   position: fixed;

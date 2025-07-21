@@ -825,6 +825,7 @@
                 this.saveToStorage();
                 this.updateUI();
                 this.showAddedNotification(product.title, size);
+                this.openPanel(); // Abrir carrinho automaticamente
                 return true;
             }
 
@@ -1062,6 +1063,20 @@
                 const paymentSelect = document.getElementById('cart-payment-select');
                 if (paymentSelect) {
                     paymentSelect.addEventListener('change', () => this.updateUI());
+                }
+
+                // Link para continuar comprando
+                const continueShopping = document.getElementById('continue-shopping');
+                if (continueShopping) {
+                    continueShopping.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        this.closePanel();
+                        // Scroll suave para a seção de produtos
+                        const produtosSection = document.querySelector('#produtos');
+                        if (produtosSection) {
+                            produtosSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }
+                    });
                 }
 
                 // Atualizar event listeners dos botões de adicionar ao carrinho
@@ -1342,6 +1357,7 @@
                 <p>Pagamento na secretaria da igreja em até 48h. Produto não garantido até confirmação do pagamento.</p>
             </div>
             <button class="checkout-btn" id="checkout-btn">Finalizar Compra</button>
+            <a href="#produtos" class="continue-shopping-link" id="continue-shopping">Escolher outros modelos</a>
         </div>
     </div>
 
