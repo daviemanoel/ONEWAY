@@ -1089,20 +1089,22 @@
                 console.log(`🔧 updateAddToCartButtons: Encontrados ${buttons.length} botões`);
                 
                 buttons.forEach((button, index) => {
-                    console.log(`🔧 Processando botão ${index + 1}:`, button);
+                    // Verificar se já tem o listener para evitar duplicação
+                    if (button.dataset.listenerAdded === 'true') {
+                        console.log(`⚠️ Botão ${index + 1} já tem listener`);
+                        return;
+                    }
                     
-                    // Remover listeners anteriores
-                    const newButton = button.cloneNode(true);
-                    button.parentNode.replaceChild(newButton, button);
+                    console.log(`🔧 Processando botão ${index + 1}:`, button);
 
-                    // Adicionar novo listener
-                    newButton.addEventListener('click', (e) => {
+                    // Adicionar listener diretamente sem clonar
+                    button.addEventListener('click', (e) => {
                         console.log('🛒 Botão carrinho clicado!', e);
                         e.preventDefault();
                         
-                        const productCard = newButton.closest('.product-card');
+                        const productCard = button.closest('.product-card');
                         const selectedSizeBtn = productCard.querySelector('.size-btn.active');
-                        const productId = newButton.dataset.productId;
+                        const productId = button.dataset.productId;
 
                         console.log('🛒 Dados do clique:', { productCard, selectedSizeBtn, productId });
 
@@ -1114,8 +1116,8 @@
                         const size = selectedSizeBtn.dataset.size;
                         
                         // Animação do botão
-                        newButton.disabled = true;
-                        newButton.textContent = 'Adicionando...';
+                        button.disabled = true;
+                        button.textContent = 'Adicionando...';
 
                         // Adicionar ao carrinho
                         const success = this.addItem(productId, size);
@@ -1123,11 +1125,13 @@
                         
                         // Restaurar botão
                         setTimeout(() => {
-                            newButton.disabled = false;
-                            newButton.textContent = 'Adicionar ao Carrinho';
+                            button.disabled = false;
+                            button.textContent = 'Adicionar ao Carrinho';
                         }, 500);
                     });
                     
+                    // Marcar que o listener foi adicionado
+                    button.dataset.listenerAdded = 'true';
                     console.log(`✅ Event listener adicionado ao botão ${index + 1}`);
                 });
             }
@@ -1283,24 +1287,11 @@
         
         // Inicializar carrinho quando DOM estiver carregado
         document.addEventListener('DOMContentLoaded', function() {
-            // Aguardar um pouco para garantir que os produtos foram renderizados
-            setTimeout(() => {
-                if (!cart) {
-                    cart = new ShoppingCart();
-                    console.log('🛒 Carrinho inicializado');
-                }
-                
-                // Verificar se os botões existem e aplicar event listeners
-                const buttons = document.querySelectorAll('.add-to-cart');
-                console.log(`🔍 Encontrados ${buttons.length} botões add-to-cart`);
-                
-                if (buttons.length > 0 && cart) {
-                    cart.updateAddToCartButtons();
-                    console.log('🔄 Event listeners aplicados aos botões');
-                } else {
-                    console.warn('⚠️ Nenhum botão add-to-cart encontrado ou carrinho não inicializado');
-                }
-            }, 2000); // Aumentar o tempo para garantir que produtos carregaram
+            // Inicializar carrinho imediatamente
+            if (!cart) {
+                cart = new ShoppingCart();
+                console.log('🛒 Carrinho inicializado no DOMContentLoaded');
+            }
         });
         
         // Função para re-inicializar carrinho após renderização de produtos
