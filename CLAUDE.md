@@ -169,6 +169,8 @@ Sistema completo implementado com:
 - Seleção de método de pagamento
 - Aplicação automática de desconto PIX
 - Notificações de item adicionado
+- **Carrinho abre automaticamente ao adicionar produto** ⭐ **NOVO**
+- **Link "Escolher outros modelos" para continuar comprando** ⭐ **NOVO**
 
 **Backend (Node.js):**
 - Endpoint `/api/cart/checkout` para múltiplos itens
@@ -198,6 +200,13 @@ cart = {
   ]
 }
 ```
+
+**Melhorias de UX (Janeiro 2025):** ⭐ **NOVO**
+- Ao adicionar produto, o painel do carrinho abre automaticamente
+- Link "Escolher outros modelos" abaixo do botão de finalizar compra
+- Navegação suave de volta para a seção de produtos
+- Correção de timing na inicialização do carrinho
+- Event listeners otimizados sem duplicação
 
 ### Sistema de Pagamento Presencial ⭐ **NOVO**
 
@@ -306,7 +315,8 @@ MERCADOPAGO_ACCESS_TOKEN=APP_USR_xxx
 - ✅ **Issues #11-14, #17-19, #22-28**: Fluxo Mercado Pago completo
 - ✅ **Issues #39-44**: Integração PayPal com configuração dinâmica
 - ✅ **Issues #46-53**: Sistema carrinho de compras completo
-- ✅ **Issue #45**: Pagamento presencial na igreja implementado ⭐ **NOVO**
+- ✅ **Issue #45**: Pagamento presencial na igreja implementado
+- ✅ **Janeiro 2025**: Melhorias UX do carrinho (auto-abrir + link continuar) ⭐ **NOVO**
 - 🔄 **Issues #32-38**: Sistema controle estoque (planejado)
 
 ### Metodologia Issues
