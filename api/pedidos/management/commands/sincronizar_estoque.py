@@ -63,12 +63,21 @@ class Command(BaseCommand):
                 from django.db.models import Q
                 
                 # Buscar pedidos aprovados OU pedidos presenciais (mesmo pending)
+                # IMPORTANTE: Só processar aqui pedidos que NÃO têm ItemPedido (para evitar duplicação)
                 query_novos = Q(status_pagamento='approved') | Q(forma_pagamento='presencial')
                 query_novos &= Q(produto_tamanho__isnull=False)
                 query_novos &= Q(data_pedido__gte=data_limite)
                 
                 if not reprocessar:
                     query_novos &= Q(estoque_decrementado=False)
+                
+                # Excluir pedidos que têm ItemPedido (esses vão para seção múltiplos itens)
+                pedidos_com_itens_ids = Pedido.objects.filter(
+                    itens__isnull=False
+                ).values_list('id', flat=True).distinct()
+                
+                if pedidos_com_itens_ids:
+                    query_novos &= ~Q(id__in=pedidos_com_itens_ids)
                 
                 pedidos_novos = Pedido.objects.filter(query_novos).select_related('produto_tamanho', 'comprador')
                 
@@ -109,24 +118,22 @@ class Command(BaseCommand):
                 # 2. Processar pedidos com MÚLTIPLOS ITENS
                 self.stdout.write(self.style.NOTICE('\n🛒 Processando pedidos com múltiplos itens...'))
                 
-                # Buscar pedidos aprovados OU pedidos presenciais (mesmo pending) que TÊM itens
+                # Buscar TODOS os pedidos que têm ItemPedido (independente de ter produto_tamanho ou não)
                 query_multiplos = Q(status_pagamento='approved') | Q(forma_pagamento='presencial')
-                query_multiplos &= Q(produto_tamanho__isnull=True)
                 query_multiplos &= Q(data_pedido__gte=data_limite)
+                query_multiplos &= Q(itens__isnull=False)  # Só pedidos que TÊM ItemPedido
                 
                 if not reprocessar:
                     query_multiplos &= Q(estoque_decrementado=False)
                 
-                pedidos_multiplos = Pedido.objects.filter(query_multiplos).prefetch_related('itens__produto_tamanho').select_related('comprador')
+                pedidos_multiplos = Pedido.objects.filter(query_multiplos).prefetch_related('itens__produto_tamanho').select_related('comprador').distinct()
                 
                 self.stdout.write(f'   Encontrados: {pedidos_multiplos.count()} candidatos a pedidos múltiplos')
                 
-                # Filtrar apenas pedidos que realmente têm itens
+                # Todos os pedidos da query já têm itens, então não precisa filtrar
                 pedidos_com_itens = []
                 for pedido in pedidos_multiplos:
-                    if not pedido.itens.exists():
-                        continue
-                    
+                    self.stdout.write(f'   🔍 Analisando pedido #{pedido.id} com {pedido.itens.count()} itens')
                     pedidos_com_itens.append(pedido.id)
                     
                     try:
