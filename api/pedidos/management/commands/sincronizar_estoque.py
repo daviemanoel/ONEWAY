@@ -169,6 +169,10 @@ class Command(BaseCommand):
                                                 itens_processados += 1
                                             else:
                                                 self.stdout.write(f"         ❌ Falha ao decrementar estoque")
+                                        else:
+                                            self.stdout.write(f"       ⚠️  Item ignorado (sem produto_tamanho): {item.get_produto_display()} ({item.tamanho})")
+                                    except Exception as item_error:
+                                        self.stdout.write(f"         ❌ Erro no item {item.get_produto_display()} ({item.tamanho}): {str(item_error)}")
                                 
                                 # Marcar pedido como processado APÓS processar todos os itens
                                 if itens_processados > 0:
