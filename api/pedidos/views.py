@@ -265,13 +265,427 @@ import io
 import sys
 
 @csrf_exempt
+@staff_member_required
 def setup_estoque_view(request):
     """
-    Endpoint HTTP para executar setup do sistema de estoque
+    Dashboard administrativo centralizado para todas as ações manuais do sistema
     Acesse: https://api.oneway.mevamfranca.com.br/api/setup-estoque/
+    REQUER: Autenticação como staff member
     """
-    if request.method != 'GET':
-        return HttpResponse('Método não permitido. Use GET.', status=405)
+    if request.method == 'POST':
+        # Executar comando via AJAX
+        return execute_command_ajax(request)
+    
+    # GET - Mostrar dashboard
+    from .models import ProdutoTamanho, Pedido
+    
+    # Estatísticas atuais
+    produtos_esgotados = ProdutoTamanho.objects.filter(estoque=0).count()
+    produtos_baixo_estoque = ProdutoTamanho.objects.filter(estoque__gt=0, estoque__lte=2).count()
+    pedidos_pendentes = Pedido.objects.filter(estoque_decrementado=False, status_pagamento='approved').count()
+    pedidos_presenciais = Pedido.objects.filter(forma_pagamento='presencial', status_pagamento='pending').count()
+    
+    html_response = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Dashboard Administrativo - ONEWAY</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+            * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+            
+            body {{
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: #333;
+                line-height: 1.6;
+                min-height: 100vh;
+            }}
+            
+            .container {{
+                max-width: 1200px;
+                margin: 0 auto;
+                padding: 20px;
+            }}
+            
+            .header {{
+                background: rgba(255, 255, 255, 0.95);
+                padding: 30px;
+                border-radius: 15px;
+                box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+                text-align: center;
+                margin-bottom: 30px;
+            }}
+            
+            .header h1 {{
+                font-size: 2.5em;
+                margin-bottom: 10px;
+                background: linear-gradient(135deg, #667eea, #764ba2);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                background-clip: text;
+            }}
+            
+            .stats {{
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 20px;
+                margin-bottom: 30px;
+            }}
+            
+            .stat-card {{
+                background: rgba(255, 255, 255, 0.95);
+                padding: 20px;
+                border-radius: 12px;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+                text-align: center;
+            }}
+            
+            .stat-number {{
+                font-size: 2em;
+                font-weight: bold;
+                margin-bottom: 5px;
+            }}
+            
+            .stat-number.danger {{ color: #e74c3c; }}
+            .stat-number.warning {{ color: #f39c12; }}
+            .stat-number.success {{ color: #27ae60; }}
+            .stat-number.info {{ color: #3498db; }}
+            
+            .sections {{
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+                gap: 25px;
+            }}
+            
+            .section {{
+                background: rgba(255, 255, 255, 0.95);
+                padding: 25px;
+                border-radius: 15px;
+                box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            }}
+            
+            .section h2 {{
+                font-size: 1.4em;
+                margin-bottom: 20px;
+                padding-bottom: 10px;
+                border-bottom: 2px solid #f1f1f1;
+                color: #2c3e50;
+            }}
+            
+            .btn {{
+                display: block;
+                width: 100%;
+                padding: 12px 20px;
+                margin: 10px 0;
+                border: none;
+                border-radius: 8px;
+                font-size: 1em;
+                font-weight: 500;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                text-decoration: none;
+                text-align: center;
+                position: relative;
+                overflow: hidden;
+            }}
+            
+            .btn:hover {{
+                transform: translateY(-2px);
+                box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            }}
+            
+            .btn.danger {{
+                background: linear-gradient(135deg, #e74c3c, #c0392b);
+                color: white;
+            }}
+            
+            .btn.primary {{
+                background: linear-gradient(135deg, #3498db, #2980b9);
+                color: white;
+            }}
+            
+            .btn.success {{
+                background: linear-gradient(135deg, #27ae60, #229954);
+                color: white;
+            }}
+            
+            .btn.warning {{
+                background: linear-gradient(135deg, #f39c12, #e67e22);
+                color: white;
+            }}
+            
+            .btn.secondary {{
+                background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+                color: white;
+            }}
+            
+            .logs {{
+                background: #2c3e50;
+                color: #ecf0f1;
+                padding: 20px;
+                border-radius: 10px;
+                font-family: 'Courier New', monospace;
+                font-size: 0.9em;
+                max-height: 400px;
+                overflow-y: auto;
+                margin-top: 20px;
+                display: none;
+            }}
+            
+            .loading {{
+                display: none;
+                text-align: center;
+                padding: 20px;
+            }}
+            
+            .spinner {{
+                border: 4px solid #f3f3f3;
+                border-top: 4px solid #3498db;
+                border-radius: 50%;
+                width: 40px;
+                height: 40px;
+                animation: spin 1s linear infinite;
+                margin: 0 auto 10px;
+            }}
+            
+            @keyframes spin {{
+                0% {{ transform: rotate(0deg); }}
+                100% {{ transform: rotate(360deg); }}
+            }}
+            
+            .links {{
+                background: rgba(255, 255, 255, 0.95);
+                padding: 20px;
+                border-radius: 12px;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+                margin-top: 30px;
+                text-align: center;
+            }}
+            
+            .links a {{
+                display: inline-block;
+                margin: 0 15px;
+                padding: 10px 20px;
+                background: linear-gradient(135deg, #667eea, #764ba2);
+                color: white;
+                text-decoration: none;
+                border-radius: 25px;
+                transition: all 0.3s ease;
+            }}
+            
+            .links a:hover {{
+                transform: scale(1.05);
+            }}
+            
+            .description {{
+                color: #7f8c8d;
+                font-size: 0.9em;
+                margin-top: 5px;
+                line-height: 1.4;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>🎯 Dashboard Administrativo</h1>
+                <p>Sistema de Controle de Estoque - ONE WAY 2025</p>
+                <p style="color: #7f8c8d; margin-top: 10px;">Logado como: <strong>{request.user.username}</strong></p>
+            </div>
+            
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-number danger">{produtos_esgotados}</div>
+                    <div class="stat-label">Produtos Esgotados</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number warning">{produtos_baixo_estoque}</div>
+                    <div class="stat-label">Estoque Baixo (&lt; 2)</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number info">{pedidos_pendentes}</div>
+                    <div class="stat-label">Pedidos p/ Processar</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number warning">{pedidos_presenciais}</div>
+                    <div class="stat-label">Pagamentos Presenciais</div>
+                </div>
+            </div>
+            
+            <div class="sections">
+                <div class="section">
+                    <h2>🔄 Operações de Estoque</h2>
+                    <button class="btn danger" onclick="executeCommand('reset_estoque', '--confirmar')">
+                        🔄 Reset Completo do Estoque
+                    </button>
+                    <div class="description">Restaura estoque original e marca pedidos para reprocessamento</div>
+                    
+                    <button class="btn primary" onclick="executeCommand('sincronizar_estoque', '--gerar-json')">
+                        📦 Sincronizar Estoque
+                    </button>
+                    <div class="description">Processa pedidos aprovados e decrementa estoque</div>
+                    
+                    <button class="btn success" onclick="executeCommand('setup_estoque_simples')">
+                        🚀 Setup Inicial
+                    </button>
+                    <div class="description">Configura produtos e estoque inicial no sistema</div>
+                </div>
+                
+                <div class="section">
+                    <h2>📄 Geração de Arquivos</h2>
+                    <button class="btn primary" onclick="executeCommand('gerar_products_json')">
+                        📄 Gerar Products.json
+                    </button>
+                    <div class="description">Atualiza products.json com dados atuais do estoque</div>
+                    
+                    <a href="/api/gerar-products-json/" target="_blank" class="btn success">
+                        📥 Download JSON Atual
+                    </a>
+                    <div class="description">Baixa o products.json gerado mais recentemente</div>
+                </div>
+                
+                <div class="section">
+                    <h2>🔧 Manutenção</h2>
+                    <button class="btn warning" onclick="executeCommand('associar_pedidos_legacy')">
+                        🔗 Associar Pedidos Legacy
+                    </button>
+                    <div class="description">Conecta pedidos antigos ao novo sistema de estoque</div>
+                    
+                    <button class="btn secondary" onclick="executeCommand('criar_token_api')">
+                        🔑 Criar Token API
+                    </button>
+                    <div class="description">Gera novo token para comunicação Django ↔ Node.js</div>
+                </div>
+                
+                <div class="section">
+                    <h2>📊 Diagnóstico</h2>
+                    <button class="btn primary" onclick="executeCommand('sincronizar_estoque', '--dry-run')">
+                        🔍 Simular Sincronização
+                    </button>
+                    <div class="description">Testa sincronização sem alterar dados</div>
+                    
+                    <button class="btn warning" onclick="executeCommand('reset_estoque', '--dry-run')">
+                        🔍 Simular Reset
+                    </button>
+                    <div class="description">Testa reset sem alterar dados</div>
+                </div>
+            </div>
+            
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Executando comando... Por favor, aguarde.</p>
+            </div>
+            
+            <div class="logs" id="logs"></div>
+            
+            <div class="links">
+                <a href="/admin" target="_blank">🔧 Django Admin</a>
+                <a href="https://oneway.mevamfranca.com.br" target="_blank">🌐 Site ONEWAY</a>
+                <a href="https://api.oneway.mevamfranca.com.br/api/pedidos/" target="_blank">📊 API Pedidos</a>
+            </div>
+        </div>
+        
+        <script>
+            async function executeCommand(command, args = '') {{
+                const loading = document.getElementById('loading');
+                const logs = document.getElementById('logs');
+                
+                // Mostrar loading
+                loading.style.display = 'block';
+                logs.style.display = 'none';
+                logs.innerHTML = '';
+                
+                try {{
+                    const formData = new FormData();
+                    formData.append('command', command);
+                    formData.append('args', args);
+                    
+                    const response = await fetch('/api/setup-estoque/', {{
+                        method: 'POST',
+                        body: formData,
+                        headers: {{
+                            'X-CSRFToken': getCookie('csrftoken')
+                        }}
+                    }});
+                    
+                    const result = await response.text();
+                    
+                    // Ocultar loading e mostrar logs
+                    loading.style.display = 'none';
+                    logs.style.display = 'block';
+                    logs.innerHTML = result;
+                    
+                    // Scroll para os logs
+                    logs.scrollIntoView({{ behavior: 'smooth' }});
+                    
+                    // Atualizar página após comandos que alteram dados
+                    if (command !== 'sincronizar_estoque' || !args.includes('--dry-run')) {{
+                        if (command !== 'reset_estoque' || !args.includes('--dry-run')) {{
+                            setTimeout(() => {{
+                                window.location.reload();
+                            }}, 3000);
+                        }}
+                    }}
+                    
+                }} catch (error) {{
+                    loading.style.display = 'none';
+                    logs.style.display = 'block';
+                    logs.innerHTML = '<span style="color: #e74c3c;">❌ Erro: ' + error.message + '</span>';
+                }}
+            }}
+            
+            function getCookie(name) {{
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {{
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {{
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {{
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }}
+                    }}
+                }}
+                return cookieValue;
+            }}
+        </script>
+    </body>
+    </html>
+    """
+    
+    return HttpResponse(html_response, content_type='text/html')
+
+
+@csrf_exempt
+@staff_member_required
+def execute_command_ajax(request):
+    """
+    Executa comandos Django via AJAX para o dashboard administrativo
+    POST /api/setup-estoque/ com command e args
+    """
+    if request.method != 'POST':
+        return HttpResponse('❌ Método não permitido', status=405)
+    
+    command = request.POST.get('command', '')
+    args_str = request.POST.get('args', '')
+    
+    if not command:
+        return HttpResponse('❌ Comando não especificado', status=400)
+    
+    # Lista de comandos permitidos por segurança
+    allowed_commands = [
+        'reset_estoque',
+        'sincronizar_estoque', 
+        'setup_estoque_simples',
+        'gerar_products_json',
+        'associar_pedidos_legacy',
+        'criar_token_api'
+    ]
+    
+    if command not in allowed_commands:
+        return HttpResponse(f'❌ Comando não permitido: {command}', status=403)
     
     # Capturar output do comando
     output_buffer = io.StringIO()
@@ -281,8 +695,14 @@ def setup_estoque_view(request):
         old_stdout = sys.stdout
         sys.stdout = output_buffer
         
-        # Executar o comando simplificado
-        call_command('setup_estoque_simples')
+        # Preparar argumentos do comando
+        args_list = []
+        if args_str:
+            args_list = args_str.split(' ')
+            args_list = [arg for arg in args_list if arg]  # Remove strings vazias
+        
+        # Executar o comando
+        call_command(command, *args_list)
         
         # Restaurar stdout
         sys.stdout = old_stdout
@@ -290,57 +710,25 @@ def setup_estoque_view(request):
         # Pegar o output
         output = output_buffer.getvalue()
         
-        # Retornar como HTML formatado
-        html_response = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Setup Sistema de Estoque</title>
-            <meta charset="UTF-8">
-            <style>
-                body {{ font-family: monospace; background: #1e1e1e; color: #00ff00; padding: 20px; }}
-                .success {{ color: #00ff00; }}
-                .error {{ color: #ff4444; }}
-                .warning {{ color: #ffaa00; }}
-                .info {{ color: #4488ff; }}
-                pre {{ white-space: pre-wrap; }}
-            </style>
-        </head>
-        <body>
-            <h1>🚀 Setup Sistema de Estoque - ONEWAY</h1>
-            <pre class="success">{output}</pre>
-            <hr>
-            <p><a href="/admin" target="_blank">🔗 Abrir Django Admin</a></p>
-            <p><a href="https://oneway.mevamfranca.com.br" target="_blank">🔗 Abrir Site</a></p>
-        </body>
-        </html>
-        """
+        # Formatar output para HTML
+        output_html = output.replace('\n', '<br>').replace(' ', '&nbsp;')
         
-        return HttpResponse(html_response, content_type='text/html')
+        # Adicionar cores baseado no conteúdo
+        output_html = output_html.replace('✅', '<span style="color: #27ae60;">✅</span>')
+        output_html = output_html.replace('❌', '<span style="color: #e74c3c;">❌</span>')
+        output_html = output_html.replace('⚠️', '<span style="color: #f39c12;">⚠️</span>')
+        output_html = output_html.replace('🔄', '<span style="color: #3498db;">🔄</span>')
+        output_html = output_html.replace('📦', '<span style="color: #9b59b6;">📦</span>')
+        output_html = output_html.replace('🚀', '<span style="color: #e67e22;">🚀</span>')
+        
+        return HttpResponse(output_html, content_type='text/html')
         
     except Exception as e:
         # Restaurar stdout em caso de erro
         sys.stdout = old_stdout
         
-        error_html = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Erro - Setup Estoque</title>
-            <meta charset="UTF-8">
-            <style>
-                body {{ font-family: monospace; background: #1e1e1e; color: #ff4444; padding: 20px; }}
-            </style>
-        </head>
-        <body>
-            <h1>❌ Erro no Setup do Sistema de Estoque</h1>
-            <pre>{str(e)}</pre>
-            <p><a href="javascript:history.back()">⬅️ Voltar</a></p>
-        </body>
-        </html>
-        """
-        
-        return HttpResponse(error_html, content_type='text/html', status=500)
+        error_msg = f'❌ Erro ao executar comando "{command}": {str(e)}'
+        return HttpResponse(error_msg, content_type='text/html', status=500)
     
     finally:
         output_buffer.close()

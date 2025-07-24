@@ -183,7 +183,7 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS('\nESTATÍSTICAS DE ESTOQUE:'))
         
         produtos_sem_estoque = ProdutoTamanho.objects.filter(estoque=0)
-        produtos_baixo_estoque = ProdutoTamanho.objects.filter(estoque__gt=0, estoque__lte=5)
+        produtos_baixo_estoque = ProdutoTamanho.objects.filter(estoque__gt=0, estoque__lte=2)
         
         if produtos_sem_estoque.exists():
             self.stdout.write(self.style.ERROR('\n❌ Produtos ESGOTADOS:'))

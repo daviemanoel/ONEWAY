@@ -33,6 +33,28 @@ Este é um site de e-commerce para o evento "ONE WAY 2025" (31 de julho - 2 de a
 
 ## Comandos de Desenvolvimento
 
+### 🎯 Dashboard Administrativo Centralizado ⭐ **NOVO**
+```bash
+# Acesso ao dashboard completo
+URL: https://api.oneway.mevamfranca.com.br/api/setup-estoque/
+Login: Requer autenticação como staff member (@staff_member_required)
+
+# Funcionalidades disponíveis via interface web AJAX:
+- 🔄 Reset Completo do Estoque (restaura valores originais)
+- 📦 Sincronizar Estoque (processa pedidos aprovados)
+- 🚀 Setup Inicial (configura produtos)
+- 📄 Gerar Products.json (atualiza frontend)
+- 🔗 Associar Pedidos Legacy (migração dados)
+- 🔑 Criar Token API (comunicação Node.js)
+- 🔍 Simulações --dry-run (testes sem alterações)
+
+# Estatísticas em tempo real:
+- Produtos esgotados (estoque = 0)
+- Estoque baixo (< 2 unidades) ⭐ **NOVO THRESHOLD**
+- Pedidos pendentes de processamento
+- Pagamentos presenciais aguardando confirmação
+```
+
 ### Railway CLI (Produção)
 ```bash
 railway logs --service WEB    # Logs Node.js em tempo real
@@ -67,9 +89,17 @@ python manage.py migrate            # Migrar banco local (SQLite)
 python manage.py runserver          # Servidor local porta 8000
 python manage.py createsuperuser    # Criar admin local
 
-# Comandos customizados
-python manage.py setup_database     # Setup automático produção
-python manage.py criar_token_api    # Gerar token para Node.js
+# Comandos customizados ⭐ **ATUALIZADOS**
+python manage.py setup_estoque_simples     # Setup automático produção
+python manage.py reset_estoque --confirmar # Reset completo estoque ⭐ **NOVO**
+python manage.py sincronizar_estoque       # Sincronizar estoque
+python manage.py gerar_products_json       # Gerar JSON atualizado
+python manage.py associar_pedidos_legacy   # Migração dados
+python manage.py criar_token_api          # Gerar token para Node.js
+
+# Comandos com dry-run (simulação)
+python manage.py reset_estoque --dry-run        # Simular reset
+python manage.py sincronizar_estoque --dry-run  # Simular sincronização
 ```
 
 ### Comandos de Diagnóstico

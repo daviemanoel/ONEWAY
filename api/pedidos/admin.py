@@ -23,7 +23,7 @@ class ProdutoTamanhoInline(admin.TabularInline):
         
         if obj.estoque == 0:
             return format_html('<span style="color: red; font-weight: bold;">❌ Esgotado</span>')
-        elif obj.estoque <= 5:
+        elif obj.estoque <= 2:
             return format_html('<span style="color: orange; font-weight: bold;">⚠️ Baixo ({} un.)</span>', obj.estoque)
         else:
             return format_html('<span style="color: green; font-weight: bold;">✅ OK ({} un.)</span>', obj.estoque)
@@ -156,7 +156,7 @@ class ProdutoTamanhoAdmin(admin.ModelAdmin):
         if obj.estoque == 0:
             color = 'red'
             emoji = '❌'
-        elif obj.estoque <= 5:
+        elif obj.estoque <= 2:
             color = 'orange'
             emoji = '⚠️'
         else:
