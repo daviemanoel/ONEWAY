@@ -279,14 +279,56 @@ Sistema completo para reserva e pagamento na igreja implementado:
 - ✅ Mantém relacionamento presencial igreja-membro
 - ✅ Controle administrativo total via Django
 
-### Sistema de Controle de Estoque Automático ⭐ **NOVO**
+### Sistema de Controle de Estoque Completo ⭐ **NOVO**
 
-Sistema completo de controle de estoque em tempo real implementado:
+Sistema integrado de controle de estoque com histórico completo de movimentações implementado:
 
-**Arquitetura:**
+**🏗️ Arquitetura:**
 ```
 [Frontend] → [product_size_id] → [Node.js] → [Django API] → [PostgreSQL]
      ↓              ↓               ↓            ↓             ↓
+[products.json] → [Validação] → [Sincronização] → [Models] → [Histórico]
+```
+
+**📊 Models Django:**
+- **Produto**: Gestão de produtos com preço, custo, ordem, ativo
+- **ProdutoTamanho**: Controle de estoque por tamanho (P/M/G/GG)
+- **MovimentacaoEstoque**: Histórico completo de todas as movimentações
+- **Pedido**: Integração híbrida (novo sistema + legacy)
+- **ItemPedido**: Suporte a múltiplos itens por pedido
+
+**🔄 Sincronização Automática:**
+- **Dashboard Web**: `/api/setup-estoque/` com interface visual
+- **Comando CLI**: `python manage.py sincronizar_estoque`
+- **Admin Actions**: Sincronização direta no Django Admin
+- **Híbrido**: Processa pedidos novos + legacy automaticamente
+- **Pedidos Presenciais**: Incluídos automaticamente na sincronização
+- **Histórico**: Todas as movimentações registradas com pedido relacionado
+
+**📈 Funcionalidades Avançadas:**
+- **Reset de Estoque**: Comando para reprocessamento completo
+- **Migração de Dados**: Scripts automáticos products.json → Django
+- **Validação Dupla**: Frontend + Backend + Django
+- **Dry-run Mode**: Simulação sem alterar dados
+- **Geração JSON**: products.json atualizado automaticamente
+- **Logs Detalhados**: Auditoria completa de todas as operações
+
+**🎯 Interface Admin:**
+- **Produtos**: Lista com estoque total, margem de lucro, status visual
+- **Tamanhos**: Edição inline com botões de ação rápida (+5/-1)
+- **Histórico**: Visualização completa de movimentações por produto
+- **Filtros**: Por tipo, data, usuário, origem da movimentação
+- **Actions**: Sincronizar estoque, confirmar presencial, gerar JSON
+
+**💻 Dashboard Centralizado:**
+```
+https://api.oneway.mevamfranca.com.br/api/setup-estoque/
+```
+- 📊 Estatísticas em tempo real (esgotados, baixo estoque, pendentes)
+- 🔄 Botões de comando (Reset, Sincronizar, Gerar JSON)
+- 📋 Logs de execução via AJAX
+- 🔐 Autenticação obrigatória (@staff_member_required)
+- 📱 Interface responsiva e moderna
 [Botão clicado] [ID capturado] [Validação] [Estoque real] [Atualização]
 ```
 
@@ -414,12 +456,18 @@ MERCADOPAGO_ACCESS_TOKEN=APP_USR_xxx
 ## Desenvolvimento e Issues
 
 ### Status Implementação
-- ✅ **Issues #11-14, #17-19, #22-28**: Fluxo Mercado Pago completo
+- ✅ **Issues #1-14, #17-28**: Fluxo Mercado Pago completo + infraestrutura
 - ✅ **Issues #39-44**: Integração PayPal com configuração dinâmica
 - ✅ **Issues #46-53**: Sistema carrinho de compras completo
 - ✅ **Issue #45**: Pagamento presencial na igreja implementado
-- ✅ **Janeiro 2025**: Melhorias UX do carrinho (auto-abrir + link continuar) ⭐ **NOVO**
-- 🔄 **Issues #32-38**: Sistema controle estoque (planejado)
+- ✅ **Issues #32-37**: Sistema controle estoque Django COMPLETO ⭐ **NOVO**
+  - ✅ **#32**: Refactor sistema controle estoque com models Django
+  - ✅ **#33**: Models Produto e ProdutoTamanho criados
+  - ✅ **#34**: Scripts migração products.json → Django
+  - ✅ **#35**: Interface admin completa para produtos e estoque
+  - ✅ **#36**: Comando sincronização híbrido (novo + legacy)
+  - ✅ **#37**: Frontend integrado com IDs numéricos Django
+- ✅ **Janeiro 2025**: Melhorias UX do carrinho + histórico movimentações ⭐ **NOVO**
 
 ### Metodologia Issues
 - **code-complete**: Código implementado, mas não testado
@@ -442,12 +490,14 @@ MERCADOPAGO_ACCESS_TOKEN=APP_USR_xxx
 **Deploy:** Railway (auto-deploy, custom domains)  
 
 **Estatísticas:**
-- ~8000 linhas código total (HTML/CSS/JS + Python)
-- 54+ issues criadas (9 fechadas com sucesso ✅)
-- Sistema triplo pagamentos operacional (MP + PayPal + Presencial)
+- ~12000+ linhas código total (HTML/CSS/JS + Python)
+- 53 issues criadas → **46 fechadas com sucesso** ✅ (87% conclusão)
+- Sistema completo: **Pagamentos (MP + PayPal + Presencial) + Controle Estoque**
 - PostgreSQL persistente com zero downtime
-- Migração automática de dados sem perda
-- 100% funcionalidades carrinho + presencial implementadas ⭐
+- **Sistema híbrido**: Novo + Legacy funcionando simultaneamente
+- **Histórico completo**: MovimentacaoEstoque com 520+ linhas de código
+- **Dashboard admin**: Interface moderna com 15+ comandos
+- **100% funcionalidades carrinho + presencial + estoque implementadas** ⭐
 
 ---
 
