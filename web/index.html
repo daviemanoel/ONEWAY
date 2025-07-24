@@ -382,7 +382,7 @@
                                             const isActive = size === 'M' && isAvailable;
                                             const disabled = !isAvailable ? 'disabled' : '';
                                             const activeClass = isActive ? 'active' : '';
-                                            return `<button class="size-btn ${activeClass}" data-size="${size}" data-stripe-id="${sizeData.id_stripe}" ${disabled}>${size}</button>`;
+                                            return `<button class="size-btn ${activeClass}" data-size="${size}" data-stripe-id="${sizeData.id_stripe}" data-product-size-id="${sizeData.product_size_id || ''}" ${disabled}>${size}</button>`;
                                         }).join('')}
                                     </div>
                                 </div>
@@ -786,7 +786,7 @@
             }
 
             // Adicionar item ao carrinho
-            addItem(productId, size) {
+            addItem(productId, size, productSizeId = null) {
                 // Buscar produto pelo ID dentro do objeto products
                 let product = null;
                 
@@ -800,6 +800,11 @@
                 if (!product) {
                     console.error('Produto não encontrado:', productId);
                     return false;
+                }
+
+                // Obter product_size_id se não foi fornecido
+                if (!productSizeId && product.sizes[size]) {
+                    productSizeId = product.sizes[size].product_size_id;
                 }
 
                 // Verificar se já existe o mesmo produto/tamanho
@@ -818,7 +823,8 @@
                         size: size,
                         quantity: 1,
                         price: product.price,
-                        image: product.image
+                        image: product.image,
+                        product_size_id: productSizeId // ✨ NOVO CAMPO
                     });
                 }
 
@@ -890,10 +896,36 @@
                     const saved = localStorage.getItem('oneway_cart');
                     if (saved) {
                         this.items = JSON.parse(saved);
+                        // Migrar itens antigos sem product_size_id
+                        this.migrateOldItems();
                     }
                 } catch (error) {
                     console.error('Erro ao carregar carrinho:', error);
                     this.items = [];
+                }
+            }
+
+            // Migrar itens antigos para incluir product_size_id
+            migrateOldItems() {
+                let needsSave = false;
+                
+                this.items.forEach(item => {
+                    if (!item.product_size_id && productsData && productsData.products) {
+                        // Buscar product_size_id baseado no productId e size
+                        for (const [key, product] of Object.entries(productsData.products)) {
+                            if (product.id === item.productId && product.sizes[item.size]) {
+                                item.product_size_id = product.sizes[item.size].product_size_id;
+                                needsSave = true;
+                                console.log(`🔄 Migrado item: ${item.title} ${item.size} -> ID ${item.product_size_id}`);
+                                break;
+                            }
+                        }
+                    }
+                });
+                
+                if (needsSave) {
+                    this.saveToStorage();
+                    console.log('✅ Carrinho migrado com product_size_id');
                 }
             }
 
@@ -1114,13 +1146,16 @@
                         }
 
                         const size = selectedSizeBtn.dataset.size;
+                        const productSizeId = selectedSizeBtn.dataset.productSizeId; // ✨ NOVO CAMPO
+                        
+                        console.log('🛒 Dados capturados:', { productId, size, productSizeId });
                         
                         // Animação do botão
                         button.disabled = true;
                         button.textContent = 'Adicionando...';
 
                         // Adicionar ao carrinho
-                        const success = this.addItem(productId, size);
+                        const success = this.addItem(productId, size, productSizeId);
                         console.log('🛒 Resultado addItem:', success);
                         
                         // Restaurar botão
@@ -1230,7 +1265,8 @@
                         productId: item.productId,
                         size: item.size,
                         quantity: item.quantity,
-                        price: item.price
+                        price: item.price,
+                        product_size_id: item.product_size_id // ✨ NOVO CAMPO para Django
                     }));
 
                     // Determinar método de pagamento baseado na seleção do carrinho
