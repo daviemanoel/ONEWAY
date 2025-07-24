@@ -150,22 +150,44 @@ class Command(BaseCommand):
                         
                         if pode_processar:
                             # Decrementar estoque de todos os itens
-                            self.stdout.write(f"     🔄 Processando {pedido.itens.count()} itens do pedido #{pedido.id}...")
+                            total_itens = pedido.itens.count()
+                            self.stdout.write(f"     🔄 Processando {total_itens} itens do pedido #{pedido.id}...")
+                            
+                            # Debug: contar movimentações antes
+                            from pedidos.models import MovimentacaoEstoque
+                            movs_antes = MovimentacaoEstoque.objects.filter(pedido=pedido).count()
+                            self.stdout.write(f"     📊 Movimentações existentes: {movs_antes}")
+                            
                             itens_processados = 0
                             if not dry_run:
-                                for item in pedido.itens.all():
+                                for idx, item in enumerate(pedido.itens.all(), 1):
                                     try:
                                         if item.produto_tamanho:
-                                            self.stdout.write(f"       🔽 Decrementando: {item.get_produto_display()} ({item.tamanho}) x{item.quantidade}")
+                                            self.stdout.write(f"       🔽 Item {idx}/{total_itens}: {item.get_produto_display()} ({item.tamanho}) x{item.quantidade}")
+                                            
+                                            # Contar movimentações antes deste item
+                                            movs_item_antes = MovimentacaoEstoque.objects.filter(
+                                                pedido=pedido,
+                                                produto_tamanho=item.produto_tamanho
+                                            ).count()
+                                            
                                             sucesso = item.produto_tamanho.decrementar_estoque(
                                                 quantidade=item.quantidade,
                                                 pedido=pedido,
                                                 usuario='sistema',
-                                                observacao=f'Sincronização automática - Pedido #{pedido.id} - Item: {item.get_produto_display()} ({item.tamanho})',
+                                                observacao=f'Sincronização automática - Pedido #{pedido.id} - Item {idx}: {item.get_produto_display()} ({item.tamanho})',
                                                 origem='sincronizar_estoque_comando'
                                             )
                                             if sucesso:
+                                                # Verificar se movimentação foi criada
+                                                movs_item_depois = MovimentacaoEstoque.objects.filter(
+                                                    pedido=pedido,
+                                                    produto_tamanho=item.produto_tamanho
+                                                ).count()
+                                                nova_mov = movs_item_depois - movs_item_antes
+                                                
                                                 self.stdout.write(f"         ✅ Movimentação registrada - Estoque restante: {item.produto_tamanho.estoque}")
+                                                self.stdout.write(f"         📈 Movimentações criadas para este item: {nova_mov}")
                                                 itens_processados += 1
                                             else:
                                                 self.stdout.write(f"         ❌ Falha ao decrementar estoque")
@@ -178,6 +200,11 @@ class Command(BaseCommand):
                                 if itens_processados > 0:
                                     pedido.estoque_decrementado = True
                                     pedido.save()
+                                
+                                # Debug: contar movimentações depois
+                                movs_depois = MovimentacaoEstoque.objects.filter(pedido=pedido).count()
+                                self.stdout.write(f"     📊 Total de movimentações após processamento: {movs_depois} (eram {movs_antes})")
+                                self.stdout.write(f"     📊 Novas movimentações criadas: {movs_depois - movs_antes}")
                             else:
                                 # Contar itens que seriam processados no dry run
                                 for item in pedido.itens.all():

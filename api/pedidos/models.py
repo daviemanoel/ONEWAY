@@ -516,4 +516,8 @@ class MovimentacaoEstoque(models.Model):
             origem=origem
         )
         
+        # Debug log
+        if pedido:
+            print(f"[DEBUG MovimentacaoEstoque] Criada movimentação ID #{movimentacao.id} para pedido #{pedido.id} - {produto_tamanho}")
+        
         return movimentacao
