@@ -5,7 +5,7 @@ from decimal import Decimal
 
 
 class Command(BaseCommand):
-    help = 'Reset completo do estoque - restaura valores originais e permite reprocessamento'
+    help = 'Reset completo do estoque - restaura valores originais, limpa histórico e permite reprocessamento'
     
     def add_arguments(self, parser):
         parser.add_argument(
@@ -96,6 +96,7 @@ class Command(BaseCommand):
                 
                 produtos_resetados = 0
                 tamanhos_resetados = 0
+                movimentacoes_removidas = 0
                 
                 for produto in Produto.objects.filter(ativo=True):
                     if produto.json_key in estoque_original:
@@ -128,7 +129,19 @@ class Command(BaseCommand):
                             )
                         )
                 
-                # 2. Marcar todos os pedidos para reprocessamento
+                # 2. Limpar histórico de movimentações de estoque
+                self.stdout.write(self.style.NOTICE('\n🗑️  Limpando histórico de movimentações...'))
+                
+                from .models import MovimentacaoEstoque
+                if not dry_run:
+                    movimentacoes_removidas = MovimentacaoEstoque.objects.all().count()
+                    MovimentacaoEstoque.objects.all().delete()
+                else:
+                    movimentacoes_removidas = MovimentacaoEstoque.objects.count()
+                
+                self.stdout.write(f'  ✅ {movimentacoes_removidas} registros de movimentação removidos')
+                
+                # 3. Marcar todos os pedidos para reprocessamento
                 self.stdout.write(self.style.NOTICE('\n🔄 Marcando pedidos para reprocessamento...'))
                 
                 if not dry_run:
@@ -169,6 +182,7 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS('📋 RESUMO DO RESET:'))
         self.stdout.write(self.style.SUCCESS(f'  ✅ Produtos processados: {produtos_resetados}'))
         self.stdout.write(self.style.SUCCESS(f'  ✅ Tamanhos resetados: {tamanhos_resetados}'))
+        self.stdout.write(self.style.SUCCESS(f'  🗑️  Movimentações removidas: {movimentacoes_removidas}'))
         self.stdout.write(self.style.SUCCESS(f'  ✅ Pedidos para reprocessar: {pedidos_resetados}'))
         self.stdout.write(self.style.SUCCESS(f'  📦 Estoque total restaurado: {estoque_total_apos} unidades'))
         
