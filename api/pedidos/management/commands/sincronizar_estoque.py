@@ -26,11 +26,17 @@ class Command(BaseCommand):
             action='store_true',
             help='Gerar products.json após sincronização',
         )
+        parser.add_argument(
+            '--reprocessar',
+            action='store_true',
+            help='Reprocessar pedidos que já tiveram estoque decrementado (CUIDADO!)',
+        )
     
     def handle(self, *args, **options):
         dry_run = options.get('dry_run', False)
         dias = options.get('dias', 30)
         gerar_json = options.get('gerar_json', False)
+        reprocessar = options.get('reprocessar', False)
         
         # Data limite para processar pedidos
         data_limite = datetime.now() - timedelta(days=dias)
@@ -57,12 +63,14 @@ class Command(BaseCommand):
                 from django.db.models import Q
                 
                 # Buscar pedidos aprovados OU pedidos presenciais (mesmo pending)
-                pedidos_novos = Pedido.objects.filter(
-                    Q(status_pagamento='approved') | Q(forma_pagamento='presencial'),
-                    estoque_decrementado=False,
-                    produto_tamanho__isnull=False,
-                    data_pedido__gte=data_limite
-                ).select_related('produto_tamanho', 'comprador')
+                query_novos = Q(status_pagamento='approved') | Q(forma_pagamento='presencial')
+                query_novos &= Q(produto_tamanho__isnull=False)
+                query_novos &= Q(data_pedido__gte=data_limite)
+                
+                if not reprocessar:
+                    query_novos &= Q(estoque_decrementado=False)
+                
+                pedidos_novos = Pedido.objects.filter(query_novos).select_related('produto_tamanho', 'comprador')
                 
                 self.stdout.write(f'   Encontrados: {pedidos_novos.count()} pedidos do novo sistema')
                 
@@ -102,12 +110,14 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.NOTICE('\n🛒 Processando pedidos com múltiplos itens...'))
                 
                 # Buscar pedidos aprovados OU pedidos presenciais (mesmo pending) que TÊM itens
-                pedidos_multiplos = Pedido.objects.filter(
-                    Q(status_pagamento='approved') | Q(forma_pagamento='presencial'),
-                    estoque_decrementado=False,
-                    produto_tamanho__isnull=True,
-                    data_pedido__gte=data_limite
-                ).prefetch_related('itens__produto_tamanho').select_related('comprador')
+                query_multiplos = Q(status_pagamento='approved') | Q(forma_pagamento='presencial')
+                query_multiplos &= Q(produto_tamanho__isnull=True)
+                query_multiplos &= Q(data_pedido__gte=data_limite)
+                
+                if not reprocessar:
+                    query_multiplos &= Q(estoque_decrementado=False)
+                
+                pedidos_multiplos = Pedido.objects.filter(query_multiplos).prefetch_related('itens__produto_tamanho').select_related('comprador')
                 
                 self.stdout.write(f'   Encontrados: {pedidos_multiplos.count()} candidatos a pedidos múltiplos')
                 
@@ -159,20 +169,17 @@ class Command(BaseCommand):
                                                 itens_processados += 1
                                             else:
                                                 self.stdout.write(f"         ❌ Falha ao decrementar estoque")
-                                        else:
-                                            self.stdout.write(f"       ⚠️  Item ignorado (sem produto_tamanho): {item.get_produto_display()} ({item.tamanho})")
-                                    except Exception as item_error:
-                                        self.stdout.write(f"         ❌ Erro no item {item.get_produto_display()} ({item.tamanho}): {str(item_error)}")
+                                
+                                # Marcar pedido como processado APÓS processar todos os itens
+                                if itens_processados > 0:
+                                    pedido.estoque_decrementado = True
+                                    pedido.save()
                             else:
                                 # Contar itens que seriam processados no dry run
                                 for item in pedido.itens.all():
                                     if item.produto_tamanho:
                                         self.stdout.write(f"       🔽 [DRY RUN] Decrementaria: {item.get_produto_display()} ({item.tamanho}) x{item.quantidade}")
                                         itens_processados += 1
-                            
-                            if not dry_run:
-                                pedido.estoque_decrementado = True
-                                pedido.save()
                             
                             self.stdout.write(
                                 f"  ✅ Pedido #{pedido.id}: {itens_processados}/{pedido.itens.count()} itens processados com sucesso"
