@@ -437,6 +437,36 @@ def setup_estoque_view(request):
                 overflow-y: auto;
                 margin-top: 20px;
                 display: none;
+                position: relative;
+            }}
+            
+            .logs-controls {{
+                position: sticky;
+                top: 0;
+                background: #34495e;
+                margin: -20px -20px 15px -20px;
+                padding: 10px 20px;
+                border-radius: 10px 10px 0 0;
+                border-bottom: 1px solid #4a6278;
+            }}
+            
+            .logs-btn {{
+                background: #e74c3c;
+                color: white;
+                border: none;
+                padding: 5px 10px;
+                border-radius: 5px;
+                cursor: pointer;
+                font-size: 0.8em;
+                margin-right: 10px;
+            }}
+            
+            .logs-btn.success {{
+                background: #27ae60;
+            }}
+            
+            .logs-btn:hover {{
+                opacity: 0.8;
             }}
             
             .loading {{
@@ -588,7 +618,14 @@ def setup_estoque_view(request):
                 <p>Executando comando... Por favor, aguarde.</p>
             </div>
             
-            <div class="logs" id="logs"></div>
+            <div class="logs" id="logs">
+                <div class="logs-controls">
+                    <button class="logs-btn" onclick="fecharLogs()">❌ Fechar Logs</button>
+                    <button class="logs-btn success" onclick="recarregarPagina()">🔄 Recarregar Página</button>
+                    <span style="float: right; font-size: 0.8em; color: #bdc3c7;">Logs ficam visíveis até você fechar</span>
+                </div>
+                <div id="logs-content"></div>
+            </div>
             
             <div class="links">
                 <a href="/admin" target="_blank">🔧 Django Admin</a>
@@ -605,7 +642,7 @@ def setup_estoque_view(request):
                 // Mostrar loading
                 loading.style.display = 'block';
                 logs.style.display = 'none';
-                logs.innerHTML = '';
+                document.getElementById('logs-content').innerHTML = '';
                 
                 try {{
                     const formData = new FormData();
@@ -625,24 +662,17 @@ def setup_estoque_view(request):
                     // Ocultar loading e mostrar logs
                     loading.style.display = 'none';
                     logs.style.display = 'block';
-                    logs.innerHTML = result;
+                    document.getElementById('logs-content').innerHTML = result;
                     
                     // Scroll para os logs
                     logs.scrollIntoView({{ behavior: 'smooth' }});
                     
-                    // Atualizar página após comandos que alteram dados
-                    if (command !== 'sincronizar_estoque' || !args.includes('--dry-run')) {{
-                        if (command !== 'reset_estoque' || !args.includes('--dry-run')) {{
-                            setTimeout(() => {{
-                                window.location.reload();
-                            }}, 3000);
-                        }}
-                    }}
+                    // Logs permanecem visíveis - não recarregar automaticamente
                     
                 }} catch (error) {{
                     loading.style.display = 'none';
                     logs.style.display = 'block';
-                    logs.innerHTML = '<span style="color: #e74c3c;">❌ Erro: ' + error.message + '</span>';
+                    document.getElementById('logs-content').innerHTML = '<span style="color: #e74c3c;">❌ Erro: ' + error.message + '</span>';
                 }}
             }}
             
@@ -659,6 +689,15 @@ def setup_estoque_view(request):
                     }}
                 }}
                 return cookieValue;
+            }}
+            
+            function fecharLogs() {{
+                const logs = document.getElementById('logs');
+                logs.style.display = 'none';
+            }}
+            
+            function recarregarPagina() {{
+                window.location.reload();
             }}
         </script>
     </body>
