@@ -159,19 +159,57 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.NOTICE('\n📊 Processando pedidos legacy...'))
                 
                 pedidos_legacy = Pedido.objects.filter(
-                    status_pagamento='approved',
+                    Q(status_pagamento='approved') | Q(forma_pagamento='presencial'),
                     estoque_decrementado=False,
                     produto_tamanho__isnull=True,
                     data_pedido__gte=data_limite
                 ).exclude(id__in=pedidos_multiplos).select_related('comprador')
                 
-                if pedidos_legacy.exists():
-                    self.stdout.write(
-                        self.style.WARNING(
-                            f"  ⚠️  {pedidos_legacy.count()} pedidos legacy encontrados. "
-                            "Execute 'python manage.py associar_pedidos_legacy' primeiro."
+                for pedido in pedidos_legacy:
+                    try:
+                        # Buscar ProdutoTamanho baseado nos campos legacy
+                        try:
+                            produto = Produto.objects.get(json_key=pedido.produto)
+                            produto_tamanho = produto.tamanhos.get(tamanho=pedido.tamanho)
+                            
+                            if produto_tamanho.estoque > 0:
+                                if not dry_run:
+                                    produto_tamanho.decrementar_estoque(
+                                        quantidade=1,
+                                        pedido=pedido,
+                                        usuario='sistema',
+                                        observacao=f'Sincronização legacy - Pedido #{pedido.id}',
+                                        origem='sincronizar_estoque_legacy'
+                                    )
+                                    pedido.estoque_decrementado = True
+                                    pedido.save()
+                                
+                                self.stdout.write(
+                                    f"  ✅ Pedido legacy #{pedido.id}: {produto_tamanho} "
+                                    f"(estoque: {produto_tamanho.estoque - 1})"
+                                )
+                                processados += 1
+                            else:
+                                self.stdout.write(
+                                    self.style.ERROR(
+                                        f"  ❌ Pedido legacy #{pedido.id}: Sem estoque para {produto_tamanho}"
+                                    )
+                                )
+                                sem_estoque += 1
+                                
+                        except (Produto.DoesNotExist, ProdutoTamanho.DoesNotExist):
+                            self.stdout.write(
+                                self.style.WARNING(
+                                    f"  ⚠️  Pedido legacy #{pedido.id}: Produto/tamanho não encontrado "
+                                    f"({pedido.produto}/{pedido.tamanho}). Execute 'associar_pedidos_legacy'."
+                                )
+                            )
+                            
+                    except Exception as e:
+                        self.stdout.write(
+                            self.style.ERROR(f"  ❌ Erro no pedido legacy #{pedido.id}: {str(e)}")
                         )
-                    )
+                        erros += 1
                 
                 if dry_run:
                     raise Exception('Dry run - rollback')
