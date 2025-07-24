@@ -281,8 +281,8 @@ def setup_estoque_view(request):
         old_stdout = sys.stdout
         sys.stdout = output_buffer
         
-        # Executar o comando
-        call_command('setup_estoque')
+        # Executar o comando simplificado
+        call_command('setup_estoque_simples')
         
         # Restaurar stdout
         sys.stdout = old_stdout
