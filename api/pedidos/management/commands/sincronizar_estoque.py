@@ -126,30 +126,56 @@ class Command(BaseCommand):
                         
                         for item in pedido.itens.all():
                             if item.produto_tamanho:
+                                self.stdout.write(f"     📋 Verificando item: {item.get_produto_display()} ({item.tamanho}) x{item.quantidade}")
                                 if item.produto_tamanho.estoque < item.quantidade:
                                     pode_processar = False
                                     itens_sem_estoque.append(
                                         f"{item.produto_tamanho} (precisa: {item.quantidade}, tem: {item.produto_tamanho.estoque})"
                                     )
+                                    self.stdout.write(f"       ❌ Estoque insuficiente: {item.produto_tamanho.estoque} < {item.quantidade}")
+                                else:
+                                    self.stdout.write(f"       ✅ Estoque OK: {item.produto_tamanho.estoque} >= {item.quantidade}")
+                            else:
+                                self.stdout.write(f"     ⚠️  Item sem produto_tamanho: {item.get_produto_display()} ({item.tamanho})")
                         
                         if pode_processar:
                             # Decrementar estoque de todos os itens
+                            self.stdout.write(f"     🔄 Processando {pedido.itens.count()} itens do pedido #{pedido.id}...")
+                            itens_processados = 0
                             if not dry_run:
                                 for item in pedido.itens.all():
+                                    try:
+                                        if item.produto_tamanho:
+                                            self.stdout.write(f"       🔽 Decrementando: {item.get_produto_display()} ({item.tamanho}) x{item.quantidade}")
+                                            sucesso = item.produto_tamanho.decrementar_estoque(
+                                                quantidade=item.quantidade,
+                                                pedido=pedido,
+                                                usuario='sistema',
+                                                observacao=f'Sincronização automática - Pedido #{pedido.id} - Item: {item.get_produto_display()} ({item.tamanho})',
+                                                origem='sincronizar_estoque_comando'
+                                            )
+                                            if sucesso:
+                                                self.stdout.write(f"         ✅ Movimentação registrada - Estoque restante: {item.produto_tamanho.estoque}")
+                                                itens_processados += 1
+                                            else:
+                                                self.stdout.write(f"         ❌ Falha ao decrementar estoque")
+                                        else:
+                                            self.stdout.write(f"       ⚠️  Item ignorado (sem produto_tamanho): {item.get_produto_display()} ({item.tamanho})")
+                                    except Exception as item_error:
+                                        self.stdout.write(f"         ❌ Erro no item {item.get_produto_display()} ({item.tamanho}): {str(item_error)}")
+                            else:
+                                # Contar itens que seriam processados no dry run
+                                for item in pedido.itens.all():
                                     if item.produto_tamanho:
-                                        item.produto_tamanho.decrementar_estoque(
-                                            quantidade=item.quantidade,
-                                            pedido=pedido,
-                                            usuario='sistema',
-                                            observacao=f'Sincronização automática - Pedido #{pedido.id} - Item: {item.get_produto_display()} ({item.tamanho})',
-                                            origem='sincronizar_estoque_comando'
-                                        )
-                                
+                                        self.stdout.write(f"       🔽 [DRY RUN] Decrementaria: {item.get_produto_display()} ({item.tamanho}) x{item.quantidade}")
+                                        itens_processados += 1
+                            
+                            if not dry_run:
                                 pedido.estoque_decrementado = True
                                 pedido.save()
                             
                             self.stdout.write(
-                                f"  ✅ Pedido #{pedido.id}: {pedido.itens.count()} itens processados"
+                                f"  ✅ Pedido #{pedido.id}: {itens_processados}/{pedido.itens.count()} itens processados com sucesso"
                             )
                             processados += 1
                         else:
