@@ -36,6 +36,60 @@ function getProductsCatalog() {
 const DJANGO_API_URL = process.env.DJANGO_API_URL || 'http://localhost:8000/api';
 const DJANGO_API_TOKEN = process.env.DJANGO_API_TOKEN;
 
+// Função para validar estoque via Django
+async function validarEstoqueDjango(productSizeId, quantidade = 1) {
+  try {
+    const response = await axios.get(`${DJANGO_API_URL}/validar-estoque/`, {
+      params: { product_size_id: productSizeId },
+      headers: { 'Authorization': `Token ${DJANGO_API_TOKEN}` },
+      timeout: 10000
+    });
+    
+    const data = response.data;
+    
+    // Verificar se há estoque suficiente
+    const estoqueOk = data.estoque >= quantidade && data.pode_comprar;
+    
+    return {
+      valid: estoqueOk,
+      estoque: data.estoque,
+      produto: data.produto,
+      tamanho: data.tamanho,
+      status: data.status,
+      message: estoqueOk ? 'Estoque OK' : `Estoque insuficiente. Disponível: ${data.estoque}, Solicitado: ${quantidade}`
+    };
+  } catch (error) {
+    console.error('❌ Erro ao validar estoque no Django:', error.message);
+    return {
+      valid: false,
+      message: 'Erro na validação de estoque'
+    };
+  }
+}
+
+// Função para validar múltiplos itens
+async function validarEstoqueMultiplo(items) {
+  try {
+    const response = await axios.post(`${DJANGO_API_URL}/estoque-multiplo/`, {
+      items: items
+    }, {
+      headers: { 
+        'Authorization': `Token ${DJANGO_API_TOKEN}`,
+        'Content-Type': 'application/json'
+      },
+      timeout: 15000
+    });
+    
+    return response.data;
+  } catch (error) {
+    console.error('❌ Erro ao validar estoque múltiplo:', error.message);
+    return {
+      pode_processar: false,
+      erros: ['Erro na validação de estoque']
+    };
+  }
+}
+
 // Configurar Mercado Pago
 const mercadoPagoClient = new MercadoPagoConfig({ 
   accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN 
@@ -1307,8 +1361,11 @@ app.post('/api/cart/checkout', async (req, res) => {
     let totalPrice = 0;
     const validatedItems = [];
     
+    // Primeiro, coletar todos os product_size_id para validação em lote
+    const estoqueItems = [];
+    
     for (const item of items) {
-      const { productId, size, quantity, price } = item;
+      const { productId, size, quantity, price, product_size_id } = item;
       
       if (!productId || !size || !quantity || quantity <= 0) {
         return res.status(400).json({
@@ -1316,8 +1373,15 @@ app.post('/api/cart/checkout', async (req, res) => {
         });
       }
       
+      // NOVO: Usar product_size_id se disponível
+      if (product_size_id) {
+        estoqueItems.push({
+          product_size_id: product_size_id,
+          quantidade: quantity
+        });
+      }
+      
       // SEGURANÇA: Validar preço contra catálogo do servidor
-      // Buscar produto por ID dentro do objeto products
       let product = null;
       for (const [key, prod] of Object.entries(productsData.products)) {
         if (prod.id === productId) {
@@ -1340,12 +1404,14 @@ app.post('/api/cart/checkout', async (req, res) => {
         });
       }
       
-      // Verificar disponibilidade do tamanho
-      const sizeData = product.sizes[size];
-      if (!sizeData || !sizeData.available) {
-        return res.status(400).json({
-          error: `Tamanho ${size} indisponível para ${product.title}`
-        });
+      // Verificar disponibilidade do tamanho (fallback se não tiver product_size_id)
+      if (!product_size_id) {
+        const sizeData = product.sizes[size];
+        if (!sizeData || !sizeData.available) {
+          return res.status(400).json({
+            error: `Tamanho ${size} indisponível para ${product.title}`
+          });
+        }
       }
       
       const itemTotal = serverPrice * quantity;
@@ -1357,8 +1423,27 @@ app.post('/api/cart/checkout', async (req, res) => {
         size: size,
         quantity: quantity,
         priceUnit: serverPrice,
-        subtotal: itemTotal
+        subtotal: itemTotal,
+        product_size_id: product_size_id // Adicionar para uso posterior
       });
+    }
+    
+    // NOVO: Validar estoque via Django se temos product_size_ids
+    if (estoqueItems.length > 0) {
+      console.log('🔍 Validando estoque via Django para', estoqueItems.length, 'itens...');
+      
+      const estoqueValidacao = await validarEstoqueMultiplo(estoqueItems);
+      
+      if (!estoqueValidacao.pode_processar) {
+        console.error('❌ Validação de estoque falhou:', estoqueValidacao.erros);
+        return res.status(400).json({
+          error: 'Estoque insuficiente',
+          details: estoqueValidacao.erros,
+          items_com_problema: estoqueValidacao.items?.filter(i => !i.pode_comprar)
+        });
+      }
+      
+      console.log('✅ Estoque validado - todos os itens disponíveis');
     }
     
     // Aplicar desconto PIX se necessário
@@ -1723,6 +1808,8 @@ app.listen(PORT, () => {
   console.log(`📍 Health check: http://localhost:${PORT}/health`);
   console.log(`📍 MP Health check: http://localhost:${PORT}/mp-health`);
   console.log(`🌐 Site: http://localhost:${PORT}`);
+  console.log(`🔗 Django API: ${DJANGO_API_URL}`);
+  console.log(`🔑 Django Token: ${DJANGO_API_TOKEN ? 'Configurado' : 'NÃO CONFIGURADO'}`);
   
   // Verificar configuração Stripe
   if (!process.env.STRIPE_SECRET_KEY) {
@@ -1738,6 +1825,36 @@ app.listen(PORT, () => {
     const tokenType = process.env.MERCADOPAGO_ACCESS_TOKEN.startsWith('TEST-') ? 'TESTE' : 'PRODUÇÃO';
     console.log(`✅ MERCADOPAGO_ACCESS_TOKEN configurada (${tokenType})`);
   }
+});
+
+// Endpoint para atualizar products.json com dados do Django
+app.get('/api/update-products-json', async (req, res) => {
+  try {
+    console.log('📄 Atualizando products.json com dados do Django...');
+    
+    // Redirecionar para o Django que faz a geração
+    res.redirect(`${DJANGO_API_URL}/gerar-products-json/`);
+    
+  } catch (error) {
+    console.error('❌ Erro ao atualizar products.json:', error.message);
+    res.status(500).json({
+      error: 'Erro ao atualizar products.json',
+      details: error.message
+    });
+  }
+});
+
+// Endpoint de health check
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'OK',
+    timestamp: new Date().toISOString(),
+    services: {
+      mercadopago: !!process.env.MERCADOPAGO_ACCESS_TOKEN,
+      paypal: !!PAYPAL_CLIENT_ID,
+      django: !!DJANGO_API_TOKEN
+    }
+  });
 });
 
 module.exports = app;
