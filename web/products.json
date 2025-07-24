@@ -13,26 +13,30 @@
       "video": "./videos/camiseta-marrom-preview.mp4",
       "sizes": {
         "P": {
+          "product_size_id": 1,
           "available": true,
           "qtda_estoque": 8,
           "stripe_link": "https://buy.stripe.com/dRm4gz0bG2B96sFbtu18c00",
           "id_stripe": "price_1Rk2XbE4PQdmzp6hAbBMuWkk"
         },
         "M": {
+          "product_size_id": 2,
           "available": true,
           "qtda_estoque": 17,
           "stripe_link": "https://buy.stripe.com/bJeeVde2wgrZ2cpcxy18c01",
           "id_stripe": "prod_Sfp76DBvJ4JbjZ"
         },
         "G": {
+          "product_size_id": 3,
           "available": true,
           "qtda_estoque": 17,
           "stripe_link": "https://buy.stripe.com/14AeVd0bG4Jh9ER2WY18c02",
           "id_stripe": "prod_Sfp8rIvJOPm6AI"
         },
         "GG": {
+          "product_size_id": 4,
           "available": true,
-          "qtda_estoque": 8,
+          "qtda_estoque": 7,
           "stripe_link": "https://buy.stripe.com/3cI7sL0bGfnVaIV9lm18c03",
           "id_stripe": "prod_Sfp8sbKNKcnY4c"
         }
@@ -46,26 +50,30 @@
       "image": "./img/camisetas/Camiseta_jesus.jpeg",
       "sizes": {
         "P": {
+          "product_size_id": 5,
           "available": true,
           "qtda_estoque": 5,
           "stripe_link": "https://buy.stripe.com/dRm4gz0bG2B96sFbtu18c00",
           "id_stripe": "price_jesus_p_001"
         },
         "M": {
+          "product_size_id": 6,
           "available": true,
           "qtda_estoque": 10,
           "stripe_link": null,
           "id_stripe": "price_jesus_m_001"
         },
         "G": {
+          "product_size_id": 7,
           "available": true,
           "qtda_estoque": 10,
           "stripe_link": null,
           "id_stripe": "price_jesus_g_001"
         },
         "GG": {
+          "product_size_id": 8,
           "available": true,
-          "qtda_estoque": 5,
+          "qtda_estoque": 4,
           "stripe_link": null,
           "id_stripe": "price_jesus_gg_001"
         }
@@ -79,24 +87,28 @@
       "image": "./img/camisetas/Camiseta_onewayBranca.jpeg",
       "sizes": {
         "P": {
+          "product_size_id": 9,
           "available": true,
           "qtda_estoque": 5,
           "stripe_link": null,
           "id_stripe": "price_oneway_branca_p_001"
         },
         "M": {
+          "product_size_id": 10,
           "available": true,
           "qtda_estoque": 10,
           "stripe_link": null,
           "id_stripe": "price_oneway_branca_m_001"
         },
         "G": {
+          "product_size_id": 11,
           "available": true,
           "qtda_estoque": 10,
           "stripe_link": null,
           "id_stripe": "price_oneway_branca_g_001"
         },
         "GG": {
+          "product_size_id": 12,
           "available": true,
           "qtda_estoque": 5,
           "stripe_link": null,
@@ -112,24 +124,28 @@
       "image": "./img/camisetas/Camiseta_theway.jpeg",
       "sizes": {
         "P": {
+          "product_size_id": 13,
           "available": true,
           "qtda_estoque": 5,
           "stripe_link": null,
           "id_stripe": "price_the_way_p_001"
         },
         "M": {
+          "product_size_id": 14,
           "available": true,
           "qtda_estoque": 10,
           "stripe_link": null,
           "id_stripe": "price_the_way_m_001"
         },
         "G": {
+          "product_size_id": 15,
           "available": true,
           "qtda_estoque": 10,
           "stripe_link": null,
           "id_stripe": "price_the_way_g_001"
         },
         "GG": {
+          "product_size_id": 16,
           "available": true,
           "qtda_estoque": 5,
           "stripe_link": null,
