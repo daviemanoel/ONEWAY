@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 from django.db import transaction
-from pedidos.models import Produto, ProdutoTamanho, Pedido
+from pedidos.models import Produto, ProdutoTamanho, Pedido, MovimentacaoEstoque
 from decimal import Decimal
 
 
@@ -132,7 +132,6 @@ class Command(BaseCommand):
                 # 2. Limpar histórico de movimentações de estoque
                 self.stdout.write(self.style.NOTICE('\n🗑️  Limpando histórico de movimentações...'))
                 
-                from .models import MovimentacaoEstoque
                 if not dry_run:
                     movimentacoes_removidas = MovimentacaoEstoque.objects.all().count()
                     MovimentacaoEstoque.objects.all().delete()
