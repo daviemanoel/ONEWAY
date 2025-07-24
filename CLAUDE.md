@@ -28,7 +28,8 @@ Este é um site de e-commerce para o evento "ONE WAY 2025" (31 de julho - 2 de a
 - ✅ **Pagamentos**: Mercado Pago + PayPal + Presencial
 - ✅ **Banco**: PostgreSQL Railway persistente
 - ✅ **Carrinho**: Sistema completo de múltiplos itens
-- ✅ **Pagamento Presencial**: Igreja com confirmação administrativa
+- ✅ **Controle de Estoque**: Sistema automático em tempo real ⭐ **NOVO**
+- ✅ **Pagamento Presencial**: Estoque decrementado imediatamente ⭐ **NOVO**
 
 ## Comandos de Desenvolvimento
 
@@ -247,6 +248,77 @@ Sistema completo para reserva e pagamento na igreja implementado:
 - ✅ Atende membros que preferem pagamento físico
 - ✅ Mantém relacionamento presencial igreja-membro
 - ✅ Controle administrativo total via Django
+
+### Sistema de Controle de Estoque Automático ⭐ **NOVO**
+
+Sistema completo de controle de estoque em tempo real implementado:
+
+**Arquitetura:**
+```
+[Frontend] → [product_size_id] → [Node.js] → [Django API] → [PostgreSQL]
+     ↓              ↓               ↓            ↓             ↓
+[Botão clicado] [ID capturado] [Validação] [Estoque real] [Atualização]
+```
+
+**Models Django:**
+```python
+class ProdutoTamanho(models.Model):
+    produto = models.ForeignKey(Produto, related_name='tamanhos')
+    tamanho = models.CharField(max_length=5)
+    estoque = models.IntegerField(default=0)
+    disponivel = models.BooleanField(default=True)
+    
+    def decrementar_estoque(self, quantidade=1):
+        """Decrementa estoque e atualiza disponibilidade"""
+        if self.estoque >= quantidade:
+            self.estoque -= quantidade
+            if self.estoque == 0:
+                self.disponivel = False
+            self.save()
+            return True
+        return False
+    
+    def incrementar_estoque(self, quantidade=1):
+        """Incrementa estoque e reativa produto se necessário"""
+        if quantidade > 0:
+            self.estoque += quantidade
+            if not self.disponivel and self.estoque > 0:
+                self.disponivel = True
+            self.save()
+            return True
+        return False
+```
+
+**Integração Frontend:**
+- ✅ Botões de tamanho incluem `data-product-size-id`
+- ✅ Carrinho armazena IDs numéricos do Django
+- ✅ Validação em tempo real antes do checkout
+- ✅ Migração automática de carrinhos antigos
+
+**APIs REST:**
+```bash
+POST /api/estoque-multiplo/        # Validar múltiplos itens
+POST /api/decrementar-estoque/     # Decrementar imediato (presencial)
+GET  /api/validar-estoque/         # Validar item único
+```
+
+**Pagamento Presencial Automático:**
+1. **Cliente seleciona "Presencial"** → Validação de estoque
+2. **🔥 ESTOQUE DECREMENTADO IMEDIATAMENTE** → Reserva confirmada
+3. **Pedido criado com `pending`** → Aguarda pagamento igreja
+4. **Admin confirma** → Status muda para `approved`
+
+**Cancelamento com Devolução:**
+1. **Admin cancela pedido** → Action "Cancelar e devolver estoque"
+2. **Sistema verifica `estoque_decrementado=True`** → Devolve automaticamente
+3. **Estoque restaurado** → Produto disponível novamente
+
+**Benefícios:**
+- ✅ **Zero overselling**: Reserva imediata de estoque
+- ✅ **Sistema reversível**: Cancelamentos devolvem estoque
+- ✅ **Tempo real**: Validação instantânea
+- ✅ **Transações atômicas**: Consistência garantida
+- ✅ **Logs detalhados**: Auditoria completa
 
 ### Sistema products.json
 
