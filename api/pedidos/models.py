@@ -84,6 +84,17 @@ class ProdutoTamanho(models.Model):
             self.save()
             return True
         return False
+    
+    def incrementar_estoque(self, quantidade=1):
+        """Incrementa o estoque e reativa produto se necessário"""
+        if quantidade > 0:
+            self.estoque += quantidade
+            # Reativar produto se estava indisponível e agora tem estoque
+            if not self.disponivel and self.estoque > 0:
+                self.disponivel = True
+            self.save()
+            return True
+        return False
 
 
 class Comprador(models.Model):

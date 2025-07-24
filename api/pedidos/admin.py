@@ -471,9 +471,64 @@ class PedidoAdmin(admin.ModelAdmin):
     marcar_como_aprovado.short_description = "✅ Marcar como aprovado"
     
     def marcar_como_cancelado(self, request, queryset):
-        updated = queryset.update(status_pagamento='cancelled')
-        self.message_user(request, f'{updated} pedidos marcados como cancelados.')
-    marcar_como_cancelado.short_description = "🚫 Marcar como cancelado"
+        """Marca pedidos como cancelados e devolve estoque se necessário"""
+        from django.db import transaction
+        
+        processados = 0
+        estoque_devolvido = 0
+        erros = 0
+        
+        for pedido in queryset:
+            try:
+                with transaction.atomic():
+                    # Verificar se estoque foi decrementado e pode ser devolvido
+                    if pedido.estoque_decrementado:
+                        # Processar devolução de estoque
+                        if pedido.usa_novo_sistema and pedido.produto_tamanho:
+                            # Pedido simples (produto_tamanho)
+                            if pedido.produto_tamanho.incrementar_estoque(1):
+                                pedido.estoque_decrementado = False
+                                estoque_devolvido += 1
+                                self.message_user(
+                                    request,
+                                    f'Estoque devolvido para {pedido.produto_tamanho}',
+                                    level='SUCCESS'
+                                )
+                        elif pedido.itens.exists():
+                            # Pedido com múltiplos itens
+                            for item in pedido.itens.all():
+                                if item.produto_tamanho:
+                                    item.produto_tamanho.incrementar_estoque(item.quantidade)
+                            pedido.estoque_decrementado = False
+                            estoque_devolvido += 1
+                            self.message_user(
+                                request,
+                                f'Estoque devolvido para pedido #{pedido.id} ({pedido.itens.count()} itens)',
+                                level='SUCCESS'
+                            )
+                    
+                    # Marcar como cancelado
+                    pedido.status_pagamento = 'cancelled'
+                    pedido.save()
+                    processados += 1
+                    
+            except Exception as e:
+                erros += 1
+                self.message_user(
+                    request,
+                    f'Erro ao cancelar pedido #{pedido.id}: {str(e)}',
+                    level='ERROR'
+                )
+        
+        # Mensagem final
+        mensagem = f'{processados} pedidos cancelados'
+        if estoque_devolvido > 0:
+            mensagem += f' ({estoque_devolvido} tiveram estoque devolvido)'
+        if erros > 0:
+            mensagem += f' - {erros} erros'
+        
+        self.message_user(request, mensagem, level='SUCCESS' if erros == 0 else 'WARNING')
+    marcar_como_cancelado.short_description = "🚫 Cancelar pedidos (e devolver estoque)"
     
     def sincronizar_estoque(self, request, queryset):
         """Sincroniza estoque para pedidos aprovados"""

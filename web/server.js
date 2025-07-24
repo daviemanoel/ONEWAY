@@ -90,6 +90,36 @@ async function validarEstoqueMultiplo(items) {
   }
 }
 
+// Função para decrementar estoque imediatamente (pagamento presencial)
+async function decrementarEstoqueImediato(items, pedidoId = null) {
+  try {
+    console.log('🔄 Decrementando estoque para', items.length, 'itens...');
+    
+    const requestBody = { items: items };
+    if (pedidoId) {
+      requestBody.pedido_id = pedidoId;
+    }
+    
+    const response = await axios.post(`${DJANGO_API_URL}/decrementar-estoque/`, requestBody, {
+      headers: {
+        'Authorization': `Token ${DJANGO_API_TOKEN}`,
+        'Content-Type': 'application/json'
+      },
+      timeout: 15000
+    });
+    
+    console.log('✅ Estoque decrementado com sucesso:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('❌ Erro ao decrementar estoque:', error.response?.data || error.message);
+    return {
+      success: false,
+      erros: ['Erro de comunicação com sistema de estoque'],
+      items_processados: []
+    };
+  }
+}
+
 // Configurar Mercado Pago
 const mercadoPagoClient = new MercadoPagoConfig({ 
   accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN 
@@ -1532,23 +1562,72 @@ app.post('/api/cart/checkout', async (req, res) => {
       // Pedido já foi criado, mas sem itens - não é crítico para o fluxo de pagamento
     }
     
-    // Se for pagamento presencial, retornar URL especial
+    // Se for pagamento presencial, decrementar estoque e retornar URL especial
     if (paymentMethod === 'presencial') {
       console.log('💒 Processando pagamento presencial...');
       
-      // Atualizar observações do pedido
-      try {
-        await axios.post(`${DJANGO_API_URL}/pedidos/${pedidoId}/atualizar_status/`, {
-          observacoes: 'Pagamento Presencial - Aguardando pagamento na secretaria da igreja. Prazo: 48 horas.'
-        }, {
-          headers: { 
-            'Authorization': `Token ${DJANGO_API_TOKEN}`,
-            'Content-Type': 'application/json'
+      // NOVO: Decrementar estoque imediatamente para pagamento presencial
+      if (estoqueItems.length > 0) {
+        console.log('🔄 Decrementando estoque para pagamento presencial...');
+        
+        const estoqueResultado = await decrementarEstoqueImediato(estoqueItems, pedidoId);
+        
+        if (!estoqueResultado.success) {
+          console.error('❌ Falha ao decrementar estoque:', estoqueResultado.erros);
+          
+          // Tentar cancelar o pedido criado
+          try {
+            await axios.post(`${DJANGO_API_URL}/pedidos/${pedidoId}/atualizar_status/`, {
+              status_pagamento: 'cancelled',
+              observacoes: `Pedido cancelado automaticamente - falha no decremento de estoque: ${estoqueResultado.erros.join(', ')}`
+            }, {
+              headers: { 
+                'Authorization': `Token ${DJANGO_API_TOKEN}`,
+                'Content-Type': 'application/json'
+              }
+            });
+            console.log('✅ Pedido cancelado devido a falha no estoque');
+          } catch (cancelError) {
+            console.error('⚠️ Erro ao cancelar pedido (não crítico):', cancelError.message);
           }
-        });
-        console.log('✅ Pedido marcado como pagamento presencial');
-      } catch (error) {
-        console.error('⚠️ Erro ao atualizar observações (não crítico):', error.message);
+          
+          return res.status(400).json({
+            error: 'Estoque insuficiente para completar reserva',
+            details: estoqueResultado.erros
+          });
+        }
+        
+        console.log('✅ Estoque decrementado para pagamento presencial:', estoqueResultado.items_processados.length, 'itens');
+        
+        // Marcar pedido como tendo estoque decrementado
+        try {
+          await axios.post(`${DJANGO_API_URL}/pedidos/${pedidoId}/atualizar_status/`, {
+            observacoes: `Pagamento presencial - estoque decrementado em ${new Date().toLocaleString('pt-BR')} - ${estoqueResultado.items_processados.length} itens processados. Aguardando pagamento na secretaria da igreja. Prazo: 48 horas.`
+          }, {
+            headers: { 
+              'Authorization': `Token ${DJANGO_API_TOKEN}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          console.log('✅ Pedido marcado com estoque decrementado');
+        } catch (error) {
+          console.error('⚠️ Erro ao atualizar observações (não crítico):', error.message);
+        }
+      } else {
+        // Atualizar observações do pedido (fallback para itens sem product_size_id)
+        try {
+          await axios.post(`${DJANGO_API_URL}/pedidos/${pedidoId}/atualizar_status/`, {
+            observacoes: 'Pagamento Presencial - Aguardando pagamento na secretaria da igreja. Prazo: 48 horas. (estoque será processado manualmente)'
+          }, {
+            headers: { 
+              'Authorization': `Token ${DJANGO_API_TOKEN}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          console.log('✅ Pedido marcado como pagamento presencial (sem decremento automático)');
+        } catch (error) {
+          console.error('⚠️ Erro ao atualizar observações (não crítico):', error.message);
+        }
       }
       
       // Retornar URL para página de confirmação presencial

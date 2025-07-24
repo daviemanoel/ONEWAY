@@ -548,3 +548,106 @@ def gerar_products_json_view(request):
     
     finally:
         output_buffer.close()
+
+
+@csrf_exempt
+def decrementar_estoque_view(request):
+    """
+    Endpoint para decrementar estoque imediatamente (pagamento presencial)
+    POST /api/decrementar-estoque/
+    Body: {"items": [{"product_size_id": 1, "quantidade": 2}, ...], "pedido_id": 123}
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método não permitido'}, status=405)
+    
+    # Verificar autenticação por token
+    auth_header = request.META.get('HTTP_AUTHORIZATION', '')
+    if not auth_header.startswith('Token '):
+        return JsonResponse({'error': 'Token de autorização obrigatório'}, status=401)
+    
+    try:
+        import json
+        from django.db import transaction
+        from .models import ProdutoTamanho, Pedido
+        
+        data = json.loads(request.body)
+        items = data.get('items', [])
+        pedido_id = data.get('pedido_id')  # Opcional
+        
+        if not items:
+            return JsonResponse({
+                'error': 'Lista de items é obrigatória'
+            }, status=400)
+        
+        resultado = {
+            'success': True,
+            'items_processados': [],
+            'erros': []
+        }
+        
+        with transaction.atomic():
+            for item in items:
+                product_size_id = item.get('product_size_id')
+                quantidade = item.get('quantidade', 1)
+                
+                if not product_size_id:
+                    resultado['erros'].append('product_size_id é obrigatório em todos os items')
+                    continue
+                
+                try:
+                    produto_tamanho = ProdutoTamanho.objects.select_related('produto').get(
+                        id=product_size_id
+                    )
+                    
+                    # Verificar se há estoque suficiente
+                    if produto_tamanho.estoque < quantidade:
+                        resultado['success'] = False
+                        resultado['erros'].append(
+                            f'{produto_tamanho}: Estoque insuficiente (disponível: {produto_tamanho.estoque}, solicitado: {quantidade})'
+                        )
+                        continue
+                    
+                    # Decrementar estoque
+                    if produto_tamanho.decrementar_estoque(quantidade):
+                        resultado['items_processados'].append({
+                            'product_size_id': produto_tamanho.id,
+                            'produto_nome': produto_tamanho.produto.nome,
+                            'tamanho': produto_tamanho.tamanho,
+                            'quantidade_decrementada': quantidade,
+                            'estoque_restante': produto_tamanho.estoque,
+                            'ainda_disponivel': produto_tamanho.disponivel
+                        })
+                    else:
+                        resultado['success'] = False
+                        resultado['erros'].append(f'{produto_tamanho}: Falha ao decrementar estoque')
+                
+                except ProdutoTamanho.DoesNotExist:
+                    resultado['success'] = False
+                    resultado['erros'].append(f'Produto com ID {product_size_id} não encontrado')
+            
+            # Se houve erros, fazer rollback
+            if not resultado['success']:
+                raise Exception('Rollback devido a erros')
+            
+            # Se foi fornecido pedido_id e o decremento foi bem-sucedido, marcar flag
+            if pedido_id and resultado['success']:
+                try:
+                    pedido = Pedido.objects.get(id=pedido_id)
+                    pedido.estoque_decrementado = True
+                    pedido.save()
+                    resultado['pedido_atualizado'] = True
+                except Pedido.DoesNotExist:
+                    resultado['erro_pedido'] = f'Pedido {pedido_id} não encontrado'
+        
+        return JsonResponse(resultado)
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'error': 'JSON inválido'
+        }, status=400)
+    
+    except Exception as e:
+        return JsonResponse({
+            'error': f'Erro interno: {str(e)}',
+            'success': False
+        }, status=500)
