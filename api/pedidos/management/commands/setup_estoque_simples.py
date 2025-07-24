@@ -149,7 +149,13 @@ class Command(BaseCommand):
                     
                     for pedido in pedidos_aprovados:
                         if pedido.produto_tamanho.estoque > 0:
-                            pedido.produto_tamanho.decrementar_estoque(1)
+                            pedido.produto_tamanho.decrementar_estoque(
+                                quantidade=1,
+                                pedido=pedido,
+                                usuario='sistema',
+                                observacao=f'Setup inicial - Pedido #{pedido.id}',
+                                origem='setup_estoque_simples'
+                            )
                             pedido.estoque_decrementado = True
                             pedido.save()
                             processados += 1

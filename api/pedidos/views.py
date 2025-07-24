@@ -967,6 +967,14 @@ def decrementar_estoque_view(request):
         items = data.get('items', [])
         pedido_id = data.get('pedido_id')  # Opcional
         
+        # Buscar pedido se fornecido
+        pedido_obj = None
+        if pedido_id:
+            try:
+                pedido_obj = Pedido.objects.get(id=pedido_id)
+            except Pedido.DoesNotExist:
+                pass
+        
         if not items:
             return JsonResponse({
                 'error': 'Lista de items é obrigatória'
@@ -1001,7 +1009,13 @@ def decrementar_estoque_view(request):
                         continue
                     
                     # Decrementar estoque
-                    if produto_tamanho.decrementar_estoque(quantidade):
+                    if produto_tamanho.decrementar_estoque(
+                        quantidade=quantidade,
+                        pedido=pedido_obj,
+                        usuario='api_pagamento_presencial',
+                        observacao=f'Pagamento presencial - Pedido #{pedido_obj.id if pedido_obj else "N/A"}',
+                        origem='decrementar_estoque_view'
+                    ):
                         resultado['items_processados'].append({
                             'product_size_id': produto_tamanho.id,
                             'produto_nome': produto_tamanho.produto.nome,

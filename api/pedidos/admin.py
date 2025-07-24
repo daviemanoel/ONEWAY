@@ -658,7 +658,13 @@ class PedidoAdmin(admin.ModelAdmin):
                 with transaction.atomic():
                     if pedido.usa_novo_sistema and pedido.produto_tamanho:
                         # Decrementar estoque do produto_tamanho
-                        if pedido.produto_tamanho.decrementar_estoque(1):
+                        if pedido.produto_tamanho.decrementar_estoque(
+                            quantidade=1,
+                            pedido=pedido,
+                            usuario=request.user.username if request.user.is_authenticated else 'admin',
+                            observacao=f'Sincronização de estoque - Pedido #{pedido.id}',
+                            origem='sincronizar_estoque_admin'
+                        ):
                             pedido.estoque_decrementado = True
                             pedido.save()
                             processados += 1
@@ -674,7 +680,13 @@ class PedidoAdmin(admin.ModelAdmin):
                         sucesso = True
                         for item in pedido.itens.all():
                             if item.produto_tamanho:
-                                if not item.produto_tamanho.decrementar_estoque(item.quantidade):
+                                if not item.produto_tamanho.decrementar_estoque(
+                                    quantidade=item.quantidade,
+                                    pedido=pedido,
+                                    usuario=request.user.username if request.user.is_authenticated else 'admin',
+                                    observacao=f'Sincronização de estoque - Pedido #{pedido.id} - Item: {item.get_produto_display()} ({item.tamanho})',
+                                    origem='sincronizar_estoque_admin'
+                                ):
                                     sucesso = False
                                     break
                         

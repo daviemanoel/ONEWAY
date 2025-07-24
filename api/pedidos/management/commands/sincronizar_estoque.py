@@ -63,7 +63,13 @@ class Command(BaseCommand):
                     try:
                         if pedido.produto_tamanho.estoque > 0:
                             if not dry_run:
-                                pedido.produto_tamanho.decrementar_estoque(1)
+                                pedido.produto_tamanho.decrementar_estoque(
+                                    quantidade=1,
+                                    pedido=pedido,
+                                    usuario='sistema',
+                                    observacao=f'Sincronização automática - Pedido #{pedido.id}',
+                                    origem='sincronizar_estoque_comando'
+                                )
                                 pedido.estoque_decrementado = True
                                 pedido.save()
                             
@@ -117,7 +123,13 @@ class Command(BaseCommand):
                             if not dry_run:
                                 for item in pedido.itens.all():
                                     if item.produto_tamanho:
-                                        item.produto_tamanho.decrementar_estoque(item.quantidade)
+                                        item.produto_tamanho.decrementar_estoque(
+                                            quantidade=item.quantidade,
+                                            pedido=pedido,
+                                            usuario='sistema',
+                                            observacao=f'Sincronização automática - Pedido #{pedido.id} - Item: {item.get_produto_display()} ({item.tamanho})',
+                                            origem='sincronizar_estoque_comando'
+                                        )
                                 
                                 pedido.estoque_decrementado = True
                                 pedido.save()
