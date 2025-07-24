@@ -256,3 +256,91 @@ def consultar_mp_admin(request):
             'success': False,
             'error': f'Erro interno: {str(e)}'
         })
+
+
+from django.http import HttpResponse
+from django.core.management import call_command
+from django.views.decorators.csrf import csrf_exempt
+import io
+import sys
+
+@csrf_exempt
+def setup_estoque_view(request):
+    """
+    Endpoint HTTP para executar setup do sistema de estoque
+    Acesse: https://api.oneway.mevamfranca.com.br/api/setup-estoque/
+    """
+    if request.method != 'GET':
+        return HttpResponse('Método não permitido. Use GET.', status=405)
+    
+    # Capturar output do comando
+    output_buffer = io.StringIO()
+    
+    try:
+        # Redirecionar stdout para capturar logs
+        old_stdout = sys.stdout
+        sys.stdout = output_buffer
+        
+        # Executar o comando
+        call_command('setup_estoque')
+        
+        # Restaurar stdout
+        sys.stdout = old_stdout
+        
+        # Pegar o output
+        output = output_buffer.getvalue()
+        
+        # Retornar como HTML formatado
+        html_response = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Setup Sistema de Estoque</title>
+            <meta charset="UTF-8">
+            <style>
+                body {{ font-family: monospace; background: #1e1e1e; color: #00ff00; padding: 20px; }}
+                .success {{ color: #00ff00; }}
+                .error {{ color: #ff4444; }}
+                .warning {{ color: #ffaa00; }}
+                .info {{ color: #4488ff; }}
+                pre {{ white-space: pre-wrap; }}
+            </style>
+        </head>
+        <body>
+            <h1>🚀 Setup Sistema de Estoque - ONEWAY</h1>
+            <pre class="success">{output}</pre>
+            <hr>
+            <p><a href="/admin" target="_blank">🔗 Abrir Django Admin</a></p>
+            <p><a href="https://oneway.mevamfranca.com.br" target="_blank">🔗 Abrir Site</a></p>
+        </body>
+        </html>
+        """
+        
+        return HttpResponse(html_response, content_type='text/html')
+        
+    except Exception as e:
+        # Restaurar stdout em caso de erro
+        sys.stdout = old_stdout
+        
+        error_html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Erro - Setup Estoque</title>
+            <meta charset="UTF-8">
+            <style>
+                body {{ font-family: monospace; background: #1e1e1e; color: #ff4444; padding: 20px; }}
+            </style>
+        </head>
+        <body>
+            <h1>❌ Erro no Setup do Sistema de Estoque</h1>
+            <pre>{str(e)}</pre>
+            <p><a href="javascript:history.back()">⬅️ Voltar</a></p>
+        </body>
+        </html>
+        """
+        
+        return HttpResponse(error_html, content_type='text/html', status=500)
+    
+    finally:
+        output_buffer.close()
