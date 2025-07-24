@@ -522,10 +522,15 @@ def setup_estoque_view(request):
                     </button>
                     <div class="description">Restaura estoque original e marca pedidos para reprocessamento</div>
                     
-                    <button class="btn primary" onclick="executeCommand('sincronizar_estoque', '--gerar-json')">
+                    <button class="btn primary" onclick="executeCommand('sincronizar_estoque')">
                         📦 Sincronizar Estoque
                     </button>
                     <div class="description">Processa pedidos aprovados e decrementa estoque</div>
+                    
+                    <button class="btn success" onclick="executeCommand('sincronizar_estoque', '--gerar-json')">
+                        📦 Sincronizar + Gerar JSON
+                    </button>
+                    <div class="description">Sincroniza estoque e gera products.json atualizado</div>
                     
                     <button class="btn success" onclick="executeCommand('setup_estoque_simples')">
                         🚀 Setup Inicial

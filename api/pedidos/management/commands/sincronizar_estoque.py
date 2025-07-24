@@ -170,7 +170,15 @@ class Command(BaseCommand):
         # 4. Gerar products.json se solicitado
         if gerar_json and not dry_run:
             self.stdout.write(self.style.NOTICE('\n📄 Gerando products.json...'))
-            self.gerar_products_json()
+            try:
+                self.gerar_products_json()
+            except Exception as e:
+                self.stdout.write(
+                    self.style.ERROR(f'❌ Erro ao gerar products.json: {str(e)}')
+                )
+                self.stdout.write(
+                    self.style.WARNING('⚠️  Sincronização concluída, mas JSON não foi gerado')
+                )
         
         # 5. Resumo final
         self.stdout.write(self.style.SUCCESS(f'\n{"="*50}'))
@@ -263,16 +271,35 @@ class Command(BaseCommand):
                             sizes[tamanho]['id_stripe'] = tamanho_data.get('id_stripe', sizes[tamanho]['id_stripe'])
         
         # Salvar o arquivo
+        # Tentar primeiro na estrutura local
         base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
         output_path = os.path.join(base_dir, 'web', 'products_generated.json')
         
-        # Fallback para estrutura Railway
+        # Se não existir, tentar Railway
         if not os.path.exists(os.path.dirname(output_path)):
-            output_path = '/app/web/products_generated.json'
-            
-        # Fallback para desenvolvimento local
-        if not os.path.exists(os.path.dirname(output_path)):
-            output_path = os.path.join(os.getcwd(), 'web', 'products_generated.json')
+            railway_web_path = '/app/web'
+            if os.path.exists(railway_web_path):
+                output_path = os.path.join(railway_web_path, 'products_generated.json')
+            else:
+                # Fallback para diretório temporário
+                import tempfile
+                temp_dir = tempfile.gettempdir()
+                output_path = os.path.join(temp_dir, 'products_generated.json')
+        
+        # Debug: mostrar caminhos testados
+        self.stdout.write(f'  🔍 Tentando salvar em: {output_path}')
+        
+        # Garantir que o diretório existe
+        dir_path = os.path.dirname(output_path)
+        self.stdout.write(f'  🔍 Diretório de destino: {dir_path}')
+        
+        try:
+            os.makedirs(dir_path, exist_ok=True)
+            self.stdout.write(f'  ✅ Diretório criado/verificado')
+        except Exception as e:
+            self.stdout.write(f'  ❌ Erro ao criar diretório: {str(e)}')
+            raise
+        
         with open(output_path, 'w', encoding='utf-8') as f:
             json.dump(products_data, f, indent=2, ensure_ascii=False)
         
