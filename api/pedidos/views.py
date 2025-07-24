@@ -258,7 +258,7 @@ def consultar_mp_admin(request):
         })
 
 
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.core.management import call_command
 from django.views.decorators.csrf import csrf_exempt
 import io
@@ -334,6 +334,210 @@ def setup_estoque_view(request):
         </head>
         <body>
             <h1>❌ Erro no Setup do Sistema de Estoque</h1>
+            <pre>{str(e)}</pre>
+            <p><a href="javascript:history.back()">⬅️ Voltar</a></p>
+        </body>
+        </html>
+        """
+        
+        return HttpResponse(error_html, content_type='text/html', status=500)
+    
+    finally:
+        output_buffer.close()
+
+
+@csrf_exempt
+def validar_estoque_view(request):
+    """
+    Endpoint para validar estoque de um produto específico
+    GET /api/validar-estoque/?product_size_id=123
+    """
+    if request.method != 'GET':
+        return JsonResponse({'error': 'Método não permitido'}, status=405)
+    
+    product_size_id = request.GET.get('product_size_id')
+    
+    if not product_size_id:
+        return JsonResponse({
+            'error': 'product_size_id é obrigatório'
+        }, status=400)
+    
+    try:
+        from .models import ProdutoTamanho
+        
+        produto_tamanho = ProdutoTamanho.objects.select_related('produto').get(
+            id=product_size_id
+        )
+        
+        return JsonResponse({
+            'product_size_id': produto_tamanho.id,
+            'produto': {
+                'id': produto_tamanho.produto.id,
+                'nome': produto_tamanho.produto.nome,
+                'preco': float(produto_tamanho.produto.preco),
+                'json_key': produto_tamanho.produto.json_key
+            },
+            'tamanho': produto_tamanho.tamanho,
+            'estoque': produto_tamanho.estoque,
+            'disponivel': produto_tamanho.disponivel,
+            'pode_comprar': produto_tamanho.esta_disponivel,
+            'status': 'disponivel' if produto_tamanho.esta_disponivel else 'indisponivel'
+        })
+        
+    except ProdutoTamanho.DoesNotExist:
+        return JsonResponse({
+            'error': 'Produto/tamanho não encontrado'
+        }, status=404)
+    
+    except Exception as e:
+        return JsonResponse({
+            'error': f'Erro interno: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt  
+def estoque_multiplo_view(request):
+    """
+    Endpoint para validar estoque de múltiplos produtos
+    POST /api/estoque-multiplo/
+    Body: {"items": [{"product_size_id": 123, "quantidade": 2}, ...]}
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método não permitido'}, status=405)
+    
+    try:
+        import json
+        from .models import ProdutoTamanho
+        
+        data = json.loads(request.body)
+        items = data.get('items', [])
+        
+        if not items:
+            return JsonResponse({
+                'error': 'Lista de items é obrigatória'
+            }, status=400)
+        
+        resultado = {
+            'items': [],
+            'pode_processar': True,
+            'total_valor': 0,
+            'erros': []
+        }
+        
+        for item in items:
+            product_size_id = item.get('product_size_id')
+            quantidade = item.get('quantidade', 1)
+            
+            if not product_size_id:
+                resultado['erros'].append('product_size_id é obrigatório em todos os items')
+                continue
+            
+            try:
+                produto_tamanho = ProdutoTamanho.objects.select_related('produto').get(
+                    id=product_size_id
+                )
+                
+                # Validar estoque
+                estoque_suficiente = produto_tamanho.estoque >= quantidade
+                pode_comprar = produto_tamanho.disponivel and estoque_suficiente
+                
+                item_resultado = {
+                    'product_size_id': produto_tamanho.id,
+                    'produto_nome': produto_tamanho.produto.nome,
+                    'tamanho': produto_tamanho.tamanho,
+                    'quantidade_solicitada': quantidade,
+                    'estoque_disponivel': produto_tamanho.estoque,
+                    'preco_unitario': float(produto_tamanho.produto.preco),
+                    'subtotal': float(produto_tamanho.produto.preco * quantidade),
+                    'pode_comprar': pode_comprar,
+                    'status': 'ok' if pode_comprar else 'sem_estoque'
+                }
+                
+                if pode_comprar:
+                    resultado['total_valor'] += item_resultado['subtotal']
+                else:
+                    resultado['pode_processar'] = False
+                    item_resultado['erro'] = f'Estoque insuficiente. Disponível: {produto_tamanho.estoque}, Solicitado: {quantidade}'
+                
+                resultado['items'].append(item_resultado)
+                
+            except ProdutoTamanho.DoesNotExist:
+                resultado['erros'].append(f'Produto com ID {product_size_id} não encontrado')
+                resultado['pode_processar'] = False
+        
+        return JsonResponse(resultado)
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'error': 'JSON inválido'
+        }, status=400)
+    
+    except Exception as e:
+        return JsonResponse({
+            'error': f'Erro interno: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+def gerar_products_json_view(request):
+    """
+    Endpoint para gerar products.json atualizado via HTTP
+    GET /api/gerar-products-json/
+    """
+    if request.method != 'GET':
+        return HttpResponse('Método não permitido', status=405)
+    
+    output_buffer = io.StringIO()
+    
+    try:
+        # Capturar output do comando
+        old_stdout = sys.stdout
+        sys.stdout = output_buffer
+        
+        call_command('gerar_products_json')
+        
+        sys.stdout = old_stdout
+        output = output_buffer.getvalue()
+        
+        # Retornar como HTML
+        html_response = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Geração Products.JSON</title>
+            <meta charset="UTF-8">
+            <style>
+                body {{ font-family: monospace; background: #1e1e1e; color: #00ff00; padding: 20px; }}
+                pre {{ white-space: pre-wrap; }}
+            </style>
+        </head>
+        <body>
+            <h1>📄 Geração Products.JSON - ONEWAY</h1>
+            <pre>{output}</pre>
+            <hr>
+            <p><a href="/admin" target="_blank">🔗 Django Admin</a></p>
+            <p><a href="/api/setup-estoque/" target="_blank">🔗 Setup Estoque</a></p>
+        </body>
+        </html>
+        """
+        
+        return HttpResponse(html_response, content_type='text/html')
+        
+    except Exception as e:
+        sys.stdout = old_stdout
+        
+        error_html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Erro - Geração JSON</title>
+            <meta charset="UTF-8">
+            <style>
+                body {{ font-family: monospace; background: #1e1e1e; color: #ff4444; padding: 20px; }}
+            </style>
+        </head>
+        <body>
+            <h1>❌ Erro na Geração do Products.JSON</h1>
             <pre>{str(e)}</pre>
             <p><a href="javascript:history.back()">⬅️ Voltar</a></p>
         </body>
