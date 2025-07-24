@@ -639,9 +639,10 @@ class PedidoAdmin(admin.ModelAdmin):
         processados = 0
         erros = 0
         
-        # Filtrar apenas pedidos aprovados que não tiveram estoque decrementado
+        # Filtrar pedidos aprovados OU pedidos presenciais que não tiveram estoque decrementado
+        from django.db.models import Q
         pedidos = queryset.filter(
-            status_pagamento='approved',
+            Q(status_pagamento='approved') | Q(forma_pagamento='presencial'),
             estoque_decrementado=False
         )
         

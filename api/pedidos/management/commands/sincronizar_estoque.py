@@ -52,8 +52,11 @@ class Command(BaseCommand):
                 # 1. Processar pedidos NOVOS (com produto_tamanho)
                 self.stdout.write(self.style.NOTICE('📦 Processando pedidos do novo sistema...'))
                 
+                from django.db.models import Q
+                
+                # Buscar pedidos aprovados OU pedidos presenciais (mesmo pending)
                 pedidos_novos = Pedido.objects.filter(
-                    status_pagamento='approved',
+                    Q(status_pagamento='approved') | Q(forma_pagamento='presencial'),
                     estoque_decrementado=False,
                     produto_tamanho__isnull=False,
                     data_pedido__gte=data_limite
@@ -94,8 +97,9 @@ class Command(BaseCommand):
                 # 2. Processar pedidos com MÚLTIPLOS ITENS
                 self.stdout.write(self.style.NOTICE('\n🛒 Processando pedidos com múltiplos itens...'))
                 
+                # Buscar pedidos aprovados OU pedidos presenciais (mesmo pending)
                 pedidos_multiplos = Pedido.objects.filter(
-                    status_pagamento='approved',
+                    Q(status_pagamento='approved') | Q(forma_pagamento='presencial'),
                     estoque_decrementado=False,
                     produto_tamanho__isnull=True,
                     data_pedido__gte=data_limite

@@ -280,9 +280,14 @@ def setup_estoque_view(request):
     from .models import ProdutoTamanho, Pedido
     
     # Estatísticas atuais
+    from django.db.models import Q
     produtos_esgotados = ProdutoTamanho.objects.filter(estoque=0).count()
     produtos_baixo_estoque = ProdutoTamanho.objects.filter(estoque__gt=0, estoque__lte=2).count()
-    pedidos_pendentes = Pedido.objects.filter(estoque_decrementado=False, status_pagamento='approved').count()
+    # Pedidos que precisam sincronizar estoque: aprovados OU presenciais
+    pedidos_pendentes = Pedido.objects.filter(
+        Q(status_pagamento='approved') | Q(forma_pagamento='presencial'),
+        estoque_decrementado=False
+    ).count()
     pedidos_presenciais = Pedido.objects.filter(forma_pagamento='presencial', status_pagamento='pending').count()
     
     html_response = f"""
@@ -525,7 +530,7 @@ def setup_estoque_view(request):
                     <button class="btn primary" onclick="executeCommand('sincronizar_estoque')">
                         📦 Sincronizar Estoque
                     </button>
-                    <div class="description">Processa pedidos aprovados e decrementa estoque</div>
+                    <div class="description">Processa pedidos aprovados + presenciais e decrementa estoque</div>
                     
                     <button class="btn success" onclick="executeCommand('sincronizar_estoque', '--gerar-json')">
                         📦 Sincronizar + Gerar JSON
