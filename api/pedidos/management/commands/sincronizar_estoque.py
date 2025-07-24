@@ -18,8 +18,8 @@ class Command(BaseCommand):
         parser.add_argument(
             '--dias',
             type=int,
-            default=7,
-            help='Processar pedidos dos últimos N dias (padrão: 7)',
+            default=30,
+            help='Processar pedidos dos últimos N dias (padrão: 30)',
         )
         parser.add_argument(
             '--gerar-json',
@@ -29,7 +29,7 @@ class Command(BaseCommand):
     
     def handle(self, *args, **options):
         dry_run = options.get('dry_run', False)
-        dias = options.get('dias', 7)
+        dias = options.get('dias', 30)
         gerar_json = options.get('gerar_json', False)
         
         # Data limite para processar pedidos
@@ -38,6 +38,8 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(f'\n{"="*50}'))
         self.stdout.write(self.style.SUCCESS('SINCRONIZAÇÃO DE ESTOQUE'))
         self.stdout.write(self.style.SUCCESS(f'{"="*50}\n'))
+        
+        self.stdout.write(f'📅 Processando pedidos dos últimos {dias} dias (desde {data_limite.strftime("%d/%m/%Y %H:%M")})')
         
         if dry_run:
             self.stdout.write(self.style.WARNING('🔍 MODO DRY RUN - Nenhuma alteração será salva\n'))
@@ -61,6 +63,8 @@ class Command(BaseCommand):
                     produto_tamanho__isnull=False,
                     data_pedido__gte=data_limite
                 ).select_related('produto_tamanho', 'comprador')
+                
+                self.stdout.write(f'   Encontrados: {pedidos_novos.count()} pedidos do novo sistema')
                 
                 for pedido in pedidos_novos:
                     try:
@@ -97,7 +101,7 @@ class Command(BaseCommand):
                 # 2. Processar pedidos com MÚLTIPLOS ITENS
                 self.stdout.write(self.style.NOTICE('\n🛒 Processando pedidos com múltiplos itens...'))
                 
-                # Buscar pedidos aprovados OU pedidos presenciais (mesmo pending)
+                # Buscar pedidos aprovados OU pedidos presenciais (mesmo pending) que TÊM itens
                 pedidos_multiplos = Pedido.objects.filter(
                     Q(status_pagamento='approved') | Q(forma_pagamento='presencial'),
                     estoque_decrementado=False,
@@ -105,9 +109,15 @@ class Command(BaseCommand):
                     data_pedido__gte=data_limite
                 ).prefetch_related('itens__produto_tamanho').select_related('comprador')
                 
+                self.stdout.write(f'   Encontrados: {pedidos_multiplos.count()} candidatos a pedidos múltiplos')
+                
+                # Filtrar apenas pedidos que realmente têm itens
+                pedidos_com_itens = []
                 for pedido in pedidos_multiplos:
                     if not pedido.itens.exists():
                         continue
+                    
+                    pedidos_com_itens.append(pedido.id)
                     
                     try:
                         # Verificar se há estoque para todos os itens
@@ -163,7 +173,12 @@ class Command(BaseCommand):
                     estoque_decrementado=False,
                     produto_tamanho__isnull=True,
                     data_pedido__gte=data_limite
-                ).exclude(id__in=pedidos_multiplos).select_related('comprador')
+                ).exclude(id__in=pedidos_com_itens).select_related('comprador')
+                
+                self.stdout.write(f'   Encontrados: {pedidos_legacy.count()} pedidos legacy')
+                if pedidos_legacy.exists():
+                    for p in pedidos_legacy[:3]:  # Mostrar até 3 exemplos
+                        self.stdout.write(f'     - Pedido #{p.id}: {p.produto} ({p.tamanho}) - {p.forma_pagamento}')
                 
                 for pedido in pedidos_legacy:
                     try:
