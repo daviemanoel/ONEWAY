@@ -75,9 +75,25 @@ class ProdutoTamanho(models.Model):
         """Verifica se o produto está disponível para venda"""
         return self.disponivel and self.estoque > 0
     
-    def decrementar_estoque(self, quantidade=1):
-        """Decrementa o estoque e atualiza disponibilidade se necessário"""
+    def decrementar_estoque(self, quantidade=1, pedido=None, usuario="", observacao="", origem=""):
+        """
+        Decrementa o estoque e atualiza disponibilidade se necessário
+        Registra automaticamente a movimentação no histórico
+        """
         if self.estoque >= quantidade:
+            # Registrar movimentação ANTES de alterar o estoque
+            from .models import MovimentacaoEstoque
+            MovimentacaoEstoque.registrar_movimentacao(
+                produto_tamanho=self,
+                tipo='saida',
+                quantidade=quantidade,
+                pedido=pedido,
+                usuario=usuario,
+                observacao=observacao or f"Decremento de estoque: {quantidade} unidade(s)",
+                origem=origem or 'decrementar_estoque'
+            )
+            
+            # Atualizar estoque
             self.estoque -= quantidade
             if self.estoque == 0:
                 self.disponivel = False
@@ -85,13 +101,56 @@ class ProdutoTamanho(models.Model):
             return True
         return False
     
-    def incrementar_estoque(self, quantidade=1):
-        """Incrementa o estoque e reativa produto se necessário"""
+    def incrementar_estoque(self, quantidade=1, pedido=None, usuario="", observacao="", origem=""):
+        """
+        Incrementa o estoque e reativa produto se necessário
+        Registra automaticamente a movimentação no histórico
+        """
         if quantidade > 0:
+            # Registrar movimentação ANTES de alterar o estoque
+            from .models import MovimentacaoEstoque
+            MovimentacaoEstoque.registrar_movimentacao(
+                produto_tamanho=self,
+                tipo='entrada',
+                quantidade=quantidade,
+                pedido=pedido,
+                usuario=usuario,
+                observacao=observacao or f"Incremento de estoque: {quantidade} unidade(s)",
+                origem=origem or 'incrementar_estoque'
+            )
+            
+            # Atualizar estoque
             self.estoque += quantidade
             # Reativar produto se estava indisponível e agora tem estoque
             if not self.disponivel and self.estoque > 0:
                 self.disponivel = True
+            self.save()
+            return True
+        return False
+    
+    def ajustar_estoque(self, novo_estoque, usuario="", observacao="", origem="ajuste_manual"):
+        """
+        Ajusta o estoque para um valor específico
+        Registra a movimentação com a diferença
+        """
+        diferenca = novo_estoque - self.estoque
+        if diferenca != 0:
+            tipo = 'entrada' if diferenca > 0 else 'saida'
+            
+            # Registrar movimentação
+            from .models import MovimentacaoEstoque
+            MovimentacaoEstoque.registrar_movimentacao(
+                produto_tamanho=self,
+                tipo='ajuste',
+                quantidade=diferenca,
+                usuario=usuario,
+                observacao=observacao or f"Ajuste de estoque: {self.estoque} → {novo_estoque}",
+                origem=origem
+            )
+            
+            # Atualizar estoque
+            self.estoque = novo_estoque
+            self.disponivel = novo_estoque > 0
             self.save()
             return True
         return False
@@ -321,3 +380,140 @@ class ItemPedido(models.Model):
     def save(self, *args, **kwargs):
         # Validar preço contra products.json seria ideal aqui
         super().save(*args, **kwargs)
+
+
+class MovimentacaoEstoque(models.Model):
+    """
+    Histórico de todas as movimentações de estoque
+    Registra automaticamente entradas, saídas e ajustes
+    """
+    TIPO_CHOICES = [
+        ('entrada', 'Entrada'),
+        ('saida', 'Saída'),
+        ('ajuste', 'Ajuste'),
+        ('reset', 'Reset'),
+        ('setup', 'Setup Inicial'),
+    ]
+    
+    # Relacionamentos
+    produto_tamanho = models.ForeignKey(
+        'ProdutoTamanho',
+        on_delete=models.CASCADE,
+        related_name='movimentacoes',
+        verbose_name="Produto/Tamanho"
+    )
+    pedido = models.ForeignKey(
+        'Pedido',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name="Pedido Relacionado",
+        help_text="Pedido que gerou esta movimentação (se aplicável)"
+    )
+    
+    # Dados da movimentação
+    tipo = models.CharField(
+        max_length=20,
+        choices=TIPO_CHOICES,
+        verbose_name="Tipo de Movimentação"
+    )
+    quantidade = models.IntegerField(
+        verbose_name="Quantidade",
+        help_text="Quantidade movimentada (positiva para entrada, negativa para saída)"
+    )
+    estoque_anterior = models.IntegerField(
+        verbose_name="Estoque Anterior",
+        help_text="Quantidade de estoque antes da movimentação"
+    )
+    estoque_posterior = models.IntegerField(
+        verbose_name="Estoque Posterior",
+        help_text="Quantidade de estoque após a movimentação"
+    )
+    
+    # Metadados
+    data_movimentacao = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Data da Movimentação"
+    )
+    usuario = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name="Usuário",
+        help_text="Usuário ou sistema que executou a movimentação"
+    )
+    observacao = models.TextField(
+        blank=True,
+        verbose_name="Observação",
+        help_text="Detalhes adicionais sobre a movimentação"
+    )
+    origem = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name="Origem",
+        help_text="Sistema/comando que originou a movimentação (ex: pagamento_presencial, sincronizacao)"
+    )
+    
+    class Meta:
+        verbose_name = "Movimentação de Estoque"
+        verbose_name_plural = "Movimentações de Estoque"
+        ordering = ['-data_movimentacao']
+        indexes = [
+            models.Index(fields=['produto_tamanho', '-data_movimentacao']),
+            models.Index(fields=['tipo', '-data_movimentacao']),
+            models.Index(fields=['pedido']),
+        ]
+    
+    def __str__(self):
+        sinal = "+" if self.quantidade >= 0 else ""
+        return f"{self.produto_tamanho} - {sinal}{self.quantidade} ({self.get_tipo_display()})"
+    
+    @property
+    def quantidade_display(self):
+        """Exibe quantidade com sinal para melhor visualização"""
+        sinal = "+" if self.quantidade >= 0 else ""
+        return f"{sinal}{self.quantidade}"
+    
+    @classmethod
+    def registrar_movimentacao(cls, produto_tamanho, tipo, quantidade, pedido=None, usuario="", observacao="", origem=""):
+        """
+        Método utilitário para registrar movimentações
+        
+        Args:
+            produto_tamanho: Instância do ProdutoTamanho
+            tipo: Tipo da movimentação ('entrada', 'saida', 'ajuste', etc.)
+            quantidade: Quantidade (positiva ou negativa)
+            pedido: Pedido relacionado (opcional)
+            usuario: Usuário que executou (opcional)
+            observacao: Observações adicionais (opcional)
+            origem: Sistema de origem (opcional)
+        """
+        # Capturar estoque anterior
+        estoque_anterior = produto_tamanho.estoque
+        
+        # Calcular estoque posterior
+        if tipo in ['entrada', 'ajuste', 'reset', 'setup']:
+            # Para esses tipos, quantidade já é o valor final ou diferença
+            if tipo in ['reset', 'setup']:
+                estoque_posterior = quantidade
+                quantidade_real = quantidade - estoque_anterior
+            else:
+                estoque_posterior = estoque_anterior + quantidade
+                quantidade_real = quantidade
+        else:  # saida
+            estoque_posterior = estoque_anterior - abs(quantidade)
+            quantidade_real = -abs(quantidade)
+        
+        # Criar registro de movimentação
+        movimentacao = cls.objects.create(
+            produto_tamanho=produto_tamanho,
+            pedido=pedido,
+            tipo=tipo,
+            quantidade=quantidade_real,
+            estoque_anterior=estoque_anterior,
+            estoque_posterior=estoque_posterior,
+            usuario=usuario,
+            observacao=observacao,
+            origem=origem
+        )
+        
+        return movimentacao

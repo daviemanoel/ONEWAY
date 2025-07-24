@@ -3,7 +3,7 @@ from django.utils.html import format_html
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 from decimal import Decimal
-from .models import Comprador, Pedido, ItemPedido, Produto, ProdutoTamanho
+from .models import Comprador, Pedido, ItemPedido, Produto, ProdutoTamanho, MovimentacaoEstoque
 import requests
 from django.conf import settings
 import os
@@ -144,12 +144,36 @@ class ProdutoAdmin(admin.ModelAdmin):
     marcar_sem_estoque.short_description = "❌ Marcar como sem estoque"
 
 
+class MovimentacaoEstoqueInline(admin.TabularInline):
+    """Inline para mostrar histórico de movimentações de um produto"""
+    model = MovimentacaoEstoque
+    extra = 0
+    readonly_fields = ['data_movimentacao', 'tipo', 'quantidade_display', 'estoque_anterior', 'estoque_posterior', 'pedido', 'usuario', 'observacao', 'origem']
+    fields = ['data_movimentacao', 'tipo', 'quantidade_display', 'estoque_anterior', 'estoque_posterior', 'pedido', 'usuario', 'observacao', 'origem']
+    ordering = ['-data_movimentacao']
+    
+    def quantidade_display(self, obj):
+        """Exibe quantidade com cores"""
+        if obj.quantidade > 0:
+            return format_html('<span style="color: green; font-weight: bold;">+{}</span>', obj.quantidade)
+        else:
+            return format_html('<span style="color: red; font-weight: bold;">{}</span>', obj.quantidade)
+    quantidade_display.short_description = 'Quantidade'
+    
+    def has_add_permission(self, request, obj=None):
+        return False
+    
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
 @admin.register(ProdutoTamanho)
 class ProdutoTamanhoAdmin(admin.ModelAdmin):
     list_display = ['produto', 'tamanho', 'estoque_display', 'disponivel_display', 'acoes']
     list_filter = ['produto', 'tamanho', 'disponivel']
     search_fields = ['produto__nome']
     list_editable = []  # Removido para usar ações customizadas
+    inlines = [MovimentacaoEstoqueInline]
     
     def estoque_display(self, obj):
         """Exibe o estoque com cores"""
@@ -205,6 +229,84 @@ class ProdutoTamanhoAdmin(admin.ModelAdmin):
     
     class Media:
         js = ('admin/js/estoque_admin.js',)
+
+
+@admin.register(MovimentacaoEstoque)
+class MovimentacaoEstoqueAdmin(admin.ModelAdmin):
+    list_display = [
+        'data_movimentacao',
+        'produto_tamanho',
+        'tipo',
+        'quantidade_colored',
+        'estoque_anterior',
+        'estoque_posterior',
+        'pedido_link',
+        'usuario',
+        'origem'
+    ]
+    
+    list_filter = [
+        'tipo',
+        'origem',
+        'data_movimentacao',
+        'produto_tamanho__produto',
+        'usuario'
+    ]
+    
+    search_fields = [
+        'produto_tamanho__produto__nome',
+        'observacao',
+        'usuario',
+        'pedido__id',
+        'pedido__external_reference'
+    ]
+    
+    readonly_fields = [
+        'data_movimentacao',
+        'produto_tamanho',
+        'tipo',
+        'quantidade',
+        'estoque_anterior', 
+        'estoque_posterior',
+        'pedido',
+        'usuario',
+        'observacao',
+        'origem'
+    ]
+    
+    date_hierarchy = 'data_movimentacao'
+    ordering = ['-data_movimentacao']
+    
+    def quantidade_colored(self, obj):
+        """Exibe quantidade com cores"""
+        if obj.quantidade > 0:
+            return format_html(
+                '<span style="color: green; font-weight: bold;">+{}</span>',
+                obj.quantidade
+            )
+        else:
+            return format_html(
+                '<span style="color: red; font-weight: bold;">{}</span>',
+                obj.quantidade
+            )
+    quantidade_colored.short_description = 'Quantidade'
+    quantidade_colored.admin_order_field = 'quantidade'
+    
+    def pedido_link(self, obj):
+        """Link para o pedido relacionado"""
+        if obj.pedido:
+            url = reverse('admin:pedidos_pedido_change', args=[obj.pedido.id])
+            return format_html('<a href="{}">Pedido #{}</a>', url, obj.pedido.id)
+        return '-'
+    pedido_link.short_description = 'Pedido'
+    
+    def has_add_permission(self, request):
+        # Movimentações são criadas automaticamente
+        return False
+    
+    def has_delete_permission(self, request, obj=None):
+        # Não permitir deletar histórico
+        return False
 
 
 @admin.register(Comprador)
