@@ -3,10 +3,208 @@ from django.utils.html import format_html
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 from decimal import Decimal
-from .models import Comprador, Pedido, ItemPedido
+from .models import Comprador, Pedido, ItemPedido, Produto, ProdutoTamanho
 import requests
 from django.conf import settings
 import os
+
+
+class ProdutoTamanhoInline(admin.TabularInline):
+    """Inline para editar tamanhos do produto"""
+    model = ProdutoTamanho
+    extra = 0
+    fields = ['tamanho', 'estoque', 'disponivel', 'estoque_status']
+    readonly_fields = ['estoque_status']
+    
+    def estoque_status(self, obj):
+        """Exibe status visual do estoque"""
+        if not obj.pk:
+            return '-'
+        
+        if obj.estoque == 0:
+            return format_html('<span style="color: red; font-weight: bold;">❌ Esgotado</span>')
+        elif obj.estoque <= 5:
+            return format_html('<span style="color: orange; font-weight: bold;">⚠️ Baixo ({} un.)</span>', obj.estoque)
+        else:
+            return format_html('<span style="color: green; font-weight: bold;">✅ OK ({} un.)</span>', obj.estoque)
+    estoque_status.short_description = 'Status'
+
+
+@admin.register(Produto)
+class ProdutoAdmin(admin.ModelAdmin):
+    list_display = ['nome', 'preco_display', 'estoque_total_display', 'tamanhos_disponiveis', 'ativo', 'ordem']
+    list_filter = ['ativo']
+    search_fields = ['nome', 'slug', 'json_key']
+    prepopulated_fields = {'slug': ('nome',)}
+    inlines = [ProdutoTamanhoInline]
+    
+    fieldsets = (
+        ('Informações Básicas', {
+            'fields': ('nome', 'slug', 'json_key', 'ativo', 'ordem')
+        }),
+        ('Preços', {
+            'fields': ('preco', 'preco_custo', 'margem_display'),
+        }),
+    )
+    
+    readonly_fields = ['margem_display']
+    
+    def preco_display(self, obj):
+        """Exibe o preço formatado"""
+        return f'R$ {obj.preco:.2f}'
+    preco_display.short_description = 'Preço'
+    
+    def estoque_total_display(self, obj):
+        """Exibe o estoque total com indicador visual"""
+        total = obj.estoque_total
+        
+        if total == 0:
+            return format_html('<span style="color: red; font-weight: bold;">❌ 0</span>')
+        elif total <= 10:
+            return format_html('<span style="color: orange; font-weight: bold;">⚠️ {}</span>', total)
+        else:
+            return format_html('<span style="color: green; font-weight: bold;">✅ {}</span>', total)
+    estoque_total_display.short_description = 'Estoque Total'
+    
+    def tamanhos_disponiveis(self, obj):
+        """Mostra os tamanhos disponíveis"""
+        tamanhos = []
+        for t in obj.tamanhos.all().order_by('tamanho'):
+            if t.disponivel and t.estoque > 0:
+                tamanhos.append(f'{t.tamanho}({t.estoque})')
+            else:
+                tamanhos.append(f'<s>{t.tamanho}</s>')
+        return format_html(' | '.join(tamanhos))
+    tamanhos_disponiveis.short_description = 'Tamanhos'
+    
+    def margem_display(self, obj):
+        """Calcula e exibe a margem de lucro"""
+        if obj.preco_custo and obj.preco_custo > 0:
+            margem = ((obj.preco - obj.preco_custo) / obj.preco_custo) * 100
+            color = 'green' if margem > 50 else 'orange' if margem > 30 else 'red'
+            return format_html(
+                '<span style="color: {}; font-weight: bold;">{:.1f}%</span>',
+                color, margem
+            )
+        return '-'
+    margem_display.short_description = 'Margem de Lucro'
+    
+    actions = ['gerar_products_json', 'marcar_sem_estoque']
+    
+    def gerar_products_json(self, request, queryset):
+        """Action para gerar o products.json"""
+        import json
+        
+        products_data = {"products": {}}
+        
+        for produto in Produto.objects.filter(ativo=True).order_by('ordem'):
+            sizes = {}
+            for tamanho in produto.tamanhos.all():
+                sizes[tamanho.tamanho] = {
+                    "product_size_id": tamanho.id,
+                    "available": tamanho.disponivel and tamanho.estoque > 0,
+                    "qtda_estoque": tamanho.estoque,
+                    # Manter campos legacy
+                    "stripe_link": None,
+                    "id_stripe": f"prod_{produto.json_key}_{tamanho.tamanho.lower()}"
+                }
+            
+            products_data["products"][produto.json_key] = {
+                "id": str(produto.id),
+                "title": produto.nome,
+                "price": float(produto.preco),
+                "preco_custo": float(produto.preco_custo),
+                "image": f"./img/camisetas/{produto.json_key.replace('-', '_')}.jpeg",
+                "sizes": sizes
+            }
+        
+        # Salvar em arquivo temporário para download
+        import tempfile
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+            json.dump(products_data, f, indent=2, ensure_ascii=False)
+            temp_path = f.name
+        
+        self.message_user(
+            request,
+            f'✅ products.json gerado com sucesso! Arquivo salvo em: {temp_path}',
+            level='SUCCESS'
+        )
+    gerar_products_json.short_description = "📄 Gerar products.json"
+    
+    def marcar_sem_estoque(self, request, queryset):
+        """Marca produtos selecionados como sem estoque"""
+        for produto in queryset:
+            produto.tamanhos.update(disponivel=False)
+        
+        self.message_user(
+            request,
+            f'✅ {queryset.count()} produtos marcados como sem estoque',
+            level='SUCCESS'
+        )
+    marcar_sem_estoque.short_description = "❌ Marcar como sem estoque"
+
+
+@admin.register(ProdutoTamanho)
+class ProdutoTamanhoAdmin(admin.ModelAdmin):
+    list_display = ['produto', 'tamanho', 'estoque_display', 'disponivel_display', 'acoes']
+    list_filter = ['produto', 'tamanho', 'disponivel']
+    search_fields = ['produto__nome']
+    list_editable = []  # Removido para usar ações customizadas
+    
+    def estoque_display(self, obj):
+        """Exibe o estoque com cores"""
+        if obj.estoque == 0:
+            color = 'red'
+            emoji = '❌'
+        elif obj.estoque <= 5:
+            color = 'orange'
+            emoji = '⚠️'
+        else:
+            color = 'green'
+            emoji = '✅'
+        
+        return format_html(
+            '{} <span style="color: {}; font-weight: bold;">{}</span>',
+            emoji, color, obj.estoque
+        )
+    estoque_display.short_description = 'Estoque'
+    
+    def disponivel_display(self, obj):
+        """Exibe disponibilidade com ícone"""
+        if obj.disponivel and obj.estoque > 0:
+            return format_html('<span style="color: green;">✅ Disponível</span>')
+        else:
+            return format_html('<span style="color: red;">❌ Indisponível</span>')
+    disponivel_display.short_description = 'Status'
+    
+    def acoes(self, obj):
+        """Botões de ação rápida"""
+        buttons = []
+        
+        # Botão adicionar estoque
+        buttons.append(
+            format_html(
+                '<a class="button" href="#" onclick="adicionarEstoque({}, 5); return false;" '
+                'style="background: green; color: white; padding: 2px 8px; margin: 2px;">+5</a>',
+                obj.id
+            )
+        )
+        
+        # Botão remover estoque
+        if obj.estoque > 0:
+            buttons.append(
+                format_html(
+                    '<a class="button" href="#" onclick="removerEstoque({}, 1); return false;" '
+                    'style="background: red; color: white; padding: 2px 8px; margin: 2px;">-1</a>',
+                    obj.id
+                )
+            )
+        
+        return format_html(' '.join(buttons))
+    acoes.short_description = 'Ações Rápidas'
+    
+    class Media:
+        js = ('admin/js/estoque_admin.js',)
 
 
 @admin.register(Comprador)
@@ -99,7 +297,7 @@ class PedidoAdmin(admin.ModelAdmin):
         })
     )
     
-    actions = ['consultar_status_mp', 'marcar_como_aprovado', 'marcar_como_cancelado']
+    actions = ['consultar_status_mp', 'marcar_como_aprovado', 'marcar_como_cancelado', 'sincronizar_estoque', 'confirmar_pagamento_presencial']
     
     def comprador_link(self, obj):
         url = reverse('admin:pedidos_comprador_change', args=[obj.comprador.id])
@@ -108,17 +306,20 @@ class PedidoAdmin(admin.ModelAdmin):
     
     def resumo_pedido(self, obj):
         """Mostra resumo dos itens do pedido"""
+        # Indicador de sistema
+        sistema_icon = '🆕' if obj.usa_novo_sistema else '📊'
+        
         if obj.itens.exists():
             # Nova estrutura com múltiplos itens
             itens = obj.itens.all()
             if itens.count() == 1:
                 item = itens.first()
-                return f"{item.get_produto_display()} ({item.tamanho}) x{item.quantidade}"
+                return f"{sistema_icon} {item.get_produto_display()} ({item.tamanho}) x{item.quantidade}"
             else:
-                return f"{itens.count()} itens - {sum(item.quantidade for item in itens)} produtos"
+                return f"{sistema_icon} {itens.count()} itens - {sum(item.quantidade for item in itens)} produtos"
         else:
             # Pedido antigo - estrutura legada
-            return f"{obj.get_produto_display()} ({obj.tamanho})"
+            return f"{sistema_icon} {obj.get_produto_display()} ({obj.tamanho})"
     resumo_pedido.short_description = 'Produtos'
     
     def total_display(self, obj):
@@ -273,6 +474,118 @@ class PedidoAdmin(admin.ModelAdmin):
         updated = queryset.update(status_pagamento='cancelled')
         self.message_user(request, f'{updated} pedidos marcados como cancelados.')
     marcar_como_cancelado.short_description = "🚫 Marcar como cancelado"
+    
+    def sincronizar_estoque(self, request, queryset):
+        """Sincroniza estoque para pedidos aprovados"""
+        from django.db import transaction
+        
+        processados = 0
+        erros = 0
+        
+        # Filtrar apenas pedidos aprovados que não tiveram estoque decrementado
+        pedidos = queryset.filter(
+            status_pagamento='approved',
+            estoque_decrementado=False
+        )
+        
+        if not pedidos.exists():
+            self.message_user(
+                request,
+                'Nenhum pedido elegível para sincronização de estoque',
+                level='WARNING'
+            )
+            return
+        
+        for pedido in pedidos:
+            try:
+                with transaction.atomic():
+                    if pedido.usa_novo_sistema and pedido.produto_tamanho:
+                        # Decrementar estoque do produto_tamanho
+                        if pedido.produto_tamanho.decrementar_estoque(1):
+                            pedido.estoque_decrementado = True
+                            pedido.save()
+                            processados += 1
+                        else:
+                            erros += 1
+                            self.message_user(
+                                request,
+                                f'Pedido #{pedido.id}: Estoque insuficiente',
+                                level='ERROR'
+                            )
+                    elif pedido.itens.exists():
+                        # Processar itens do pedido
+                        sucesso = True
+                        for item in pedido.itens.all():
+                            if item.produto_tamanho:
+                                if not item.produto_tamanho.decrementar_estoque(item.quantidade):
+                                    sucesso = False
+                                    break
+                        
+                        if sucesso:
+                            pedido.estoque_decrementado = True
+                            pedido.save()
+                            processados += 1
+                        else:
+                            erros += 1
+                            self.message_user(
+                                request,
+                                f'Pedido #{pedido.id}: Estoque insuficiente em algum item',
+                                level='ERROR'
+                            )
+            except Exception as e:
+                erros += 1
+                self.message_user(
+                    request,
+                    f'Erro ao processar pedido #{pedido.id}: {str(e)}',
+                    level='ERROR'
+                )
+        
+        # Resumo
+        if processados:
+            self.message_user(
+                request,
+                f'✅ {processados} pedidos tiveram estoque sincronizado',
+                level='SUCCESS'
+            )
+        if erros:
+            self.message_user(
+                request,
+                f'❌ {erros} pedidos com erro',
+                level='ERROR'
+            )
+    sincronizar_estoque.short_description = "📦 Sincronizar estoque"
+    
+    def confirmar_pagamento_presencial(self, request, queryset):
+        """Confirma pagamento presencial e aprova pedidos"""
+        # Filtrar apenas pedidos presenciais pendentes
+        pedidos = queryset.filter(
+            forma_pagamento='presencial',
+            status_pagamento='pending'
+        )
+        
+        if not pedidos.exists():
+            self.message_user(
+                request,
+                'Nenhum pedido presencial pendente selecionado',
+                level='WARNING'
+            )
+            return
+        
+        # Atualizar status
+        updated = pedidos.update(
+            status_pagamento='approved',
+            observacoes=models.F('observacoes') + '\n\nPagamento presencial confirmado pelo admin.'
+        )
+        
+        self.message_user(
+            request,
+            f'✅ {updated} pedidos presenciais confirmados e aprovados',
+            level='SUCCESS'
+        )
+        
+        # Sincronizar estoque automaticamente
+        self.sincronizar_estoque(request, pedidos)
+    confirmar_pagamento_presencial.short_description = "💰 Confirmar pagamento presencial"
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('comprador')
