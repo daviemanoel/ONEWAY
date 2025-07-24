@@ -142,16 +142,29 @@ class Command(BaseCommand):
                         itens_sem_estoque = []
                         
                         for item in pedido.itens.all():
-                            if item.produto_tamanho:
+                            # Buscar produto_tamanho se não estiver preenchido
+                            produto_tamanho_obj = item.produto_tamanho
+                            
+                            if not produto_tamanho_obj:
+                                # Tentar buscar baseado nos campos legacy
+                                try:
+                                    produto_obj = Produto.objects.get(json_key=item.produto)
+                                    produto_tamanho_obj = produto_obj.tamanhos.get(tamanho=item.tamanho)
+                                    self.stdout.write(f"     🔍 Item encontrado via legacy: {item.get_produto_display()} ({item.tamanho}) → {produto_tamanho_obj}")
+                                except (Produto.DoesNotExist, ProdutoTamanho.DoesNotExist):
+                                    self.stdout.write(f"     ❌ Item não encontrado: {item.get_produto_display()} ({item.tamanho})")
+                                    produto_tamanho_obj = None
+                            
+                            if produto_tamanho_obj:
                                 self.stdout.write(f"     📋 Verificando item: {item.get_produto_display()} ({item.tamanho}) x{item.quantidade}")
-                                if item.produto_tamanho.estoque < item.quantidade:
+                                if produto_tamanho_obj.estoque < item.quantidade:
                                     pode_processar = False
                                     itens_sem_estoque.append(
-                                        f"{item.produto_tamanho} (precisa: {item.quantidade}, tem: {item.produto_tamanho.estoque})"
+                                        f"{produto_tamanho_obj} (precisa: {item.quantidade}, tem: {produto_tamanho_obj.estoque})"
                                     )
-                                    self.stdout.write(f"       ❌ Estoque insuficiente: {item.produto_tamanho.estoque} < {item.quantidade}")
+                                    self.stdout.write(f"       ❌ Estoque insuficiente: {produto_tamanho_obj.estoque} < {item.quantidade}")
                                 else:
-                                    self.stdout.write(f"       ✅ Estoque OK: {item.produto_tamanho.estoque} >= {item.quantidade}")
+                                    self.stdout.write(f"       ✅ Estoque OK: {produto_tamanho_obj.estoque} >= {item.quantidade}")
                             else:
                                 self.stdout.write(f"     ⚠️  Item sem produto_tamanho: {item.get_produto_display()} ({item.tamanho})")
                         
@@ -169,16 +182,28 @@ class Command(BaseCommand):
                             if not dry_run:
                                 for idx, item in enumerate(pedido.itens.all(), 1):
                                     try:
-                                        if item.produto_tamanho:
+                                        # Buscar produto_tamanho se não estiver preenchido
+                                        produto_tamanho_obj = item.produto_tamanho
+                                        
+                                        if not produto_tamanho_obj:
+                                            # Tentar buscar baseado nos campos legacy
+                                            try:
+                                                produto_obj = Produto.objects.get(json_key=item.produto)
+                                                produto_tamanho_obj = produto_obj.tamanhos.get(tamanho=item.tamanho)
+                                                self.stdout.write(f"       💡 Usando produto_tamanho via legacy: {produto_tamanho_obj}")
+                                            except (Produto.DoesNotExist, ProdutoTamanho.DoesNotExist):
+                                                produto_tamanho_obj = None
+                                        
+                                        if produto_tamanho_obj:
                                             self.stdout.write(f"       🔽 Item {idx}/{total_itens}: {item.get_produto_display()} ({item.tamanho}) x{item.quantidade}")
                                             
                                             # Contar movimentações antes deste item
                                             movs_item_antes = MovimentacaoEstoque.objects.filter(
                                                 pedido=pedido,
-                                                produto_tamanho=item.produto_tamanho
+                                                produto_tamanho=produto_tamanho_obj
                                             ).count()
                                             
-                                            sucesso = item.produto_tamanho.decrementar_estoque(
+                                            sucesso = produto_tamanho_obj.decrementar_estoque(
                                                 quantidade=item.quantidade,
                                                 pedido=pedido,
                                                 usuario='sistema',
@@ -189,11 +214,11 @@ class Command(BaseCommand):
                                                 # Verificar se movimentação foi criada
                                                 movs_item_depois = MovimentacaoEstoque.objects.filter(
                                                     pedido=pedido,
-                                                    produto_tamanho=item.produto_tamanho
+                                                    produto_tamanho=produto_tamanho_obj
                                                 ).count()
                                                 nova_mov = movs_item_depois - movs_item_antes
                                                 
-                                                self.stdout.write(f"         ✅ Movimentação registrada - Estoque restante: {item.produto_tamanho.estoque}")
+                                                self.stdout.write(f"         ✅ Movimentação registrada - Estoque restante: {produto_tamanho_obj.estoque}")
                                                 self.stdout.write(f"         📈 Movimentações criadas para este item: {nova_mov}")
                                                 itens_processados += 1
                                             else:
@@ -215,7 +240,17 @@ class Command(BaseCommand):
                             else:
                                 # Contar itens que seriam processados no dry run
                                 for item in pedido.itens.all():
-                                    if item.produto_tamanho:
+                                    # Buscar produto_tamanho se não estiver preenchido
+                                    produto_tamanho_obj = item.produto_tamanho
+                                    
+                                    if not produto_tamanho_obj:
+                                        try:
+                                            produto_obj = Produto.objects.get(json_key=item.produto)
+                                            produto_tamanho_obj = produto_obj.tamanhos.get(tamanho=item.tamanho)
+                                        except (Produto.DoesNotExist, ProdutoTamanho.DoesNotExist):
+                                            produto_tamanho_obj = None
+                                    
+                                    if produto_tamanho_obj:
                                         self.stdout.write(f"       🔽 [DRY RUN] Decrementaria: {item.get_produto_display()} ({item.tamanho}) x{item.quantidade}")
                                         itens_processados += 1
                             
