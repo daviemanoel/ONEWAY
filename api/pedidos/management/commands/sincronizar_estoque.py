@@ -234,7 +234,17 @@ class Command(BaseCommand):
             }
             
             # Adicionar campos extras se existirem no JSON original
-            json_path = os.path.join(os.path.dirname(__file__), '../../../../web/products.json')
+            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+            json_path = os.path.join(base_dir, 'web', 'products.json')
+            
+            # Fallback para estrutura Railway
+            if not os.path.exists(json_path):
+                json_path = '/app/web/products.json'
+                
+            # Fallback para desenvolvimento local  
+            if not os.path.exists(json_path):
+                json_path = os.path.join(os.getcwd(), 'web', 'products.json')
+            
             if os.path.exists(json_path):
                 with open(json_path, 'r', encoding='utf-8') as f:
                     original_data = json.load(f)
@@ -253,7 +263,16 @@ class Command(BaseCommand):
                             sizes[tamanho]['id_stripe'] = tamanho_data.get('id_stripe', sizes[tamanho]['id_stripe'])
         
         # Salvar o arquivo
-        output_path = os.path.join(os.path.dirname(__file__), '../../../../web/products_generated.json')
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+        output_path = os.path.join(base_dir, 'web', 'products_generated.json')
+        
+        # Fallback para estrutura Railway
+        if not os.path.exists(os.path.dirname(output_path)):
+            output_path = '/app/web/products_generated.json'
+            
+        # Fallback para desenvolvimento local
+        if not os.path.exists(os.path.dirname(output_path)):
+            output_path = os.path.join(os.getcwd(), 'web', 'products_generated.json')
         with open(output_path, 'w', encoding='utf-8') as f:
             json.dump(products_data, f, indent=2, ensure_ascii=False)
         

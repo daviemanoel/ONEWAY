@@ -18,8 +18,17 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         dry_run = options.get('dry_run', False)
         
-        # Caminho para o products.json
-        json_path = os.path.join(os.path.dirname(__file__), '../../../../web/products.json')
+        # Caminho para o products.json - adaptar para Railway
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+        json_path = os.path.join(base_dir, 'web', 'products.json')
+        
+        # Fallback para estrutura Railway
+        if not os.path.exists(json_path):
+            json_path = '/app/web/products.json'
+        
+        # Fallback para desenvolvimento local  
+        if not os.path.exists(json_path):
+            json_path = os.path.join(os.getcwd(), 'web', 'products.json')
         
         if not os.path.exists(json_path):
             self.stdout.write(self.style.ERROR(f'Arquivo não encontrado: {json_path}'))
