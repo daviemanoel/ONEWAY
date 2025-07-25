@@ -334,6 +334,89 @@
         
         // Dados dos produtos (global para o carrinho)
         let productsData = null;
+        
+        // Detectar se está rodando em file:// (desenvolvimento local)
+        const isFileProtocol = window.location.protocol === 'file:';
+        
+        // Dados de fallback para desenvolvimento local
+        const fallbackProductsData = {
+            "products": {
+                "camiseta-marrom": {
+                    "id": "1",
+                    "title": "Camiseta One Way Marrom",
+                    "price": 120.00,
+                    "preco_custo": 53.50,
+                    "image": "./img/camisetas/camiseta_marrom.jpeg",
+                    "images": ["./img/camisetas/camiseta_marrom.jpeg", "./img/camisetas/camiseta_marrom-2.jpeg"],
+                    "video": "./videos/camiseta-marrom-preview.mp4",
+                    "sizes": {
+                        "P": {"product_size_id": 1, "available": true, "qtda_estoque": 8, "stripe_link": null, "id_stripe": "price_1"},
+                        "M": {"product_size_id": 2, "available": true, "qtda_estoque": 17, "stripe_link": null, "id_stripe": "price_2"},
+                        "G": {"product_size_id": 3, "available": true, "qtda_estoque": 17, "stripe_link": null, "id_stripe": "price_3"},
+                        "GG": {"product_size_id": 4, "available": true, "qtda_estoque": 7, "stripe_link": null, "id_stripe": "price_4"}
+                    }
+                },
+                "camiseta-jesus": {
+                    "id": "2",
+                    "title": "Camiseta Jesus",
+                    "price": 120.00,
+                    "preco_custo": 55.00,
+                    "image": "./img/camisetas/Camiseta_jesus.jpeg",
+                    "sizes": {
+                        "P": {"product_size_id": 5, "available": true, "qtda_estoque": 5, "stripe_link": null, "id_stripe": "price_5"},
+                        "M": {"product_size_id": 6, "available": true, "qtda_estoque": 10, "stripe_link": null, "id_stripe": "price_6"},
+                        "G": {"product_size_id": 7, "available": true, "qtda_estoque": 10, "stripe_link": null, "id_stripe": "price_7"},
+                        "GG": {"product_size_id": 8, "available": true, "qtda_estoque": 4, "stripe_link": null, "id_stripe": "price_8"}
+                    }
+                },
+                "camiseta-oneway-branca": {
+                    "id": "3",
+                    "title": "Camiseta ONE WAY Off White",
+                    "price": 120.00,
+                    "preco_custo": 51.50,
+                    "image": "./img/camisetas/Camiseta_onewayBranca.jpeg",
+                    "sizes": {
+                        "P": {"product_size_id": 9, "available": true, "qtda_estoque": 5, "stripe_link": null, "id_stripe": "price_9"},
+                        "M": {"product_size_id": 10, "available": true, "qtda_estoque": 10, "stripe_link": null, "id_stripe": "price_10"},
+                        "G": {"product_size_id": 11, "available": true, "qtda_estoque": 10, "stripe_link": null, "id_stripe": "price_11"},
+                        "GG": {"product_size_id": 12, "available": true, "qtda_estoque": 5, "stripe_link": null, "id_stripe": "price_12"}
+                    }
+                },
+                "camiseta-the-way": {
+                    "id": "4",
+                    "title": "Camiseta The Way",
+                    "price": 120.00,
+                    "preco_custo": 49.50,
+                    "image": "./img/camisetas/Camiseta_theway.jpeg",
+                    "sizes": {
+                        "P": {"product_size_id": 13, "available": true, "qtda_estoque": 5, "stripe_link": null, "id_stripe": "price_13"},
+                        "M": {"product_size_id": 14, "available": true, "qtda_estoque": 10, "stripe_link": null, "id_stripe": "price_14"},
+                        "G": {"product_size_id": 15, "available": true, "qtda_estoque": 10, "stripe_link": null, "id_stripe": "price_15"},
+                        "GG": {"product_size_id": 16, "available": true, "qtda_estoque": 5, "stripe_link": null, "id_stripe": "price_16"}
+                    }
+                },
+                "almoco-sabado": {
+                    "id": "5",
+                    "title": "🍽️ Almoço - Sábado",
+                    "price": 23.00,
+                    "preco_custo": 15.00,
+                    "image": "./img/2.png",
+                    "sizes": {
+                        "UNICO": {"product_size_id": 17, "available": true, "qtda_estoque": 300, "stripe_link": null, "id_stripe": "price_17"}
+                    }
+                },
+                "jantar-sabado": {
+                    "id": "6",
+                    "title": "🍛 Jantar - Sábado",
+                    "price": 13.00,
+                    "preco_custo": 11.00,
+                    "image": "./img/2.png",
+                    "sizes": {
+                        "UNICO": {"product_size_id": 18, "available": true, "qtda_estoque": 350, "stripe_link": null, "id_stripe": "price_18"}
+                    }
+                }
+            }
+        };
 
         // Carregar configuração de pagamentos
         async function loadPaymentConfig() {
@@ -356,8 +439,18 @@
                 // Carregar configuração de pagamentos primeiro
                 await loadPaymentConfig();
                 
-                const response = await fetch('./products.json');
-                const data = await response.json();
+                let data;
+                
+                if (isFileProtocol) {
+                    // Modo de desenvolvimento local - usar dados fallback
+                    console.log('🔧 Modo desenvolvimento detectado (file://). Usando dados fallback.');
+                    data = fallbackProductsData;
+                } else {
+                    // Modo produção - carregar do servidor
+                    console.log('🌐 Modo produção detectado. Carregando products.json...');
+                    const response = await fetch('./products.json');
+                    data = await response.json();
+                }
                 
                 // Armazenar dados globalmente para o carrinho
                 productsData = data;
@@ -465,13 +558,36 @@
                 console.error('❌ Stack trace:', error.stack);
                 console.error('❌ Dados carregados:', productsData);
                 
+                let errorMessage = '';
+                let errorDetails = '';
+                
+                if (isFileProtocol) {
+                    errorMessage = 'Erro de desenvolvimento local detectado';
+                    errorDetails = `
+                        <p><strong>🔧 Modo Desenvolvimento Local</strong></p>
+                        <p>Você está abrindo o arquivo diretamente no navegador (file://)</p>
+                        <p><strong>Para testar corretamente:</strong></p>
+                        <ol style="text-align: left; display: inline-block;">
+                            <li>Use um servidor local: <code>python -m http.server 8000</code></li>
+                            <li>Ou acesse: <a href="https://oneway.mevamfranca.com.br" target="_blank">oneway.mevamfranca.com.br</a></li>
+                        </ol>
+                        <p style="font-size: 0.9em; color: #888;">Os dados de fallback deveriam funcionar, mas algo deu errado.</p>
+                    `;
+                } else {
+                    errorMessage = 'Erro ao carregar produtos do servidor';
+                    errorDetails = `
+                        <p>Erro: ${error.message}</p>
+                        <p>Verifique sua conexão com a internet ou tente novamente.</p>
+                    `;
+                }
+                
                 // Fallback: mostrar mensagem de erro
                 document.getElementById('products-container').innerHTML = `
-                    <div style="padding: 20px; text-align: center; color: #666;">
-                        <p><strong>Erro ao carregar produtos.</strong></p>
-                        <p>Erro: ${error.message}</p>
-                        <button onclick="loadProducts()" style="margin-top: 10px; padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">
-                            Tentar Novamente
+                    <div style="padding: 20px; text-align: center; color: #666; max-width: 500px; margin: 0 auto;">
+                        <h3>${errorMessage}</h3>
+                        ${errorDetails}
+                        <button onclick="loadProducts()" style="margin-top: 15px; padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">
+                            🔄 Tentar Novamente
                         </button>
                     </div>
                 `;
