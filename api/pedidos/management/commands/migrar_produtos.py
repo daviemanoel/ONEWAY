@@ -18,21 +18,46 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         dry_run = options.get('dry_run', False)
         
-        # Caminho para o products.json - adaptar para Railway
-        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-        json_path = os.path.join(base_dir, 'web', 'products.json')
+        # Tentar vários caminhos possíveis
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
         
-        # Fallback para estrutura Railway
-        if not os.path.exists(json_path):
-            json_path = '/app/web/products.json'
+        possible_paths = [
+            # Desenvolvimento local - caminho relativo à estrutura do projeto
+            os.path.join(base_dir, 'web', 'products.json'),
+            
+            # Railway - assumindo que estamos em /app/api e web está em /app/web
+            os.path.join(os.path.dirname(os.getcwd()), 'web', 'products.json'),
+            
+            # Se executado de dentro de api/
+            os.path.join(os.path.dirname(os.path.abspath('.')), 'web', 'products.json'),
+            
+            # Caminhos absolutos possíveis no Railway
+            '/app/web/products.json',
+            
+            # Se o arquivo foi gerado pelo comando gerar_products_json
+            os.path.join(os.getcwd(), 'products.json'),
+            '/tmp/products.json',
+            
+            # Paths relativos
+            '../web/products.json',
+            '../../web/products.json',
+        ]
         
-        # Fallback para desenvolvimento local  
-        if not os.path.exists(json_path):
-            json_path = os.path.join(os.getcwd(), 'web', 'products.json')
+        json_path = None
+        for path in possible_paths:
+            normalized_path = os.path.normpath(path)
+            if os.path.exists(normalized_path):
+                json_path = normalized_path
+                break
         
-        if not os.path.exists(json_path):
-            self.stdout.write(self.style.ERROR(f'Arquivo não encontrado: {json_path}'))
+        if not json_path:
+            self.stdout.write(self.style.ERROR('Arquivo products.json não encontrado!'))
+            self.stdout.write(self.style.ERROR('Tentados os seguintes caminhos:'))
+            for path in possible_paths:
+                self.stdout.write(self.style.ERROR(f'  - {path}'))
             return
+        
+        self.stdout.write(self.style.SUCCESS(f'✅ Arquivo encontrado em: {json_path}'))
         
         # Carregar dados do JSON
         with open(json_path, 'r', encoding='utf-8') as f:
@@ -52,6 +77,8 @@ class Command(BaseCommand):
             'camiseta-jesus': 2,
             'camiseta-oneway-branca': 3,
             'camiseta-the-way': 4,
+            'almoco-sabado': 5,
+            'jantar-sabado': 6,
         }
         
         produtos_criados = 0
