@@ -47,8 +47,8 @@ class Command(BaseCommand):
             # Estrutura base do products.json
             products_data = {"products": {}}
             
-            # Buscar produtos ativos ordenados
-            produtos = Produto.objects.filter(ativo=True).order_by('ordem', 'nome')
+            # Buscar todos os produtos ordenados (o método esta_disponivel valida se está ativo)
+            produtos = Produto.objects.all().order_by('ordem', 'nome')
             
             if not produtos.exists():
                 self.stdout.write(self.style.ERROR('❌ Nenhum produto ativo encontrado'))
