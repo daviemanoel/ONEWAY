@@ -115,7 +115,7 @@
                 <p class="alimentacao-subtitle">Adquira sua refeição antecipadamente e garante sua vaga!</p>
             </div>
             <div class="meals-grid">
-                <div class="meal-card" data-product-id="5" data-product-price="25.00">
+                <div class="meal-card" data-product-id="5" data-product-price="23.00">
                     <div class="meal-icon">🍽️</div>
                     <div class="meal-info">
                         <h3 class="meal-title">Almoço - Sábado</h3>
@@ -123,15 +123,14 @@
                         <div class="meal-time">📅 2 de Agosto • 12:00h</div>
                     </div>
                     <div class="meal-price-section">
-                        <div class="meal-price">R$ 25,00</div>
-                        <div class="meal-pix-price">PIX: R$ 23,75 <span class="discount-label">(5% OFF)</span></div>
+                        <div class="meal-price">R$ 23,00</div>
                         <button class="meal-btn add-to-cart" data-product-id="5" data-meal-type="almoco">
                             Adicionar ao Carrinho
                         </button>
                     </div>
                 </div>
                 
-                <div class="meal-card" data-product-id="6" data-product-price="30.00">
+                <div class="meal-card" data-product-id="6" data-product-price="13.00">
                     <div class="meal-icon">🍛</div>
                     <div class="meal-info">
                         <h3 class="meal-title">Jantar - Sábado</h3>
@@ -139,19 +138,11 @@
                         <div class="meal-time">📅 2 de Agosto • 19:00h</div>
                     </div>
                     <div class="meal-price-section">
-                        <div class="meal-price">R$ 30,00</div>
-                        <div class="meal-pix-price">PIX: R$ 28,50 <span class="discount-label">(5% OFF)</span></div>
+                        <div class="meal-price">R$ 13,00</div>
                         <button class="meal-btn add-to-cart" data-product-id="6" data-meal-type="jantar">
                             Adicionar ao Carrinho
                         </button>
                     </div>
-                </div>
-            </div>
-            <div class="alimentacao-notice">
-                <div class="notice-icon">⚠️</div>
-                <div class="notice-text">
-                    <strong>Importante:</strong> A alimentação não estará disponível para compra durante o evento. 
-                    Adquira antecipadamente para garantir sua refeição.
                 </div>
             </div>
         </div>
@@ -372,8 +363,10 @@
                 productsData = data;
                 console.log('📦 Dados dos produtos carregados:', productsData);
                 
-                // Converter objeto em array e ordenar por ID
-                const productsArray = Object.values(data.products).sort((a, b) => parseInt(a.id) - parseInt(b.id));
+                // Converter objeto em array, filtrar apenas camisetas (produtos com tamanhos P,M,G,GG) e ordenar por ID
+                const productsArray = Object.values(data.products)
+                    .filter(product => product.sizes && (product.sizes.P || product.sizes.M || product.sizes.G || product.sizes.GG))
+                    .sort((a, b) => parseInt(a.id) - parseInt(b.id));
                 
                 const container = document.getElementById('products-container');
                 container.innerHTML = '';
