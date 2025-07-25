@@ -2536,3 +2536,302 @@ img {
   background: #f8f9fa;
   color: #dc3545;
 }
+
+/* ========================================
+   SEÇÃO DE ALIMENTAÇÃO
+   ======================================== */
+
+.section_alimentacao {
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  padding: 60px 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.section_alimentacao::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(circle at 25% 25%, rgba(99, 102, 241, 0.08) 0%, transparent 50%),
+    radial-gradient(circle at 75% 75%, rgba(249, 115, 22, 0.06) 0%, transparent 50%);
+  z-index: 1;
+}
+
+.alimentacao-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+  position: relative;
+  z-index: 2;
+}
+
+.alimentacao-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.alimentacao-title {
+  font-family: "Montserrat", sans-serif;
+  font-weight: 800;
+  font-size: 2.5rem;
+  color: #2c3e50;
+  margin: 0 0 10px 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.alimentacao-subtitle {
+  font-family: "Montserrat", sans-serif;
+  font-weight: 400;
+  font-size: 1.1rem;
+  color: #64748b;
+  margin: 0;
+}
+
+.meals-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 30px;
+  max-width: 800px;
+  margin: 0 auto 40px;
+}
+
+.meal-card {
+  background: white;
+  border-radius: 16px;
+  padding: 30px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+  border: 1px solid rgba(99, 102, 241, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.meal-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+  border-color: rgba(99, 102, 241, 0.2);
+}
+
+.meal-icon {
+  font-size: 3rem;
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.meal-info {
+  flex-grow: 1;
+}
+
+.meal-title {
+  font-family: "Montserrat", sans-serif;
+  font-weight: 700;
+  font-size: 1.4rem;
+  color: #2c3e50;
+  margin: 0 0 10px 0;
+  text-align: center;
+}
+
+.meal-description {
+  font-family: "Montserrat", sans-serif;
+  font-weight: 400;
+  font-size: 1rem;
+  color: #64748b;
+  margin: 0 0 10px 0;
+  text-align: center;
+}
+
+.meal-time {
+  font-family: "Montserrat", sans-serif;
+  font-weight: 500;
+  font-size: 0.9rem;
+  color: #f59e0b;
+  text-align: center;
+  background: rgba(245, 158, 11, 0.1);
+  padding: 8px 12px;
+  border-radius: 8px;
+  margin-top: 10px;
+}
+
+.meal-price-section {
+  text-align: center;
+}
+
+.meal-price {
+  font-family: "Montserrat", sans-serif;
+  font-weight: 800;
+  font-size: 1.8rem;
+  color: #2c3e50;
+  margin: 0 0 5px 0;
+}
+
+.meal-pix-price {
+  font-family: "Montserrat", sans-serif;
+  font-weight: 600;
+  font-size: 1rem;
+  color: #10b981;
+  margin: 0 0 20px 0;
+}
+
+.meal-pix-price .discount-label {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-left: 5px;
+}
+
+.meal-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 15px 30px;
+  border-radius: 12px;
+  font-family: "Montserrat", sans-serif;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  width: 100%;
+  box-shadow: 0 4px 15px rgba(118, 75, 162, 0.3);
+}
+
+.meal-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 25px rgba(118, 75, 162, 0.4);
+  background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+}
+
+.meal-btn:active {
+  transform: translateY(0);
+}
+
+.meal-btn:disabled {
+  background: #e2e8f0;
+  color: #94a3b8;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.alimentacao-notice {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  align-items: flex-start;
+  gap: 15px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.notice-icon {
+  font-size: 1.5rem;
+  color: #f59e0b;
+  flex-shrink: 0;
+}
+
+.notice-text {
+  font-family: "Montserrat", sans-serif;
+  font-size: 0.95rem;
+  color: #92400e;
+  line-height: 1.5;
+}
+
+.notice-text strong {
+  font-weight: 600;
+}
+
+/* Responsivo - Tablet */
+@media (max-width: 768px) {
+  .section_alimentacao {
+    padding: 40px 0;
+  }
+  
+  .alimentacao-title {
+    font-size: 2rem;
+  }
+  
+  .alimentacao-subtitle {
+    font-size: 1rem;
+  }
+  
+  .meals-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+    max-width: 500px;
+  }
+  
+  .meal-card {
+    padding: 25px;
+  }
+  
+  .meal-title {
+    font-size: 1.2rem;
+  }
+  
+  .meal-price {
+    font-size: 1.5rem;
+  }
+  
+  .alimentacao-notice {
+    padding: 15px;
+    gap: 10px;
+  }
+}
+
+/* Responsivo - Mobile */
+@media (max-width: 480px) {
+  .alimentacao-container {
+    padding: 0 15px;
+  }
+  
+  .alimentacao-title {
+    font-size: 1.8rem;
+  }
+  
+  .meals-grid {
+    max-width: 100%;
+    gap: 15px;
+  }
+  
+  .meal-card {
+    padding: 20px;
+    gap: 15px;
+  }
+  
+  .meal-icon {
+    font-size: 2.5rem;
+  }
+  
+  .meal-title {
+    font-size: 1.1rem;
+  }
+  
+  .meal-description {
+    font-size: 0.9rem;
+  }
+  
+  .meal-price {
+    font-size: 1.4rem;
+  }
+  
+  .meal-btn {
+    padding: 12px 20px;
+    font-size: 0.9rem;
+  }
+  
+  .notice-text {
+    font-size: 0.85rem;
+  }
+}

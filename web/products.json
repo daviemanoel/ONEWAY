@@ -152,6 +152,38 @@
           "id_stripe": "price_the_way_gg_001"
         }
       }
+    },
+    "almoco-sabado": {
+      "id": "5",
+      "title": "🍽️ Almoço - Sábado",
+      "price": 25.00,
+      "preco_custo": 15.00,
+      "image": "./img/2.png",
+      "sizes": {
+        "UNICO": {
+          "product_size_id": 17,
+          "available": true,
+          "qtda_estoque": 100,
+          "stripe_link": null,
+          "id_stripe": "price_almoco_sabado_001"
+        }
+      }
+    },
+    "jantar-sabado": {
+      "id": "6",
+      "title": "🍛 Jantar - Sábado",
+      "price": 30.00,
+      "preco_custo": 18.00,
+      "image": "./img/2.png",
+      "sizes": {
+        "UNICO": {
+          "product_size_id": 18,
+          "available": true,
+          "qtda_estoque": 100,
+          "stripe_link": null,
+          "id_stripe": "price_jantar_sabado_001"
+        }
+      }
     }
   }
 }

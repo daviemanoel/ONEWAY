@@ -21,6 +21,7 @@
                 <li><a href="#minha-secao" class="nav-link">Ingressos</a></li>
                 <li><a href="#sobre" class="nav-link">Sobre</a></li>
                 <li><a href="#produtos" class="nav-link">Produtos</a></li>
+                <li><a href="#alimentacao" class="nav-link">Alimentação</a></li>
                 <li><a href="#faq" class="nav-link">FAQ</a></li>
             </ul>
             <div class="hamburger">
@@ -104,6 +105,55 @@
                     </td>
                 </tr>
             </table>
+        </div>
+    </section>
+
+    <section id="alimentacao" class="section_alimentacao">
+        <div class="alimentacao-container">
+            <div class="alimentacao-header">
+                <h2 class="alimentacao-title">Alimentação do Evento</h2>
+                <p class="alimentacao-subtitle">Adquira sua refeição antecipadamente e garante sua vaga!</p>
+            </div>
+            <div class="meals-grid">
+                <div class="meal-card" data-product-id="5" data-product-price="25.00">
+                    <div class="meal-icon">🍽️</div>
+                    <div class="meal-info">
+                        <h3 class="meal-title">Almoço - Sábado</h3>
+                        <p class="meal-description">Refeição completa servida no intervalo do sábado</p>
+                        <div class="meal-time">📅 2 de Agosto • 12:00h</div>
+                    </div>
+                    <div class="meal-price-section">
+                        <div class="meal-price">R$ 25,00</div>
+                        <div class="meal-pix-price">PIX: R$ 23,75 <span class="discount-label">(5% OFF)</span></div>
+                        <button class="meal-btn add-to-cart" data-product-id="5" data-meal-type="almoco">
+                            Adicionar ao Carrinho
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="meal-card" data-product-id="6" data-product-price="30.00">
+                    <div class="meal-icon">🍛</div>
+                    <div class="meal-info">
+                        <h3 class="meal-title">Jantar - Sábado</h3>
+                        <p class="meal-description">Jantar especial de encerramento do evento</p>
+                        <div class="meal-time">📅 2 de Agosto • 19:00h</div>
+                    </div>
+                    <div class="meal-price-section">
+                        <div class="meal-price">R$ 30,00</div>
+                        <div class="meal-pix-price">PIX: R$ 28,50 <span class="discount-label">(5% OFF)</span></div>
+                        <button class="meal-btn add-to-cart" data-product-id="6" data-meal-type="jantar">
+                            Adicionar ao Carrinho
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="alimentacao-notice">
+                <div class="notice-icon">⚠️</div>
+                <div class="notice-text">
+                    <strong>Importante:</strong> A alimentação não estará disponível para compra durante o evento. 
+                    Adquira antecipadamente para garantir sua refeição.
+                </div>
+            </div>
         </div>
     </section>
 
@@ -1135,23 +1185,44 @@
                         e.preventDefault();
                         
                         const productCard = button.closest('.product-card');
-                        const selectedSizeBtn = productCard.querySelector('.size-btn.active');
+                        const mealCard = button.closest('.meal-card');
                         const productId = button.dataset.productId;
 
-                        console.log('🛒 Dados do clique:', { productCard, selectedSizeBtn, productId });
+                        console.log('🛒 Dados do clique:', { productCard, mealCard, productId });
 
-                        if (!selectedSizeBtn) {
-                            alert('Por favor, selecione um tamanho disponível.');
+                        let size, productSizeId;
+                        
+                        if (mealCard) {
+                            // Produto de alimentação - tamanho fixo "UNICO"
+                            size = 'UNICO';
+                            // Buscar product_size_id do products.json
+                            if (productsData && productsData.products) {
+                                for (const [key, product] of Object.entries(productsData.products)) {
+                                    if (product.id === productId && product.sizes['UNICO']) {
+                                        productSizeId = product.sizes['UNICO'].product_size_id;
+                                        break;
+                                    }
+                                }
+                            }
+                            console.log('🍽️ Produto de alimentação:', { productId, size, productSizeId });
+                        } else if (productCard) {
+                            // Produto com tamanhos (camisetas)
+                            const selectedSizeBtn = productCard.querySelector('.size-btn.active');
+                            if (!selectedSizeBtn) {
+                                alert('Por favor, selecione um tamanho disponível.');
+                                return;
+                            }
+                            size = selectedSizeBtn.dataset.size;
+                            productSizeId = selectedSizeBtn.dataset.productSizeId;
+                            console.log('👕 Produto com tamanhos:', { productId, size, productSizeId });
+                        } else {
+                            console.error('❌ Não foi possível identificar o tipo de produto');
                             return;
                         }
-
-                        const size = selectedSizeBtn.dataset.size;
-                        const productSizeId = selectedSizeBtn.dataset.productSizeId; // ✨ NOVO CAMPO
-                        
-                        console.log('🛒 Dados capturados:', { productId, size, productSizeId });
                         
                         // Animação do botão
                         button.disabled = true;
+                        const originalText = button.textContent;
                         button.textContent = 'Adicionando...';
 
                         // Adicionar ao carrinho
@@ -1161,7 +1232,7 @@
                         // Restaurar botão
                         setTimeout(() => {
                             button.disabled = false;
-                            button.textContent = 'Adicionar ao Carrinho';
+                            button.textContent = originalText;
                         }, 500);
                     });
                     
