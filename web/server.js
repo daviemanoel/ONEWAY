@@ -1502,13 +1502,7 @@ app.post('/api/cart/checkout', async (req, res) => {
     // Criar pedido no Django usando CriarPedidoSerializer
     let pedidoId;
     try {
-      let firstProductKey = findProductKeyById(validatedItems[0].productId);
-      
-      // HACK temporário: usar camiseta-marrom para produtos de alimentação
-      // já que o Django não aceita almoco-sabado/jantar-sabado nas choices
-      if (firstProductKey === 'almoco-sabado' || firstProductKey === 'jantar-sabado') {
-        firstProductKey = 'camiseta-marrom';
-      }
+      const firstProductKey = findProductKeyById(validatedItems[0].productId);
       
       const pedidoResponse = await axios.post(`${DJANGO_API_URL}/pedidos/`, {
         // Dados do comprador (serão processados automaticamente)
@@ -1541,12 +1535,7 @@ app.post('/api/cart/checkout', async (req, res) => {
     // Criar ItemPedido para cada item do carrinho
     try {
       for (const item of validatedItems) {
-        let productKey = findProductKeyById(item.productId);
-        
-        // HACK temporário: usar camiseta-marrom para produtos de alimentação
-        if (productKey === 'almoco-sabado' || productKey === 'jantar-sabado') {
-          productKey = 'camiseta-marrom';
-        }
+        const productKey = findProductKeyById(item.productId);
         
         // Aplicar desconto PIX no preço unitário se necessário
         const precoUnitarioFinal = paymentMethod === 'pix' ? 

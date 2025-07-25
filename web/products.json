@@ -160,7 +160,7 @@
       "preco_custo": 15.00,
       "image": "./img/2.png",
       "sizes": {
-        "G": {
+        "UNICO": {
           "product_size_id": 17,
           "available": true,
           "qtda_estoque": 300,
@@ -176,7 +176,7 @@
       "preco_custo": 11.00,
       "image": "./img/2.png",
       "sizes": {
-        "G": {
+        "UNICO": {
           "product_size_id": 18,
           "available": true,
           "qtda_estoque": 350,

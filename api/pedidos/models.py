@@ -39,6 +39,7 @@ class ProdutoTamanho(models.Model):
         ('M', 'M'),
         ('G', 'G'),
         ('GG', 'GG'),
+        ('UNICO', 'Único'),
     ]
     
     produto = models.ForeignKey(
@@ -177,6 +178,8 @@ class Pedido(models.Model):
         ('camiseta-jesus', 'Camiseta Jesus'),
         ('camiseta-oneway-branca', 'Camiseta ONE WAY Off White'),
         ('camiseta-the-way', 'Camiseta The Way'),
+        ('almoco-sabado', 'Almoço - Sábado'),
+        ('jantar-sabado', 'Jantar - Sábado'),
     ]
     
     TAMANHOS_CHOICES = [
@@ -184,6 +187,7 @@ class Pedido(models.Model):
         ('M', 'M'),
         ('G', 'G'),
         ('GG', 'GG'),
+        ('UNICO', 'Único'),
     ]
     
     FORMA_PAGAMENTO_CHOICES = [

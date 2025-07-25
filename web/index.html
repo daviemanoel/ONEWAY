@@ -402,7 +402,7 @@
                     "preco_custo": 15.00,
                     "image": "./img/2.png",
                     "sizes": {
-                        "G": {"product_size_id": 17, "available": true, "qtda_estoque": 300, "stripe_link": null, "id_stripe": "price_17"}
+                        "UNICO": {"product_size_id": 17, "available": true, "qtda_estoque": 300, "stripe_link": null, "id_stripe": "price_17"}
                     }
                 },
                 "jantar-sabado": {
@@ -412,7 +412,7 @@
                     "preco_custo": 11.00,
                     "image": "./img/2.png",
                     "sizes": {
-                        "G": {"product_size_id": 18, "available": true, "qtda_estoque": 350, "stripe_link": null, "id_stripe": "price_18"}
+                        "UNICO": {"product_size_id": 18, "available": true, "qtda_estoque": 350, "stripe_link": null, "id_stripe": "price_18"}
                     }
                 }
             }
@@ -1337,13 +1337,13 @@
                         let size, productSizeId;
                         
                         if (mealCard) {
-                            // Produto de alimentação - tamanho fixo "G"
-                            size = 'G';
+                            // Produto de alimentação - tamanho fixo "UNICO"
+                            size = 'UNICO';
                             // Buscar product_size_id do products.json
                             if (productsData && productsData.products) {
                                 for (const [key, product] of Object.entries(productsData.products)) {
-                                    if (product.id === productId && product.sizes['G']) {
-                                        productSizeId = product.sizes['G'].product_size_id;
+                                    if (product.id === productId && product.sizes['UNICO']) {
+                                        productSizeId = product.sizes['UNICO'].product_size_id;
                                         break;
                                     }
                                 }
