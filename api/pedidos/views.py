@@ -580,6 +580,11 @@ def setup_estoque_view(request):
                     </button>
                     <div class="description">Atualiza products.json com dados atuais do estoque</div>
                     
+                    <button class="btn success" onclick="executeCommand('migrar_produtos')">
+                        📦 Migrar Produtos do JSON
+                    </button>
+                    <div class="description">Importa produtos do products.json para o Django (somente novos)</div>
+                    
                     <a href="/api/gerar-products-json/" target="_blank" class="btn success">
                         📥 Download JSON Atual
                     </a>
@@ -728,6 +733,7 @@ def execute_command_ajax(request):
         'reset_estoque',
         'sincronizar_estoque', 
         'setup_estoque_simples',
+        'migrar_produtos',
         'gerar_products_json',
         'associar_pedidos_legacy',
         'criar_token_api'

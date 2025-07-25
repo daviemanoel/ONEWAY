@@ -89,13 +89,18 @@ python manage.py migrate            # Migrar banco local (SQLite)
 python manage.py runserver          # Servidor local porta 8000
 python manage.py createsuperuser    # Criar admin local
 
-# Comandos customizados ⭐ **ATUALIZADOS**
+# Comandos customizados ⭐ **ATUALIZADOS - JANEIRO 2025**
 python manage.py setup_estoque_simples     # Setup automático produção
 python manage.py reset_estoque --confirmar # Reset completo estoque ⭐ **NOVO**
-python manage.py sincronizar_estoque       # Sincronizar estoque
+python manage.py sincronizar_estoque       # Sincronizar estoque (30 dias padrão)
+python manage.py sincronizar_estoque --reprocessar # Incluir pedidos já processados ⭐ **NOVO**
 python manage.py gerar_products_json       # Gerar JSON atualizado
 python manage.py associar_pedidos_legacy   # Migração dados
 python manage.py criar_token_api          # Gerar token para Node.js
+
+# Comandos de diagnóstico ⭐ **JANEIRO 2025**
+python manage.py verificar_movimentacoes 76    # Analisar movimentações pedido específico
+python manage.py testar_movimentacoes 76 --forcar # Forçar criação movimentações para teste
 
 # Comandos com dry-run (simulação)
 python manage.py reset_estoque --dry-run        # Simular reset
@@ -232,12 +237,19 @@ cart = {
 }
 ```
 
-**Melhorias de UX (Janeiro 2025):** ⭐ **NOVO**
+**Melhorias de UX:** ⭐ **JANEIRO 2025**
 - Ao adicionar produto, o painel do carrinho abre automaticamente
 - Link "Escolher outros modelos" abaixo do botão de finalizar compra
 - Navegação suave de volta para a seção de produtos
 - Correção de timing na inicialização do carrinho
 - Event listeners otimizados sem duplicação
+
+**Correção Sincronização Estoque:** ⭐ **JANEIRO 2025**
+- Fix crítico na lógica de exclusão de pedidos com ItemPedido
+- Comando `--reprocessar` para incluir pedidos já processados
+- Auto-associação de ItemPedido via campos legacy quando produto_tamanho é null
+- Comandos de diagnóstico para debug de movimentações específicas
+- Dashboard com logs persistentes (não fecha automaticamente)
 
 ### Sistema de Pagamento Presencial ⭐ **NOVO**
 
@@ -312,6 +324,8 @@ Sistema integrado de controle de estoque com histórico completo de movimentaç�
 - **Dry-run Mode**: Simulação sem alterar dados
 - **Geração JSON**: products.json atualizado automaticamente
 - **Logs Detalhados**: Auditoria completa de todas as operações
+- **Diagnóstico**: Comandos para debug de pedidos específicos ⭐ **JANEIRO 2025**
+- **Auto-recuperação**: Lookup automático de ProdutoTamanho via legacy fields ⭐ **JANEIRO 2025**
 
 **🎯 Interface Admin:**
 - **Produtos**: Lista com estoque total, margem de lucro, status visual
@@ -326,10 +340,9 @@ https://api.oneway.mevamfranca.com.br/api/setup-estoque/
 ```
 - 📊 Estatísticas em tempo real (esgotados, baixo estoque, pendentes)
 - 🔄 Botões de comando (Reset, Sincronizar, Gerar JSON)
-- 📋 Logs de execução via AJAX
+- 📋 Logs de execução via AJAX (persistentes até fechar manualmente) ⭐ **JANEIRO 2025**
 - 🔐 Autenticação obrigatória (@staff_member_required)
 - 📱 Interface responsiva e moderna
-[Botão clicado] [ID capturado] [Validação] [Estoque real] [Atualização]
 ```
 
 **Models Django:**
@@ -467,7 +480,12 @@ MERCADOPAGO_ACCESS_TOKEN=APP_USR_xxx
   - ✅ **#35**: Interface admin completa para produtos e estoque
   - ✅ **#36**: Comando sincronização híbrido (novo + legacy)
   - ✅ **#37**: Frontend integrado com IDs numéricos Django
-- ✅ **Janeiro 2025**: Melhorias UX do carrinho + histórico movimentações ⭐ **NOVO**
+- ✅ **Janeiro 2025**: Correções críticas sincronização + diagnóstico ⭐ **NOVO**
+  - ✅ **Fix lógica exclusão**: Pedidos com ItemPedido não eram processados corretamente
+  - ✅ **Auto-lookup**: ItemPedido sem produto_tamanho agora usa campos legacy
+  - ✅ **Comando --reprocessar**: Incluir pedidos já decrementados na sincronização
+  - ✅ **Comandos diagnóstico**: verificar_movimentacoes e testar_movimentacoes
+  - ✅ **Dashboard logs**: Logs permanecem visíveis até fechamento manual
 
 ### Metodologia Issues
 - **code-complete**: Código implementado, mas não testado
