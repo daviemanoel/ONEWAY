@@ -155,7 +155,7 @@
     },
     "almoco-sabado": {
       "id": "5",
-      "title": "🍽️ Almoço - Sábado",
+      "title": "Almoço - Sábado",
       "price": 23.00,
       "preco_custo": 15.00,
       "image": "./img/2.png",
@@ -171,7 +171,7 @@
     },
     "jantar-sabado": {
       "id": "6",
-      "title": "🍛 Jantar - Sábado",
+      "title": "Jantar - Sábado",
       "price": 13.00,
       "preco_custo": 11.00,
       "image": "./img/2.png",
