@@ -830,6 +830,13 @@
 
             // Adicionar item ao carrinho
             addItem(productId, size, productSizeId = null) {
+                // Verificar se productsData foi carregado
+                if (!productsData || !productsData.products) {
+                    console.error('❌ Dados dos produtos não carregados ainda. Tente novamente em alguns segundos.');
+                    alert('Dados dos produtos ainda não foram carregados. Tente novamente em alguns segundos.');
+                    return false;
+                }
+                
                 // Buscar produto pelo ID dentro do objeto products
                 let product = null;
                 
@@ -1197,6 +1204,13 @@
                                     }
                                 }
                             }
+                            
+                            if (!productSizeId) {
+                                console.error('❌ product_size_id não encontrado para produto de alimentação:', productId);
+                                alert('Erro ao adicionar produto. Dados não carregados completamente.');
+                                return;
+                            }
+                            
                             console.log('🍽️ Produto de alimentação:', { productId, size, productSizeId });
                         } else if (productCard) {
                             // Produto com tamanhos (camisetas)
