@@ -487,6 +487,85 @@ MERCADOPAGO_ACCESS_TOKEN=APP_USR_xxx
   - ✅ **Comandos diagnóstico**: verificar_movimentacoes e testar_movimentacoes
   - ✅ **Dashboard logs**: Logs permanecem visíveis até fechamento manual
 
+### Sessão 24-25 Julho 2025: Sistema de Alimentação e Validação de Produtos Inativos ⭐ **NOVO**
+
+#### Contexto da Sessão
+**Objetivo inicial**: Adicionar área de compra de alimentação (almoço e jantar sábado) no site
+
+#### Issues Resolvidas:
+- ✅ **Issue #54**: Sistema de alimentação implementado
+  - ✅ HTML: Seção "Alimentação do Evento" com cards de almoço/jantar
+  - ✅ CSS: Design responsivo com gradientes e hover effects  
+  - ✅ JavaScript: Integração com carrinho existente
+  - ✅ Backend: Suporte a produtos com tamanho UNICO
+  - ✅ Products.json: Produtos ID 5 (almoço) e 6 (jantar) adicionados
+
+- ✅ **Issue #55**: Django Admin - Suporte a produtos de alimentação
+  - ✅ Models: PRODUTOS_CHOICES expandido com almoco-sabado e jantar-sabado
+  - ✅ Models: TAMANHOS_CHOICES expandido com UNICO
+  - ✅ Migração: 0007_adicionar_produtos_alimentacao.py criada
+  - ✅ Comando migrar_produtos: Cadastro automático via dashboard
+
+- ✅ **Issue #56**: Validação de produto ativo no sistema
+  - ✅ Models: Método esta_disponivel agora valida produto.ativo
+  - ✅ Backend: Produtos inativos ficam indisponíveis automaticamente
+  - ✅ Command: gerar_products_json inclui produtos inativos (marked as unavailable)
+  - ✅ Frontend: Botões desabilitados para produtos sem tamanhos disponíveis
+
+#### Problemas Encontrados e Soluções:
+
+**🚨 Problema 1: Erro "UNICO não é escolha válida"**
+- **Causa**: Django não aceitava tamanho UNICO (só P,M,G,GG)
+- **Fix temporário**: Mudar para tamanho G no admin e frontend
+- **Fix definitivo**: Adicionar UNICO nas TAMANHOS_CHOICES
+
+**🚨 Problema 2: Erro "almoco-sabado não é escolha válida"**  
+- **Causa**: Django só aceitava 4 camisetas nas PRODUTOS_CHOICES
+- **Fix temporário horrível**: Mapear alimentação para camiseta-marrom no server.js
+- **Fix definitivo**: Adicionar produtos alimentação nas PRODUTOS_CHOICES
+
+**🚨 Problema 3: Frontend não respeitava produto inativo**
+- **Causa**: gerar_products_json filtrava apenas produtos ativos
+- **Fix**: Incluir todos produtos, usar esta_disponivel para marcar disponibilidade
+
+**🚨 Problema 4: Botões alimentação permaneciam azuis (não implementado completamente)**
+- **Tentativa 1**: Lógica de verificação de disponibilidade (falhou)
+- **Tentativa 2**: Função updateMealButtons() dinâmica (falhou)  
+- **Solução temporária**: `display: none` nos botões .meal-btn
+
+#### Estado Atual (24/07/2025 23:20):
+
+**✅ Funcionando:**
+- Sistema de alimentação HTML/CSS completo
+- Carrinho suporta múltiplos produtos + alimentação  
+- Django aceita produtos de alimentação (almoco-sabado, jantar-sabado)
+- Django aceita tamanho UNICO
+- Produtos inativos ficam indisponíveis no sistema
+- Validação completa de produto.ativo
+
+**❌ Pendente para amanhã:**
+- **Botões de alimentação desabilitados quando produto inativo**
+  - Botões estão escondidos (display: none) temporariamente
+  - Precisa implementar corretamente a lógica de updateMealButtons()
+  - Verificar por que função não funcionou conforme esperado
+
+#### Arquivos Modificados na Sessão:
+```
+web/products.json - Produtos alimentação adicionados
+web/index.html - Seção alimentação + fallback dados + updateMealButtons()
+web/Css/style.css - Estilos alimentação + botões desabilitados + display: none
+web/server.js - Hack temporário removido (camiseta-marrom mapping)
+api/pedidos/models.py - PRODUTOS_CHOICES + TAMANHOS_CHOICES + esta_disponivel
+api/pedidos/management/commands/gerar_products_json.py - Incluir produtos inativos
+api/pedidos/migrations/0007_adicionar_produtos_alimentacao.py - Migração choices
+```
+
+#### Próximos Passos (Para Amanhã):
+1. **Debug função updateMealButtons()**: Verificar por que não funcionou
+2. **Remover display: none**: Implementar lógica correta de desabilitação
+3. **Testar produtos inativos**: Confirmar que sistema funciona end-to-end
+4. **Considerar UX**: Melhor feedback visual para produtos indisponíveis
+
 ### Metodologia Issues
 - **code-complete**: Código implementado, mas não testado
 - **testing**: Em fase de testes
