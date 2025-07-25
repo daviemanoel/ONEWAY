@@ -559,6 +559,9 @@
                 // Inicializar carrinho após produtos carregarem
                 initializeCartAfterProducts();
                 
+                // Atualizar botões de alimentação baseado na disponibilidade
+                updateMealButtons(data);
+                
             } catch (error) {
                 console.error('❌ Erro ao carregar produtos:', error);
                 console.error('❌ Stack trace:', error.stack);
@@ -1572,6 +1575,42 @@
             } else {
                 cart.updateAddToCartButtons();
                 console.log('🛒 Botões do carrinho atualizados');
+            }
+        }
+        
+        function updateMealButtons(data) {
+            console.log('🍽️ Atualizando botões de alimentação...');
+            
+            // Verificar se almoço está disponível
+            const almoco = data.products['almoco-sabado'];
+            if (almoco) {
+                const almocoButton = document.querySelector('[data-product-id="5"]');
+                const almocoAvailable = almoco.sizes && almoco.sizes['UNICO'] && almoco.sizes['UNICO'].available;
+                
+                if (almocoButton) {
+                    if (!almocoAvailable) {
+                        almocoButton.textContent = 'Produto Indisponível';
+                        almocoButton.classList.add('disabled');
+                        almocoButton.disabled = true;
+                        console.log('🍽️ Almoço marcado como indisponível');
+                    }
+                }
+            }
+            
+            // Verificar se jantar está disponível
+            const jantar = data.products['jantar-sabado'];
+            if (jantar) {
+                const jantarButton = document.querySelector('[data-product-id="6"]');
+                const jantarAvailable = jantar.sizes && jantar.sizes['UNICO'] && jantar.sizes['UNICO'].available;
+                
+                if (jantarButton) {
+                    if (!jantarAvailable) {
+                        jantarButton.textContent = 'Produto Indisponível';
+                        jantarButton.classList.add('disabled');
+                        jantarButton.disabled = true;
+                        console.log('🍽️ Jantar marcado como indisponível');
+                    }
+                }
             }
         }
 
