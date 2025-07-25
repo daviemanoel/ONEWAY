@@ -539,7 +539,13 @@
                                         }).join('')}
                                     </div>
                                 </div>
-                                <button class="product-btn add-to-cart" data-product-id="${product.id}">Adicionar ao Carrinho</button>
+                                ${(() => {
+                                    const hasAvailableSize = Object.values(product.sizes).some(sizeData => sizeData.available);
+                                    const buttonClass = hasAvailableSize ? "product-btn add-to-cart" : "product-btn add-to-cart disabled";
+                                    const buttonText = hasAvailableSize ? "Adicionar ao Carrinho" : "Produto Indisponível";
+                                    const disabled = hasAvailableSize ? "" : "disabled";
+                                    return `<button class="${buttonClass}" data-product-id="${product.id}" ${disabled}>${buttonText}</button>`;
+                                })()}
                             </div>
                         </div>
                     `;
@@ -1327,6 +1333,12 @@
                     button.addEventListener('click', (e) => {
                         console.log('🛒 Botão carrinho clicado!', e);
                         e.preventDefault();
+                        
+                        // Verificar se o botão está desabilitado
+                        if (button.disabled || button.classList.contains('disabled')) {
+                            console.log('⚠️ Botão desabilitado - produto indisponível');
+                            return;
+                        }
                         
                         const productCard = button.closest('.product-card');
                         const mealCard = button.closest('.meal-card');
