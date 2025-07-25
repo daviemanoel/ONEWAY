@@ -74,7 +74,7 @@ class ProdutoTamanho(models.Model):
     @property
     def esta_disponivel(self):
         """Verifica se o produto está disponível para venda"""
-        return self.disponivel and self.estoque > 0
+        return self.disponivel and self.estoque > 0 and self.produto.ativo
     
     def decrementar_estoque(self, quantidade=1, pedido=None, usuario="", observacao="", origem=""):
         """

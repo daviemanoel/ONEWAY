@@ -71,14 +71,14 @@ class Command(BaseCommand):
                 for tamanho in tamanhos:
                     sizes[tamanho.tamanho] = {
                         "product_size_id": tamanho.id,  # ✨ NOVO CAMPO PRINCIPAL
-                        "available": tamanho.disponivel and tamanho.estoque > 0,
+                        "available": tamanho.esta_disponivel,  # Usa método que valida produto.ativo
                         "qtda_estoque": tamanho.estoque,
                         # Campos legacy preservados
                         "stripe_link": None,
                         "id_stripe": f"prod_{produto.json_key}_{tamanho.tamanho.lower()}"
                     }
                     
-                    status_icon = "✅" if tamanho.disponivel and tamanho.estoque > 0 else "❌"
+                    status_icon = "✅" if tamanho.esta_disponivel else "❌"
                     self.stdout.write(f'    {status_icon} {tamanho.tamanho}: {tamanho.estoque} unidades (ID: {tamanho.id})')
                 
                 # Construir produto completo
