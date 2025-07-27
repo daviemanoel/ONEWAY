@@ -129,6 +129,42 @@
                         </button>
                     </div>
                 </div>
+                
+                <div class="meal-card jantar-card" style="opacity: 0.8;">
+                    <div class="meal-icon">🍢</div>
+                    <div class="meal-info">
+                        <h3 class="meal-title">Jantar - Sábado</h3>
+                        <p class="meal-description">Espetinho Assado</p>
+                        <div class="meal-time">📅 2 de Agosto • 19:00h</div>
+                        
+                        <div class="jantar-options">
+                            <div class="sabor-section">
+                                <label for="sabor-espetinho">Escolha o sabor:</label>
+                                <select class="custom-select" id="sabor-espetinho" onchange="updateJantarPrice()">
+                                    <option value="7" data-name="Carne Bovina">Carne Bovina</option>
+                                    <option value="8" data-name="Medalhão de Frango">Medalhão de Frango</option>
+                                    <option value="9" data-name="Linguiça">Linguiça</option>
+                                </select>
+                            </div>
+                            
+                            <div class="adicional-section">
+                                <div class="checkbox-group" onclick="toggleAdicional()">
+                                    <div class="checkbox" id="adicional-checkbox">
+                                        <span class="checkmark">✓</span>
+                                    </div>
+                                    <label>Adicional: Mandioca + Vinagrete (+R$ 3,00)</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="meal-price-section">
+                        <div class="price-breakdown" id="jantar-breakdown">Espetinho</div>
+                        <div class="meal-price" id="jantar-price">R$ 10,00</div>
+                        <p style="color: #666; font-size: 14px; text-align: center; margin: 10px 0; padding: 10px; background: #f0f0f0; border-radius: 5px;">
+                            👇 Use a seção "Espetinhos" abaixo para adicionar ao carrinho
+                        </p>
+                    </div>
+                </div>
             </div>
         </div>
     </section>
