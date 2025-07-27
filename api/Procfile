@@ -1,1 +1,1 @@
-web: python fix_db.py && python manage.py collectstatic --noinput && gunicorn oneway_admin.wsgi:application
+web: python fix_db.py && python manage.py migrate --noinput && python manage.py collectstatic --noinput && gunicorn oneway_admin.wsgi:application
