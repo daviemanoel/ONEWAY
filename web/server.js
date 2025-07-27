@@ -1586,7 +1586,13 @@ app.post('/api/cart/checkout', async (req, res) => {
         timestamp: new Date().toISOString()
       });
       return res.status(500).json({
-        error: 'Erro ao criar pedido. Tente novamente.'
+        error: 'Erro ao criar pedido. Tente novamente.',
+        details: error.response?.data || error.message,
+        debug: {
+          status: error.response?.status,
+          data: error.response?.data,
+          message: error.message
+        }
       });
     }
     
