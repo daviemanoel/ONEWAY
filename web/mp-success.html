@@ -373,28 +373,62 @@
                 
                 console.log('📤 Dados para atualização:', dadosAtualizacao);
                 
-                const atualizarResponse = await fetch(`/api/django/pedidos/${pedidoExistente.id}/atualizar_status/`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(dadosAtualizacao)
-                });
+                // Implementar retry automático com backoff exponencial
+                const maxTentativas = 3;
+                let tentativaAtual = 1;
+                let sucesso = false;
                 
-                if (atualizarResponse.ok) {
-                    const pedidoAtualizado = await atualizarResponse.json();
-                    console.log('✅ Pedido atualizado com sucesso:', pedidoAtualizado);
-                    exibirSucessoAtualizacao(pedidoAtualizado);
-                } else {
-                    const errorData = await atualizarResponse.json();
-                    console.error('❌ Erro ao atualizar pedido:', errorData);
-                    
-                    // Verificar se já foi processado
-                    if (errorData.error && errorData.error.includes('já processado')) {
-                        exibirJaProcessado();
-                    } else {
-                        throw new Error(errorData.error || 'Erro ao atualizar pedido');
+                while (tentativaAtual <= maxTentativas && !sucesso) {
+                    try {
+                        console.log(`🔄 Tentativa ${tentativaAtual}/${maxTentativas} de atualização do pedido...`);
+                        
+                        const atualizarResponse = await fetch(`/api/django/pedidos/${pedidoExistente.id}/atualizar_status/`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(dadosAtualizacao),
+                            timeout: 10000 // 10 segundos timeout
+                        });
+                        
+                        if (atualizarResponse.ok) {
+                            const pedidoAtualizado = await atualizarResponse.json();
+                            console.log('✅ Pedido atualizado com sucesso na tentativa', tentativaAtual);
+                            exibirSucessoAtualizacao(pedidoAtualizado);
+                            sucesso = true;
+                        } else {
+                            const errorData = await atualizarResponse.json();
+                            console.error(`❌ Erro na tentativa ${tentativaAtual}:`, errorData);
+                            
+                            // Verificar se já foi processado (erro não crítico)
+                            if (errorData.error && errorData.error.includes('já processado')) {
+                                console.log('ℹ️ Pedido já foi processado anteriormente');
+                                exibirJaProcessado();
+                                sucesso = true;
+                            } else if (tentativaAtual === maxTentativas) {
+                                // Última tentativa falhou
+                                throw new Error(errorData.error || 'Erro ao atualizar pedido após múltiplas tentativas');
+                            } else {
+                                // Aguardar antes da próxima tentativa (backoff exponencial)
+                                const delayMs = Math.pow(2, tentativaAtual) * 1000; // 2s, 4s, 8s
+                                console.log(`⏳ Aguardando ${delayMs/1000}s antes da próxima tentativa...`);
+                                await new Promise(resolve => setTimeout(resolve, delayMs));
+                            }
+                        }
+                    } catch (fetchError) {
+                        console.error(`❌ Erro de rede na tentativa ${tentativaAtual}:`, fetchError);
+                        
+                        if (tentativaAtual === maxTentativas) {
+                            throw new Error(`Erro de conectividade após ${maxTentativas} tentativas: ${fetchError.message}`);
+                        }
+                        
+                        // Aguardar antes da próxima tentativa
+                        const delayMs = Math.pow(2, tentativaAtual) * 1000;
+                        console.log(`⏳ Aguardando ${delayMs/1000}s antes da próxima tentativa (erro de rede)...`);
+                        await new Promise(resolve => setTimeout(resolve, delayMs));
                     }
+                    
+                    tentativaAtual++;
                 }
                 
             } catch (error) {
