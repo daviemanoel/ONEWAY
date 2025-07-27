@@ -1351,12 +1351,36 @@ app.get('/env-check', (req, res) => {
 // Endpoint para processar checkout com múltiplos itens
 app.post('/api/cart/checkout', async (req, res) => {
   try {
+    const timestamp = new Date().toISOString();
     const { buyer, items, paymentMethod } = req.body;
     
-    console.log('🛒 Processando checkout do carrinho...');
-    console.log('👤 Comprador:', buyer);
-    console.log('📦 Itens:', items.length, 'produtos');
-    console.log('💳 Método:', paymentMethod);
+    console.log('🚀 INICIANDO CART CHECKOUT:', { 
+      timestamp,
+      ip: req.ip,
+      userAgent: req.get('User-Agent'),
+      contentType: req.get('Content-Type'),
+      contentLength: req.get('Content-Length')
+    });
+    
+    console.log('👤 DADOS COMPRADOR:', { 
+      name: buyer?.name,
+      email: buyer?.email ? buyer.email.replace(/(.{2}).*(@.*)/, '$1***$2') : undefined,
+      phone: buyer?.phone ? buyer.phone.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3') : undefined,
+      hasAllFields: !!(buyer?.name && buyer?.email && buyer?.phone)
+    });
+    
+    console.log('📦 DADOS ITENS:', { 
+      itemsCount: items?.length || 0,
+      items: items?.map(item => ({
+        productId: item.productId,
+        size: item.size,
+        quantity: item.quantity,
+        price: `R$ ${item.price}`,
+        hasProductSizeId: !!item.product_size_id
+      })) || []
+    });
+    
+    console.log('💳 DADOS PAGAMENTO:', { paymentMethod, timestamp });
     
     // Validar dados obrigatórios
     if (!buyer || !buyer.name || !buyer.email || !buyer.phone) {
@@ -1504,19 +1528,35 @@ app.post('/api/cart/checkout', async (req, res) => {
     try {
       const firstProductKey = findProductKeyById(validatedItems[0].productId);
       
-      const pedidoResponse = await axios.post(`${DJANGO_API_URL}/pedidos/`, {
-        // Dados do comprador (serão processados automaticamente)
+      console.log('💾 CRIANDO PEDIDO NO DJANGO:', {
+        external_reference,
+        firstProductKey,
+        paymentMethod,
+        finalPrice: `R$ ${finalPrice.toFixed(2)}`,
+        itemsCount: validatedItems.length,
+        djangoUrl: `${DJANGO_API_URL}/pedidos/`,
+        timestamp: new Date().toISOString()
+      });
+      
+      const pedidoData = {
         nome: buyer.name,
         email: buyer.email,
         telefone: buyer.phone,
-        // Dados do pedido principal (usando primeiro item para compatibilidade)
         produto: firstProductKey,
         tamanho: validatedItems[0].size,
         preco: finalPrice,
         forma_pagamento: paymentMethod,
         external_reference: external_reference,
         observacoes: `Carrinho com ${validatedItems.length} itens diferentes`
-      }, {
+      };
+      
+      console.log('📤 DADOS PEDIDO DJANGO:', {
+        ...pedidoData,
+        email: pedidoData.email.replace(/(.{2}).*(@.*)/, '$1***$2'),
+        telefone: pedidoData.telefone.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3')
+      });
+      
+      const pedidoResponse = await axios.post(`${DJANGO_API_URL}/pedidos/`, pedidoData, {
         headers: { 
           'Authorization': `Token ${DJANGO_API_TOKEN}`,
           'Content-Type': 'application/json'
@@ -1524,17 +1564,41 @@ app.post('/api/cart/checkout', async (req, res) => {
       });
       
       pedidoId = pedidoResponse.data.id;
-      console.log(`✅ Pedido criado: ID ${pedidoId}`);
+      console.log('✅ PEDIDO CRIADO COM SUCESSO:', {
+        pedidoId,
+        external_reference,
+        status: pedidoResponse.status,
+        responseData: pedidoResponse.data,
+        timestamp: new Date().toISOString()
+      });
     } catch (error) {
-      console.error('❌ Erro ao criar pedido:', error.response?.data || error.message);
+      console.error('❌ ERRO CRÍTICO CRIAÇÃO PEDIDO:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        responseData: error.response?.data,
+        stack: error.stack,
+        config: {
+          url: error.config?.url,
+          method: error.config?.method,
+          headers: error.config?.headers ? { ...error.config.headers, Authorization: '[HIDDEN]' } : undefined
+        },
+        timestamp: new Date().toISOString()
+      });
       return res.status(500).json({
         error: 'Erro ao criar pedido. Tente novamente.'
       });
     }
     
     // Criar ItemPedido para cada item do carrinho
+    console.log('📦 CRIANDO ITENS DO PEDIDO:', { 
+      pedidoId, 
+      itemsCount: validatedItems.length,
+      timestamp: new Date().toISOString()
+    });
+    
     try {
-      for (const item of validatedItems) {
+      for (const [index, item] of validatedItems.entries()) {
         const productKey = findProductKeyById(item.productId);
         
         // Aplicar desconto PIX no preço unitário se necessário
@@ -1542,23 +1606,43 @@ app.post('/api/cart/checkout', async (req, res) => {
           parseFloat((item.priceUnit * 0.95).toFixed(2)) : // 5% desconto para PIX
           item.priceUnit;
         
-        await axios.post(`${DJANGO_API_URL}/itempedidos/`, {
+        const itemData = {
           pedido: pedidoId,
-          produto: productKey, // Usar chave do produto para Django
+          produto: productKey,
           tamanho: item.size,
           quantidade: item.quantity,
           preco_unitario: precoUnitarioFinal
-        }, {
+        };
+        
+        console.log(`📦 CRIANDO ITEM ${index + 1}/${validatedItems.length}:`, {
+          ...itemData,
+          title: item.title,
+          subtotal: `R$ ${(precoUnitarioFinal * item.quantity).toFixed(2)}`
+        });
+        
+        await axios.post(`${DJANGO_API_URL}/itempedidos/`, itemData, {
           headers: { 
             'Authorization': `Token ${DJANGO_API_TOKEN}`,
             'Content-Type': 'application/json'
           }
         });
         
-        console.log(`✅ ItemPedido criado: ${item.quantity}x ${item.title} (${item.size})`);
+        console.log(`✅ ITEM ${index + 1} CRIADO: ${item.quantity}x ${item.title} (${item.size}) - R$ ${(precoUnitarioFinal * item.quantity).toFixed(2)}`);
       }
+      
+      console.log('✅ TODOS ITENS CRIADOS COM SUCESSO:', { 
+        pedidoId, 
+        totalItens: validatedItems.length,
+        timestamp: new Date().toISOString()
+      });
     } catch (error) {
-      console.error('❌ Erro ao criar itens do pedido:', error.response?.data || error.message);
+      console.error('❌ ERRO AO CRIAR ITENS:', {
+        pedidoId,
+        message: error.message,
+        status: error.response?.status,
+        responseData: error.response?.data,
+        timestamp: new Date().toISOString()
+      });
       // Pedido já foi criado, mas sem itens - não é crítico para o fluxo de pagamento
     }
     
