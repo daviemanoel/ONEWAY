@@ -36,10 +36,17 @@ echo -e "${GREEN}✅ Dependências OK${NC}"
 echo -e "${BLUE}🐍 Configurando Django...${NC}"
 cd api
 
-# Instalar dependências Python se necessário
+# Criar e ativar ambiente virtual Python
 if [ ! -d "venv" ]; then
-    echo -e "${YELLOW}📦 Instalando dependências Python...${NC}"
+    echo -e "${YELLOW}🔧 Criando ambiente virtual Python...${NC}"
+    python -m venv venv
+    echo -e "${YELLOW}📦 Ativando venv e instalando dependências...${NC}"
+    source venv/bin/activate
+    pip install --upgrade pip
     pip install -r requirements.txt
+else
+    echo -e "${GREEN}✅ Ambiente virtual encontrado, ativando...${NC}"
+    source venv/bin/activate
 fi
 
 # Migrar banco se necessário
@@ -79,13 +86,15 @@ echo -e "${GREEN}🎉 Setup completo!${NC}"
 echo -e "${BLUE}📋 Para iniciar os serviços:${NC}"
 echo ""
 echo -e "${YELLOW}Terminal 1 - Django:${NC}"
-echo "cd api && python manage.py runserver"
+echo "cd api && source venv/bin/activate && python manage.py runserver"
 echo ""
 echo -e "${YELLOW}Terminal 2 - Node.js:${NC}" 
 echo "cd web && npm start"
 echo ""
 echo -e "${YELLOW}Terminal 3 - Frontend:${NC}"
 echo "cd web && python -m http.server 8080"
+echo ""
+echo -e "${BLUE}💡 Dica:${NC} Para desativar o venv: ${YELLOW}deactivate${NC}"
 echo ""
 echo -e "${BLUE}URLs:${NC}"
 echo "🌐 Site: http://localhost:8080"

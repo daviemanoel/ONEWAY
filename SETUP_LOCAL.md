@@ -11,7 +11,14 @@
 # Navegar para API
 cd api
 
+# Criar ambiente virtual Python
+python -m venv venv
+
+# Ativar ambiente virtual
+source venv/bin/activate
+
 # Instalar dependências Python
+pip install --upgrade pip
 pip install -r requirements.txt
 
 # Criar banco SQLite local
@@ -29,8 +36,10 @@ python manage.py setup_estoque_simples
 python manage.py criar_token_api
 # ⚠️ COPIAR O TOKEN GERADO
 
-# Iniciar servidor Django
+# Iniciar servidor Django (com venv ativo)
 python manage.py runserver
+
+# IMPORTANTE: Manter venv ativo neste terminal
 ```
 
 ✅ **Django Admin**: http://localhost:8000/admin
@@ -99,19 +108,25 @@ MERCADOPAGO_ACCESS_TOKEN=APP_USR_xxxxx
 ## Comandos Úteis
 
 ```bash
+# Ativar venv (sempre que abrir novo terminal para Django)
+cd api && source venv/bin/activate
+
 # Resetar banco local
 rm api/db.sqlite3
 python manage.py migrate
 python manage.py createsuperuser
 
-# Ver logs Django
+# Ver logs Django (com venv ativo)
 python manage.py runserver --verbosity=2
 
 # Ver logs Node.js
-npm start
+cd web && npm start
 
-# Gerar novo token
-python manage.py criar_token_api
+# Gerar novo token (com venv ativo)
+cd api && source venv/bin/activate && python manage.py criar_token_api
+
+# Desativar venv
+deactivate
 ```
 
 ## Estrutura Desenvolvimento
