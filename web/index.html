@@ -1406,7 +1406,7 @@
                         
                         const productCard = button.closest('.product-card');
                         const mealCard = button.closest('.meal-card');
-                        const productId = button.dataset.productId;
+                        const productId = button.dataset.productId || (mealCard ? mealCard.dataset.productId : null);
 
                         console.log('🛒 Dados do clique:', { productCard, mealCard, productId });
 
