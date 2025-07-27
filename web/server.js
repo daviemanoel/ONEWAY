@@ -1866,6 +1866,23 @@ async function createMercadoPagoPreference(req, res, data) {
     
     console.log('✅ Preferência criada:', result.id);
     
+    // Salvar preference_id no pedido para rastreabilidade
+    try {
+      await axios.post(`${DJANGO_API_URL}/pedidos/${pedido_id}/atualizar_status/`, {
+        preference_id: result.id,
+        observacoes: `Preferência MP criada: ${result.id} em ${new Date().toLocaleString('pt-BR')}`
+      }, {
+        headers: { 
+          'Authorization': `Token ${DJANGO_API_TOKEN}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      console.log('✅ Preference_id salvo no pedido:', result.id);
+    } catch (updateError) {
+      console.error('⚠️ Erro ao salvar preference_id (não crítico):', updateError.message);
+      // Não bloquear o checkout se apenas a atualização falhar
+    }
+    
     res.json({
       success: true,
       orderId: pedido_id,
