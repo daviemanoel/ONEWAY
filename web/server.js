@@ -1510,8 +1510,8 @@ app.post('/api/cart/checkout', async (req, res) => {
     console.log(`👤 Comprador será criado no Django: ${buyer.name} (${buyer.email})`);
     
     // Gerar external_reference único para o pedido
-    const timestamp = Date.now();
-    const external_reference = `ONEWAY-CART-${timestamp}`;
+    const cartTimestamp = Date.now();
+    const external_reference = `ONEWAY-CART-${cartTimestamp}`;
     
     // Função para encontrar chave do produto pelo ID
     function findProductKeyById(productId) {
