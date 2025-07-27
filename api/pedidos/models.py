@@ -7,8 +7,8 @@ class Produto(models.Model):
     """Model para gerenciar produtos do e-commerce"""
     nome = models.CharField(max_length=200, verbose_name="Nome do Produto")
     slug = models.SlugField(unique=True, verbose_name="Slug (para URL)")
-    preco = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Preço")
-    preco_custo = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Preço de Custo")
+    preco = models.DecimalField(max_digits=15, decimal_places=2, verbose_name="Preço")
+    preco_custo = models.DecimalField(max_digits=15, decimal_places=2, verbose_name="Preço de Custo")
     ativo = models.BooleanField(default=True, verbose_name="Ativo")
     ordem = models.IntegerField(default=0, verbose_name="Ordem de Exibição")
     json_key = models.CharField(max_length=100, unique=True, help_text="Chave no products.json para compatibilidade")
@@ -222,7 +222,7 @@ class Pedido(models.Model):
     # Campos legacy (mantidos para compatibilidade)
     produto = models.CharField(max_length=100, choices=PRODUTOS_CHOICES, verbose_name="Produto")
     tamanho = models.CharField(max_length=5, choices=TAMANHOS_CHOICES, verbose_name="Tamanho")
-    preco = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Preço")
+    preco = models.DecimalField(max_digits=15, decimal_places=2, verbose_name="Preço")
     
     # Novo campo para integração com controle de estoque
     produto_tamanho = models.ForeignKey(
@@ -367,7 +367,7 @@ class ItemPedido(models.Model):
         verbose_name="Quantidade"
     )
     preco_unitario = models.DecimalField(
-        max_digits=10, 
+        max_digits=15, 
         decimal_places=2, 
         verbose_name="Preço Unitário"
     )
