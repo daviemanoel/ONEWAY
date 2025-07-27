@@ -46,6 +46,31 @@ class CriarPedidoSerializer(serializers.Serializer):
     external_reference = serializers.CharField(max_length=100, required=False, allow_blank=True)
     status_pagamento = serializers.ChoiceField(choices=Pedido.STATUS_CHOICES, required=False, default='pending')
     
+    def validate(self, data):
+        """Validação customizada para garantir dados obrigatórios conforme forma de pagamento"""
+        forma_pagamento = data.get('forma_pagamento')
+        external_reference = data.get('external_reference')
+        
+        # Para pagamento presencial, gerar external_reference automático se não fornecido
+        if forma_pagamento == 'presencial':
+            if not external_reference or external_reference.strip() == '':
+                import time
+                data['external_reference'] = f'PRESENCIAL-{int(time.time())}'
+        
+        # Para outros pagamentos via gateway, apenas logar warning se não tiver external_reference
+        # IMPORTANTE: NÃO bloquear criação para manter compatibilidade com sistema atual
+        pagamentos_com_gateway = ['pix', '2x', '4x', 'paypal', 'paypal_3x', 'mercadopago']
+        if forma_pagamento in pagamentos_com_gateway:
+            if not external_reference or external_reference.strip() == '':
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(
+                    f"⚠️ PEDIDO SEM EXTERNAL_REFERENCE: forma_pagamento={forma_pagamento} "
+                    f"pode ficar órfão se página de retorno falhar"
+                )
+        
+        return data
+    
     def create(self, validated_data):
         # Extrair dados do comprador
         comprador_data = {
@@ -68,11 +93,26 @@ class CriarPedidoSerializer(serializers.Serializer):
                 comprador.telefone = comprador_data['telefone']
             comprador.save()
         
+        # Log da criação do pedido para auditoria
+        forma_pagamento = validated_data.get('forma_pagamento')
+        external_reference = validated_data.get('external_reference')
+        payment_id = validated_data.get('payment_id')
+        
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        logger.info(f"🔍 CRIANDO PEDIDO: forma_pagamento={forma_pagamento}, external_reference={external_reference}, payment_id={payment_id}")
+        
         # Criar o pedido
         pedido = Pedido.objects.create(
             comprador=comprador,
             **validated_data
         )
+        
+        # Log adicional para pedidos sem dados MP quando deveriam ter
+        pagamentos_com_gateway = ['pix', '2x', '4x', 'paypal', 'paypal_3x', 'mercadopago']
+        if forma_pagamento in pagamentos_com_gateway and not payment_id:
+            logger.warning(f"⚠️ ATENÇÃO: Pedido {pedido.id} criado com pagamento {forma_pagamento} mas SEM payment_id - pode ficar órfão!")
         
         return pedido
 
