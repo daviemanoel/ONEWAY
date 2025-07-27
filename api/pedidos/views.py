@@ -258,6 +258,76 @@ def consultar_mp_admin(request):
         })
 
 
+@action(detail=False, methods=['get'])
+def pedidos_incompletos(self, request):
+    """Lista pedidos que podem estar incompletos (sem dados MP quando deveriam ter)"""
+    from django.db.models import Q
+    
+    # Formas de pagamento que requerem dados MP
+    pagamentos_com_gateway = ['pix', '2x', '4x', 'paypal', 'paypal_3x', 'mercadopago']
+    
+    # Buscar pedidos com forma de pagamento via gateway mas sem dados MP
+    pedidos_problematicos = Pedido.objects.filter(
+        Q(forma_pagamento__in=pagamentos_com_gateway) &
+        (Q(payment_id__isnull=True) | Q(payment_id__exact='') |
+         Q(external_reference__isnull=True) | Q(external_reference__exact=''))
+    ).select_related('comprador').order_by('-data_pedido')
+    
+    # Buscar também pedidos antigos sem status atualizado há muito tempo
+    from django.utils import timezone
+    from datetime import timedelta
+    
+    limite_tempo = timezone.now() - timedelta(hours=2)
+    pedidos_antigos_pendentes = Pedido.objects.filter(
+        forma_pagamento__in=pagamentos_com_gateway,
+        status_pagamento='pending',
+        data_pedido__lt=limite_tempo
+    ).select_related('comprador').order_by('-data_pedido')
+    
+    # Serializar os dados
+    problematicos_data = []
+    for pedido in pedidos_problematicos:
+        problematicos_data.append({
+            'id': pedido.id,
+            'comprador': pedido.comprador.nome,
+            'email': pedido.comprador.email,
+            'produto': pedido.get_produto_display(),
+            'tamanho': pedido.tamanho,
+            'forma_pagamento': pedido.get_forma_pagamento_display(),
+            'external_reference': pedido.external_reference,
+            'payment_id': pedido.payment_id,
+            'status_pagamento': pedido.get_status_pagamento_display(),
+            'data_pedido': pedido.data_pedido.strftime('%d/%m/%Y %H:%M'),
+            'problema': 'Dados MP ausentes'
+        })
+    
+    antigos_data = []
+    for pedido in pedidos_antigos_pendentes:
+        antigos_data.append({
+            'id': pedido.id,
+            'comprador': pedido.comprador.nome,
+            'email': pedido.comprador.email,
+            'produto': pedido.get_produto_display(),
+            'tamanho': pedido.tamanho,
+            'forma_pagamento': pedido.get_forma_pagamento_display(),
+            'external_reference': pedido.external_reference,
+            'payment_id': pedido.payment_id,
+            'status_pagamento': pedido.get_status_pagamento_display(),
+            'data_pedido': pedido.data_pedido.strftime('%d/%m/%Y %H:%M'),
+            'problema': f'Pendente há mais de 2h'
+        })
+    
+    return Response({
+        'pedidos_sem_dados_mp': problematicos_data,
+        'pedidos_antigos_pendentes': antigos_data,
+        'total_problematicos': len(problematicos_data),
+        'total_antigos': len(antigos_data),
+        'resumo': {
+            'total_problemas': len(problematicos_data) + len(antigos_data),
+            'tipos_problema': ['Dados MP ausentes', 'Pendente há mais de 2h']
+        }
+    })
+
 from django.http import HttpResponse, JsonResponse
 from django.core.management import call_command
 from django.views.decorators.csrf import csrf_exempt
