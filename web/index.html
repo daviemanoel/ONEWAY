@@ -1741,22 +1741,14 @@
             
             // Adicionar espetinho ao carrinho
             const espetinhoSizeId = espetinhoProduct.sizes['UNICO'].product_size_id;
-            cart.addItem(espetinhoId, 'UNICO', espetinhoSizeId, 1, {
-                title: `Espetinho de ${espetinhoName}`,
-                price: espetinhoProduct.price,
-                image: espetinhoProduct.image
-            });
+            cart.addItem(espetinhoId, 'UNICO', espetinhoSizeId);
             
             // Se adicional selecionado, adicionar também
             if (adicionalSelecionado) {
                 const adicionalProduct = productsData.products['adicional-mandioca'];
                 if (adicionalProduct) {
                     const adicionalSizeId = adicionalProduct.sizes['UNICO'].product_size_id;
-                    cart.addItem(adicionalProduct.id, 'UNICO', adicionalSizeId, 1, {
-                        title: adicionalProduct.title,
-                        price: adicionalProduct.price,
-                        image: adicionalProduct.image
-                    });
+                    cart.addItem(adicionalProduct.id, 'UNICO', adicionalSizeId);
                 }
             }
             
