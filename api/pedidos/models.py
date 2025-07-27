@@ -180,6 +180,10 @@ class Pedido(models.Model):
         ('camiseta-the-way', 'Camiseta The Way'),
         ('almoco-sabado', 'Almoço - Sábado'),
         ('jantar-sabado', 'Jantar - Sábado'),
+        ('espetinho-carne', 'Espetinho de Carne Bovina'),
+        ('espetinho-frango', 'Espetinho Medalhão de Frango'),
+        ('espetinho-linguica', 'Espetinho de Linguiça'),
+        ('adicional-mandioca', 'Adicional: Mandioca + Vinagrete'),
     ]
     
     TAMANHOS_CHOICES = [

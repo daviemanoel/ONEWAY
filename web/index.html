@@ -130,16 +130,37 @@
                     </div>
                 </div>
                 
-                <div class="meal-card" data-product-id="6" data-product-price="13.00">
-                    <div class="meal-icon">🍛</div>
+                <div class="meal-card jantar-card" data-product-price="10.00">
+                    <div class="meal-icon">🍢</div>
                     <div class="meal-info">
                         <h3 class="meal-title">Jantar - Sábado</h3>
-                        <p class="meal-description">Jantar especial de encerramento do evento</p>
+                        <p class="meal-description">Espetinho especial de encerramento do evento</p>
                         <div class="meal-time">📅 2 de Agosto • 19:00h</div>
+                        
+                        <div class="jantar-options">
+                            <div class="sabor-section">
+                                <label for="sabor-espetinho">Escolha o sabor:</label>
+                                <select class="custom-select" id="sabor-espetinho" onchange="updateJantarPrice()">
+                                    <option value="7" data-name="Carne Bovina">Carne Bovina</option>
+                                    <option value="8" data-name="Medalhão de Frango">Medalhão de Frango</option>
+                                    <option value="9" data-name="Linguiça">Linguiça</option>
+                                </select>
+                            </div>
+                            
+                            <div class="adicional-section">
+                                <div class="checkbox-group" onclick="toggleAdicional()">
+                                    <div class="checkbox" id="adicional-checkbox">
+                                        <span class="checkmark">✓</span>
+                                    </div>
+                                    <label>Adicional: Mandioca + Vinagrete (+R$ 3,00)</label>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <div class="meal-price-section">
-                        <div class="meal-price">R$ 13,00</div>
-                        <button class="meal-btn add-to-cart" data-product-id="6" data-meal-type="jantar">
+                        <div class="price-breakdown" id="jantar-breakdown">Espetinho</div>
+                        <div class="meal-price" id="jantar-price">R$ 10,00</div>
+                        <button class="meal-btn add-to-cart" onclick="adicionarJantarAoCarrinho()">
                             Adicionar ao Carrinho
                         </button>
                     </div>
@@ -1612,6 +1633,94 @@
                     }
                 }
             }
+        }
+
+        // ========== FUNÇÕES DO CARD DE JANTAR ==========
+        let adicionalSelecionado = false;
+
+        function toggleAdicional() {
+            adicionalSelecionado = !adicionalSelecionado;
+            const checkbox = document.getElementById('adicional-checkbox');
+            
+            if (adicionalSelecionado) {
+                checkbox.classList.add('checked');
+            } else {
+                checkbox.classList.remove('checked');
+            }
+            
+            updateJantarPrice();
+        }
+
+        function updateJantarPrice() {
+            const basePrice = 10.00;
+            const adicionalPrice = 3.00;
+            let total = basePrice;
+            let breakdown = 'Espetinho';
+            
+            if (adicionalSelecionado) {
+                total += adicionalPrice;
+                breakdown += ' + Mandioca + Vinagrete';
+            }
+            
+            // Atualizar exibição
+            document.getElementById('jantar-breakdown').textContent = breakdown;
+            document.getElementById('jantar-price').textContent = `R$ ${total.toFixed(2).replace('.', ',')}`;
+        }
+
+        function adicionarJantarAoCarrinho() {
+            if (!productsData || !productsData.products) {
+                alert('Aguarde o carregamento dos produtos...');
+                return;
+            }
+
+            // Obter espetinho selecionado
+            const selectElement = document.getElementById('sabor-espetinho');
+            const espetinhoId = selectElement.value;
+            const espetinhoName = selectElement.options[selectElement.selectedIndex].getAttribute('data-name');
+            
+            // Buscar dados do espetinho
+            let espetinhoProduct = null;
+            for (const [key, product] of Object.entries(productsData.products)) {
+                if (product.id === espetinhoId) {
+                    espetinhoProduct = product;
+                    break;
+                }
+            }
+            
+            if (!espetinhoProduct) {
+                alert('Erro ao localizar produto. Tente novamente.');
+                return;
+            }
+            
+            // Adicionar espetinho ao carrinho
+            const espetinhoSizeId = espetinhoProduct.sizes['UNICO'].product_size_id;
+            cart.addItem(espetinhoId, 'UNICO', espetinhoSizeId, 1, {
+                title: `Espetinho de ${espetinhoName}`,
+                price: espetinhoProduct.price,
+                image: espetinhoProduct.image
+            });
+            
+            // Se adicional selecionado, adicionar também
+            if (adicionalSelecionado) {
+                const adicionalProduct = productsData.products['adicional-mandioca'];
+                if (adicionalProduct) {
+                    const adicionalSizeId = adicionalProduct.sizes['UNICO'].product_size_id;
+                    cart.addItem(adicionalProduct.id, 'UNICO', adicionalSizeId, 1, {
+                        title: adicionalProduct.title,
+                        price: adicionalProduct.price,
+                        image: adicionalProduct.image
+                    });
+                }
+            }
+            
+            // Resetar seleções
+            document.getElementById('sabor-espetinho').selectedIndex = 0;
+            adicionalSelecionado = false;
+            document.getElementById('adicional-checkbox').classList.remove('checked');
+            updateJantarPrice();
+            
+            // Abrir carrinho
+            cart.openPanel();
         }
 
     </script>

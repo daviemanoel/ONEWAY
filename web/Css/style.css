@@ -2861,3 +2861,149 @@ img {
     font-size: 0.85rem;
   }
 }
+
+/* ===== CARD DE JANTAR CUSTOMIZADO ===== */
+.jantar-card {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.jantar-options {
+  margin-top: 20px;
+  padding: 20px;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.sabor-section {
+  margin-bottom: 20px;
+}
+
+.sabor-section label {
+  display: block;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.custom-select {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid #e9ecef;
+  border-radius: 12px;
+  background: white;
+  cursor: pointer;
+  appearance: none;
+  font-size: 16px;
+  color: #2c3e50;
+  font-family: "Montserrat", sans-serif;
+  transition: all 0.3s ease;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%235a5c69' d='M10.293 3.293L6 7.586 1.707 3.293A1 1 0 00.293 4.707l5 5a1 1 0 001.414 0l5-5a1 1 0 10-1.414-1.414z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 16px center;
+  background-size: 12px;
+  padding-right: 40px;
+}
+
+.custom-select:hover {
+  border-color: #7c4dff;
+}
+
+.custom-select:focus {
+  outline: none;
+  border-color: #7c4dff;
+  box-shadow: 0 0 0 3px rgba(124, 77, 255, 0.1);
+}
+
+.adicional-section {
+  margin-top: 16px;
+}
+
+.checkbox-group {
+  display: flex;
+  align-items: center;
+  padding: 16px;
+  border: 2px solid #e9ecef;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: white;
+  gap: 12px;
+}
+
+.checkbox-group:hover {
+  border-color: #7c4dff;
+  background: rgba(124, 77, 255, 0.02);
+}
+
+.checkbox {
+  width: 22px;
+  height: 22px;
+  border: 2px solid #ddd;
+  border-radius: 4px;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+
+.checkbox.checked {
+  background: #7c4dff;
+  border-color: #7c4dff;
+}
+
+.checkbox .checkmark {
+  display: none;
+  color: white;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.checkbox.checked .checkmark {
+  display: block;
+}
+
+.checkbox-group label {
+  margin: 0;
+  font-size: 15px;
+  color: #2c3e50;
+  font-weight: 500;
+  user-select: none;
+}
+
+.price-breakdown {
+  font-size: 14px;
+  color: #7f8c8d;
+  margin-bottom: 4px;
+}
+
+.jantar-card .meal-price {
+  font-size: 1.8rem;
+  color: #7c4dff;
+  font-weight: 700;
+}
+
+/* Responsivo para card de jantar */
+@media (max-width: 768px) {
+  .jantar-options {
+    padding: 15px;
+  }
+  
+  .custom-select {
+    font-size: 15px;
+    padding: 10px 14px;
+  }
+  
+  .checkbox-group {
+    padding: 12px;
+  }
+  
+  .checkbox {
+    width: 20px;
+    height: 20px;
+  }
+}

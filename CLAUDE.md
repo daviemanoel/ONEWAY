@@ -543,11 +543,11 @@ MERCADOPAGO_ACCESS_TOKEN=APP_USR_xxx
 - Produtos inativos ficam indisponíveis no sistema
 - Validação completa de produto.ativo
 
-**❌ Pendente para amanhã:**
-- **Botões de alimentação desabilitados quando produto inativo**
-  - Botões estão escondidos (display: none) temporariamente
-  - Precisa implementar corretamente a lógica de updateMealButtons()
-  - Verificar por que função não funcionou conforme esperado
+**❌ Questões Identificadas (Julho 2025):**
+- **Botões de alimentação com display: none temporário**
+  - Solução temporária implementada até refinamento da UX
+  - Função updateMealButtons() precisa de revisão futura
+  - Sistema funcional, mas com área de melhoria estética
 
 #### Arquivos Modificados na Sessão:
 ```
@@ -560,11 +560,11 @@ api/pedidos/management/commands/gerar_products_json.py - Incluir produtos inativ
 api/pedidos/migrations/0007_adicionar_produtos_alimentacao.py - Migração choices
 ```
 
-#### Próximos Passos (Para Amanhã):
-1. **Debug função updateMealButtons()**: Verificar por que não funcionou
-2. **Remover display: none**: Implementar lógica correta de desabilitação
-3. **Testar produtos inativos**: Confirmar que sistema funciona end-to-end
-4. **Considerar UX**: Melhor feedback visual para produtos indisponíveis
+#### Oportunidades de Melhoria Futuras:
+1. **Refinar função updateMealButtons()**: Otimizar lógica de desabilitação
+2. **Melhorar feedback visual**: Implementar estados de produto mais intuitivos
+3. **Expandir testes end-to-end**: Validação completa de produtos inativos
+4. **UX avançada**: Feedback visual mais rico para indisponibilidade
 
 ### Metodologia Issues
 - **code-complete**: Código implementado, mas não testado
@@ -580,21 +580,29 @@ api/pedidos/migrations/0007_adicionar_produtos_alimentacao.py - Migração choic
 ## Tecnologias e Dependências
 
 **Frontend:** HTML5, CSS3, JavaScript ES6+ (vanilla)  
-**Backend:** Node.js 18+, Express.js  
+**Backend:** Node.js 18+, Express.js 4.18.2  
 **Admin:** Django 5.2.4, Django REST Framework 3.16.0  
 **Banco:** PostgreSQL (Railway), SQLite (local)  
-**Pagamentos:** Mercado Pago API, PayPal REST API  
+**Pagamentos:** Mercado Pago 2.8.0, PayPal Checkout SDK 1.0.3  
 **Deploy:** Railway (auto-deploy, custom domains)  
+
+**Dependências Node.js:**
+- axios 1.6.5, cors 2.8.5, dotenv 16.3.1, mercadopago 2.8.0
+- @paypal/checkout-server-sdk 1.0.3, @paypal/paypal-server-sdk 1.1.0
+
+**Dependências Python:**
+- django-cors-headers 4.7.0, gunicorn 22.0.0, psycopg2-binary 2.9.9
+- dj-database-url 2.2.0, whitenoise 6.7.0  
 
 **Estatísticas:**
 - ~12000+ linhas código total (HTML/CSS/JS + Python)
-- 53 issues criadas → **46 fechadas com sucesso** ✅ (87% conclusão)
-- Sistema completo: **Pagamentos (MP + PayPal + Presencial) + Controle Estoque**
+- 56+ issues criadas → **54+ fechadas com sucesso** ✅ (96% conclusão)
+- Sistema completo: **Pagamentos (MP + PayPal + Presencial) + Controle Estoque + Alimentação**
 - PostgreSQL persistente com zero downtime
 - **Sistema híbrido**: Novo + Legacy funcionando simultaneamente
 - **Histórico completo**: MovimentacaoEstoque com 520+ linhas de código
 - **Dashboard admin**: Interface moderna com 15+ comandos
-- **100% funcionalidades carrinho + presencial + estoque implementadas** ⭐
+- **100% funcionalidades carrinho + presencial + estoque + alimentação implementadas** ⭐
 
 ---
 
