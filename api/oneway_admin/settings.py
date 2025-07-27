@@ -168,8 +168,9 @@ ADMIN_SITE_HEADER = "ONE WAY 2025 - Gestão de Pedidos"
 ADMIN_SITE_TITLE = "Admin ONE WAY"
 ADMIN_INDEX_TITLE = "Painel Administrativo"
 
-# Mercado Pago (será usado na API)
-MERCADOPAGO_ACCESS_TOKEN = ""  # Configurar via variável de ambiente em produção
+# Mercado Pago (configurado via variável de ambiente)
+MERCADOPAGO_ACCESS_TOKEN = os.environ.get('MERCADOPAGO_ACCESS_TOKEN', '')
+MERCADOPAGO_PUBLIC_KEY = os.environ.get('MERCADOPAGO_PUBLIC_KEY', '')
 
 # CSRF Settings
 CSRF_TRUSTED_ORIGINS = [
