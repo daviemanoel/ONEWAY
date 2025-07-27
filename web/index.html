@@ -492,10 +492,14 @@
             }
         };
 
+        // Configuração de ambiente - detectar se é local ou produção
+        const API_BASE_URL = window.location.port === '8080' ? 'http://localhost:3000' : '';
+        console.log('🔧 API Base URL:', API_BASE_URL);
+
         // Carregar configuração de pagamentos
         async function loadPaymentConfig() {
             try {
-                const response = await fetch('/api/payment-config');
+                const response = await fetch(`${API_BASE_URL}/api/payment-config`);
                 const data = await response.json();
                 paymentConfig = data.config;
                 console.log('🔧 Configuração de pagamentos carregada:', paymentConfig);
@@ -1600,14 +1604,14 @@
 
                     console.log('🚀 ENVIANDO REQUISIÇÃO CHECKOUT:', { 
                         timestamp, 
-                        endpoint: '/api/cart/checkout',
+                        endpoint: `${API_BASE_URL}/api/cart/checkout`,
                         method: 'POST',
                         buyer: { ...buyer, phone: buyer.phone.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3') },
                         itemsCount: items.length,
                         paymentMethod 
                     });
 
-                    const response = await fetch('/api/cart/checkout', {
+                    const response = await fetch(`${API_BASE_URL}/api/cart/checkout`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
