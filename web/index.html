@@ -1565,11 +1565,15 @@
             // Processar checkout do carrinho
             async processCartCheckout(formData) {
                 try {
+                    const timestamp = new Date().toISOString();
+                    console.log('🚀 INICIANDO CHECKOUT CARRINHO:', { timestamp, totalItems: this.items.length });
+                    
                     const buyer = {
                         name: formData.get('nome'),
                         email: formData.get('email'),
                         phone: formData.get('telefone')
                     };
+                    console.log('👤 DADOS COMPRADOR:', { ...buyer, emailMasked: buyer.email.replace(/(.{2}).*(@.*)/, '$1***$2') });
 
                     // Preparar itens do carrinho
                     const items = this.items.map(item => ({
@@ -1579,12 +1583,27 @@
                         price: item.price,
                         product_size_id: item.product_size_id // ✨ NOVO CAMPO para Django
                     }));
+                    console.log('📦 ITENS PREPARADOS:', items.map(item => ({
+                        id: item.productId,
+                        size: item.size,
+                        qty: item.quantity,
+                        price: `R$ ${item.price}`,
+                        hasProductSizeId: !!item.product_size_id
+                    })));
 
                     // Determinar método de pagamento baseado na seleção do carrinho
                     const paymentSelect = document.getElementById('cart-payment-select');
                     const paymentMethod = paymentSelect ? paymentSelect.value : 'pix';
+                    console.log('💳 MÉTODO PAGAMENTO:', { paymentMethod, total: `R$ ${this.getTotal()}`, totalPix: `R$ ${this.getPixTotal()}` });
 
-                    console.log('🛒 Enviando dados do carrinho:', { buyer, items, paymentMethod });
+                    console.log('🚀 ENVIANDO REQUISIÇÃO CHECKOUT:', { 
+                        timestamp, 
+                        endpoint: '/api/cart/checkout',
+                        method: 'POST',
+                        buyer: { ...buyer, phone: buyer.phone.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3') },
+                        itemsCount: items.length,
+                        paymentMethod 
+                    });
 
                     const response = await fetch('/api/cart/checkout', {
                         method: 'POST',
@@ -1598,32 +1617,92 @@
                         })
                     });
 
+                    console.log('📥 RESPOSTA CHECKOUT:', { 
+                        status: response.status, 
+                        ok: response.ok, 
+                        statusText: response.statusText,
+                        headers: {
+                            contentType: response.headers.get('content-type'),
+                            contentLength: response.headers.get('content-length')
+                        }
+                    });
+
                     const data = await response.json();
+                    console.log('📋 DADOS RESPOSTA:', { 
+                        success: data.success, 
+                        hasRedirectUrl: !!data.redirect_url,
+                        hasPaymentUrl: !!data.paymentUrl,
+                        hasCheckoutUrl: !!data.checkout_url,
+                        hasPedidoId: !!data.pedido_id,
+                        hasExternalRef: !!data.external_reference
+                    });
 
                     if (response.ok && data.success) {
-                        console.log('✅ Checkout realizado com sucesso:', data);
+                        console.log('✅ CHECKOUT SUCESSO:', { 
+                            success: data.success,
+                            pedidoId: data.pedido_id,
+                            externalReference: data.external_reference,
+                            timestamp: new Date().toISOString()
+                        });
                         
                         // Limpar carrinho
+                        console.log('🧹 LIMPANDO CARRINHO:', { itemsAntes: this.items.length });
                         this.clear();
+                        console.log('✅ CARRINHO LIMPO');
                         
                         // Redirecionar baseado no tipo de resposta
                         if (data.redirect_url) {
-                            // Pagamento presencial ou outros casos especiais
+                            console.log('🔄 REDIRECIONAMENTO PRESENCIAL:', { 
+                                url: data.redirect_url,
+                                pedidoId: data.pedido_id,
+                                externalRef: data.external_reference,
+                                timestamp: new Date().toISOString()
+                            });
                             window.location.href = data.redirect_url;
                         } else if (data.paymentUrl) {
-                            // Mercado Pago/PayPal
+                            console.log('🔄 REDIRECIONAMENTO GATEWAY:', { 
+                                provider: paymentMethod,
+                                url: data.paymentUrl,
+                                pedidoId: data.pedido_id,
+                                externalRef: data.external_reference,
+                                checkoutUrl: data.checkout_url,
+                                timestamp: new Date().toISOString()
+                            });
                             window.location.href = data.paymentUrl;
                         } else {
-                            console.error('❌ URL de redirecionamento não encontrada');
+                            console.error('❌ URL REDIRECIONAMENTO AUSENTE:', { 
+                                data,
+                                hasRedirectUrl: !!data.redirect_url,
+                                hasPaymentUrl: !!data.paymentUrl,
+                                hasCheckoutUrl: !!data.checkout_url,
+                                timestamp: new Date().toISOString()
+                            });
                             alert('Erro ao processar pagamento. Tente novamente.');
                         }
                     } else {
-                        console.error('❌ Erro no checkout:', data);
+                        console.error('❌ ERRO CHECKOUT:', { 
+                            responseOk: response.ok,
+                            dataSuccess: data.success,
+                            status: response.status,
+                            statusText: response.statusText,
+                            error: data.error,
+                            details: data.details,
+                            data,
+                            timestamp: new Date().toISOString()
+                        });
                         alert(data.error || 'Erro ao processar checkout. Tente novamente.');
                     }
 
                 } catch (error) {
-                    console.error('❌ Erro ao processar checkout:', error);
+                    console.error('❌ ERRO CRÍTICO CHECKOUT:', { 
+                        message: error.message,
+                        stack: error.stack,
+                        name: error.name,
+                        timestamp: new Date().toISOString(),
+                        buyer,
+                        items: items?.length || 0,
+                        paymentMethod
+                    });
                     alert('Erro de conexão. Verifique sua internet e tente novamente.');
                 }
             }
