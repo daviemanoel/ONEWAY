@@ -632,6 +632,172 @@ cce9e32 - Fix: Restaurar botão 'Adicionar ao Carrinho' do jantar
 3. **IDs consistentes**: products.json deve match com Django
 4. **UX híbrida**: Cartão visual + função configuradora = melhor experiência
 
+### Sessão 27 Janeiro 2025: Correção Crítica de Precisão Numérica + Migração Campo Preço ⭐ **URGENTE**
+
+#### Contexto da Sessão
+**Problema crítico**: Sistema em produção apresentando erro "Certifique-se de que não haja mais de 10 dígitos no total" impedindo checkouts
+
+#### Issues Críticas Resolvidas:
+- ✅ **Migração 0009**: `max_digits=15` aplicada em produção via Procfile
+- ✅ **Precisão Decimal**: Correção R$ 21.849999999999998 → R$ 21.85
+- ✅ **Logging Avançado**: Sistema debug detalhado para produção
+- ✅ **Deploy Automático**: Forçado via Railway com migrate obrigatório
+
+#### Problemas Identificados e Soluções:
+
+**🚨 Problema 1: Campo preco limitado a 10 dígitos no banco**
+- **Causa**: Migração 0009_aumentar_max_digits_preco não aplicada em produção
+- **Fix**: Adicionado `python manage.py migrate --noinput` no Procfile
+- **Resultado**: Campo preco expandido para max_digits=15
+
+**🚨 Problema 2: Valores decimais JavaScript com precisão flutuante**
+- **Causa**: `this.getTotal() * 0.95` gerava 21.849999999999998
+- **Fix**: `Math.round(pixTotal * 100) / 100` + `parseFloat(value.toFixed(2))`
+- **Aplicado em**: Frontend (getTotal/getPixTotal) + Backend (preco/preco_unitario)
+
+**🚨 Problema 3: Servidor Node.js crashando por variável duplicada**
+- **Causa**: `const timestamp` declarada duas vezes (linhas 1354 e 1513)
+- **Fix**: Renomeada para `cartTimestamp` na segunda ocorrência
+- **Resultado**: Servidor funcionando sem SyntaxError
+
+**🚨 Problema 4: Logs insuficientes para debug em produção**
+- **Causa**: Erros 500 sem detalhes específicos retornados
+- **Fix**: Adicionar `error.response?.data` e `debug` object no retorno
+- **Benefício**: Facilitar identificação de problemas reais
+
+#### Sistema de Logs de Debug Implementado:
+
+**Frontend Console Logging:**
+```javascript
+💳 MÉTODO PAGAMENTO: { paymentMethod: 'pix', total: 'R$ 23.00', totalPix: 'R$ 21.85' }
+📥 RESPOSTA CHECKOUT: { status: 500, details: {preco: Array(1)} }
+❌ ERRO CHECKOUT: { debug: { status: 400, data: {...}, message: "..." } }
+```
+
+**Backend Error Handling:**
+```javascript
+return res.status(500).json({
+  error: 'Erro ao criar pedido. Tente novamente.',
+  details: error.response?.data || error.message,
+  debug: {
+    status: error.response?.status,
+    data: error.response?.data,
+    message: error.message
+  }
+});
+```
+
+#### Deploy Strategy Crítico:
+
+**Procfile Modificado:**
+```bash
+# Antes
+web: python fix_db.py && python manage.py collectstatic --noinput && gunicorn ...
+
+# Depois  
+web: python fix_db.py && python manage.py migrate --noinput && python manage.py collectstatic --noinput && gunicorn ...
+```
+
+**Commits da Correção Urgente:**
+```
+4e23507 - Deploy: Forçar aplicação da migração 0009_aumentar_max_digits_preco
+1ed2965 - Fix: Corrigir erro 500 checkout - aumentar max_digits campos preço
+d5bcae9 - Feature: Adicionar descrição detalhada + debug detalhado
+c2a98cd - Fix: Corrigir cálculo valores decimais (21.849999999999998 → 21.85)  
+ee52885 - Fix: Garantir preco com exatamente 2 casas decimais
+```
+
+#### Lições Críticas para Produção:
+1. **Migrações devem ser aplicadas via Procfile**: Deploy automático garante consistência
+2. **JavaScript Math**: Sempre usar `Math.round(value * 100) / 100` para moeda
+3. **Logs detalhados**: Erros 500 devem retornar debug info completo
+4. **Variáveis únicas**: Evitar `const` duplicado em escopo global
+5. **Validação tripla**: Frontend + Backend + Django para campos críticos
+
+### Sessão 27 Janeiro 2025: Sistema de Logs Detalhados + Validação de Pedidos Órfãos ⭐ **NOVO**
+
+#### Contexto da Sessão  
+**Problema anterior**: Pedidos sendo gravados sem dados do Mercado Pago, dificultando identificação de pedidos órfãos
+
+#### Issues Resolvidas:
+- ✅ **Validação Suave**: CriarPedidoSerializer com warnings em vez de bloqueios
+- ✅ **Retry Automático**: Sistema de 3 tentativas na página mp-success.html
+- ✅ **Endpoint API**: `/api/pedidos/pedidos_incompletos/` para auditoria
+- ✅ **Filtros Admin**: Identificação automática de pedidos órfãos
+- ✅ **Logs Incrementados**: Sistema completo de debugging via console
+
+#### Sistema de Logs Detalhados Implementado:
+
+**🎯 Frontend (index.html):**
+```javascript
+// Logs estruturados com timestamps
+🚀 INICIANDO CHECKOUT CARRINHO: { timestamp, totalItems }
+👤 DADOS COMPRADOR: { emailMasked: "jo***@email.com" }
+📦 ITENS PREPARADOS: [{ hasProductSizeId: true }]
+💳 MÉTODO PAGAMENTO: { paymentMethod, total }
+📥 RESPOSTA CHECKOUT: { status: 200, ok: true }
+✅ CHECKOUT SUCESSO: { pedidoId, externalReference }
+🔄 REDIRECIONAMENTO GATEWAY: { provider, url }
+```
+
+**🛠️ Backend (server.js):**
+```javascript
+// Logs com mascaramento de dados sensíveis
+🚀 INICIANDO CART CHECKOUT: { ip, userAgent }
+👤 DADOS COMPRADOR: { emailMasked, phoneMasked }
+💾 CRIANDO PEDIDO NO DJANGO: { external_reference, djangoUrl }
+✅ PEDIDO CRIADO COM SUCESSO: { pedidoId, timestamp }
+📦 CRIANDO ITENS DO PEDIDO: { itemsCount }
+```
+
+**🔄 Página Retorno (mp-success.html):**
+```javascript
+// Logs completos do processamento
+🎯 INICIANDO PROCESSAMENTO RETORNO MP: { url, userAgent }
+📋 PARÂMETROS MP CAPTURADOS: { hasPaymentId, hasExternalRef }
+🔍 BUSCANDO PEDIDO POR EXTERNAL_REFERENCE: { endpoint }
+✅ PEDIDO ENCONTRADO: { id, status_pagamento }
+🔄 TENTATIVA DE ATUALIZAÇÃO: { tentativa, dadosAtualizacao }
+🏁 PROCESSAMENTO MP FINALIZADO: { success }
+```
+
+#### Ferramentas de Debug Implementadas:
+
+**📊 Django Admin Filters:**
+- **Filtro "Pedidos Órfãos"**: Identifica automaticamente problemas
+- **Filtro "Campos MP Vazios"**: Para auditoria específica
+- **Endpoint API**: `/api/pedidos/pedidos_incompletos/` com dados estruturados
+
+**🔧 Validação Defensiva:**
+- **CriarPedidoSerializer**: Warnings em vez de erros para manter compatibilidade
+- **Retry Automático**: 3 tentativas com backoff exponencial (2s, 4s, 8s)
+- **Logs de Segurança**: Headers de autorização mascarados
+
+#### Benefícios para Debug:
+
+**✅ Visibilidade Completa:**
+- Todos os logs visíveis no console do browser (F12)
+- Timestamps precisos para correlação de eventos
+- Dados mascarados para privacidade (emails/telefones)
+- Stack traces completos em todos os erros
+
+**✅ Rastreamento de Pedidos Órfãos:**
+- External references únicos para rastreamento
+- Logs em cada etapa crítica do fluxo
+- Identificação automática via filtros admin
+- APIs específicas para auditoria
+
+**✅ Exemplo de Uso em Produção:**
+```bash
+# Ver logs em tempo real
+railway logs --service WEB | grep "CHECKOUT\|PEDIDO"
+railway logs --service API | grep "CRIANDO\|ATENÇÃO"
+
+# Debug via browser
+# Abrir DevTools (F12) → Console durante checkout
+# Logs estruturados facilitam identificação de problemas
+```
+
 ### Metodologia Issues
 - **code-complete**: Código implementado, mas não testado
 - **testing**: Em fase de testes
