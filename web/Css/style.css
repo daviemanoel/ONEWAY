@@ -2983,14 +2983,60 @@ img {
 
 .jantar-card .meal-price {
   font-size: 1.8rem;
-  color: #7c4dff;
+  color: #2c3e50;
   font-weight: 700;
 }
 
-/* Responsivo para card de jantar */
+/* Estilos para descrição do almoço */
+.almoco-options {
+  margin-top: 20px;
+  padding: 20px;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.menu-section h4 {
+  font-family: "Montserrat", sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  color: #374151;
+  margin: 0 0 12px 0;
+}
+
+.menu-items {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.menu-items li {
+  padding: 6px 0;
+  font-size: 14px;
+  color: #6b7280;
+  font-family: "Open Sans", sans-serif;
+}
+
+.menu-items .destaque {
+  font-weight: 600;
+  color: #8b5cf6;
+  font-size: 15px;
+}
+
+/* Responsivo para cards de alimentação */
 @media (max-width: 768px) {
-  .jantar-options {
+  .jantar-options,
+  .almoco-options {
     padding: 15px;
+  }
+  
+  .menu-section h4 {
+    font-size: 15px;
+  }
+  
+  .menu-items li {
+    font-size: 13px;
+    padding: 5px 0;
   }
   
   .custom-select {
