@@ -1136,14 +1136,16 @@
 
             // Calcular total
             getTotal() {
-                return this.items.reduce((total, item) => {
+                const total = this.items.reduce((total, item) => {
                     return total + (item.price * item.quantity);
                 }, 0);
+                return Math.round(total * 100) / 100; // Arredondar para 2 casas decimais
             }
 
             // Calcular total com desconto PIX
             getPixTotal() {
-                return this.getTotal() * 0.95;
+                const pixTotal = this.getTotal() * 0.95;
+                return Math.round(pixTotal * 100) / 100; // Arredondar para 2 casas decimais
             }
 
             // Obter quantidade total de itens
@@ -1594,7 +1596,7 @@
                     // Determinar método de pagamento baseado na seleção do carrinho
                     const paymentSelect = document.getElementById('cart-payment-select');
                     const paymentMethod = paymentSelect ? paymentSelect.value : 'pix';
-                    console.log('💳 MÉTODO PAGAMENTO:', { paymentMethod, total: `R$ ${this.getTotal()}`, totalPix: `R$ ${this.getPixTotal()}` });
+                    console.log('💳 MÉTODO PAGAMENTO:', { paymentMethod, total: `R$ ${this.getTotal().toFixed(2)}`, totalPix: `R$ ${this.getPixTotal().toFixed(2)}` });
 
                     console.log('🚀 ENVIANDO REQUISIÇÃO CHECKOUT:', { 
                         timestamp, 
