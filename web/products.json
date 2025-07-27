@@ -193,7 +193,7 @@
       "image": "./img/2.png",
       "sizes": {
         "UNICO": {
-          "product_size_id": 19,
+          "product_size_id": 17,
           "available": true,
           "qtda_estoque": 200,
           "stripe_link": null,
@@ -209,7 +209,7 @@
       "image": "./img/2.png",
       "sizes": {
         "UNICO": {
-          "product_size_id": 20,
+          "product_size_id": 17,
           "available": true,
           "qtda_estoque": 200,
           "stripe_link": null,
@@ -225,7 +225,7 @@
       "image": "./img/2.png",
       "sizes": {
         "UNICO": {
-          "product_size_id": 21,
+          "product_size_id": 17,
           "available": true,
           "qtda_estoque": 200,
           "stripe_link": null,
@@ -241,7 +241,7 @@
       "image": "./img/2.png",
       "sizes": {
         "UNICO": {
-          "product_size_id": 22,
+          "product_size_id": 17,
           "available": true,
           "qtda_estoque": 400,
           "stripe_link": null,
