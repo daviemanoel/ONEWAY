@@ -1642,6 +1642,10 @@
         function updateMealButtons(data) {
             console.log('🍽️ Atualizando botões de alimentação...');
             
+            // Temporariamente desabilitado para permitir compras de teste
+            // TODO: Reativar validação de estoque quando sistema estiver estabilizado
+            
+            /*
             // Verificar se almoço está disponível
             const almoco = data.products['almoco-sabado'];
             if (almoco) {
@@ -1673,6 +1677,9 @@
                     }
                 }
             }
+            */
+            
+            console.log('🍽️ Validação de estoque temporariamente desabilitada');
         }
 
         // ========== FUNÇÕES DO CARD DE JANTAR ==========
