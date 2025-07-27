@@ -1544,7 +1544,7 @@ app.post('/api/cart/checkout', async (req, res) => {
         telefone: buyer.phone,
         produto: firstProductKey,
         tamanho: validatedItems[0].size,
-        preco: finalPrice,
+        preco: parseFloat(finalPrice.toFixed(2)), // Garantir 2 casas decimais
         forma_pagamento: paymentMethod,
         external_reference: external_reference,
         observacoes: `Carrinho com ${validatedItems.length} itens diferentes`
@@ -1617,7 +1617,7 @@ app.post('/api/cart/checkout', async (req, res) => {
           produto: productKey,
           tamanho: item.size,
           quantidade: item.quantity,
-          preco_unitario: precoUnitarioFinal
+          preco_unitario: parseFloat(precoUnitarioFinal.toFixed(2)) // Garantir 2 casas decimais
         };
         
         console.log(`📦 CRIANDO ITEM ${index + 1}/${validatedItems.length}:`, {
