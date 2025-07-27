@@ -7,6 +7,91 @@ from .models import Comprador, Pedido, ItemPedido, Produto, ProdutoTamanho, Movi
 import requests
 from django.conf import settings
 import os
+from django.db.models import Q
+
+
+class PedidosOrfaosFilter(admin.SimpleListFilter):
+    """Filtro para identificar pedidos órfãos (sem dados MP quando deveriam ter)"""
+    title = 'Pedidos Órfãos (sem dados MP)'
+    parameter_name = 'orfaos'
+    
+    def lookups(self, request, model_admin):
+        return (
+            ('sim', 'Sim - Sem dados MP'),
+            ('pendentes_antigos', 'Pendentes há mais de 2h'),
+            ('todos_problemas', 'Todos os problemas'),
+        )
+    
+    def queryset(self, request, queryset):
+        pagamentos_com_gateway = ['pix', '2x', '4x', 'paypal', 'paypal_3x', 'mercadopago']
+        
+        if self.value() == 'sim':
+            # Pedidos com forma de pagamento via gateway mas sem dados MP
+            return queryset.filter(
+                Q(forma_pagamento__in=pagamentos_com_gateway) &
+                (Q(payment_id__isnull=True) | Q(payment_id__exact='') |
+                 Q(external_reference__isnull=True) | Q(external_reference__exact=''))
+            )
+        elif self.value() == 'pendentes_antigos':
+            # Pedidos antigos pendentes (mais de 2h)
+            from django.utils import timezone
+            from datetime import timedelta
+            limite_tempo = timezone.now() - timedelta(hours=2)
+            return queryset.filter(
+                forma_pagamento__in=pagamentos_com_gateway,
+                status_pagamento='pending',
+                data_pedido__lt=limite_tempo
+            )
+        elif self.value() == 'todos_problemas':
+            # Combinar ambos os problemas
+            from django.utils import timezone
+            from datetime import timedelta
+            limite_tempo = timezone.now() - timedelta(hours=2)
+            
+            sem_dados_mp = Q(forma_pagamento__in=pagamentos_com_gateway) & (
+                Q(payment_id__isnull=True) | Q(payment_id__exact='') |
+                Q(external_reference__isnull=True) | Q(external_reference__exact='')
+            )
+            
+            pendentes_antigos = Q(
+                forma_pagamento__in=pagamentos_com_gateway,
+                status_pagamento='pending',
+                data_pedido__lt=limite_tempo
+            )
+            
+            return queryset.filter(sem_dados_mp | pendentes_antigos)
+        
+        return queryset
+
+
+class PedidosComDadosVaziosFilter(admin.SimpleListFilter):
+    """Filtro para verificar campos específicos vazios"""
+    title = 'Campos MP Vazios'
+    parameter_name = 'dados_vazios'
+    
+    def lookups(self, request, model_admin):
+        return (
+            ('sem_payment_id', 'Sem Payment ID'),
+            ('sem_external_ref', 'Sem External Reference'),
+            ('sem_preference_id', 'Sem Preference ID'),
+            ('todos_vazios', 'Todos os campos vazios'),
+        )
+    
+    def queryset(self, request, queryset):
+        if self.value() == 'sem_payment_id':
+            return queryset.filter(Q(payment_id__isnull=True) | Q(payment_id__exact=''))
+        elif self.value() == 'sem_external_ref':
+            return queryset.filter(Q(external_reference__isnull=True) | Q(external_reference__exact=''))
+        elif self.value() == 'sem_preference_id':
+            return queryset.filter(Q(preference_id__isnull=True) | Q(preference_id__exact=''))
+        elif self.value() == 'todos_vazios':
+            return queryset.filter(
+                (Q(payment_id__isnull=True) | Q(payment_id__exact='')) &
+                (Q(external_reference__isnull=True) | Q(external_reference__exact='')) &
+                (Q(preference_id__isnull=True) | Q(preference_id__exact=''))
+            )
+        
+        return queryset
 
 
 class ProdutoTamanhoInline(admin.TabularInline):
@@ -360,7 +445,9 @@ class PedidoAdmin(admin.ModelAdmin):
         'tamanho',
         'forma_pagamento',
         'data_pedido',
-        'data_atualizacao'
+        'data_atualizacao',
+        PedidosOrfaosFilter,
+        PedidosComDadosVaziosFilter
     ]
     
     search_fields = [
