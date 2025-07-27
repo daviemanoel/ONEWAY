@@ -588,12 +588,14 @@ class PedidoAdmin(admin.ModelAdmin):
     
     # Actions personalizadas
     def consultar_status_mp(self, request, queryset):
-        """Action para consultar status no Mercado Pago"""
+        """Action melhorada para consultar status no Mercado Pago via payment_id ou external_reference"""
         import requests
         from django.conf import settings
+        import json
         
         updated = 0
         errors = 0
+        found_payments = 0
         
         # Token do Mercado Pago (deve estar configurado no settings)
         mp_token = getattr(settings, 'MERCADOPAGO_ACCESS_TOKEN', os.environ.get('MERCADOPAGO_ACCESS_TOKEN'))
@@ -603,54 +605,139 @@ class PedidoAdmin(admin.ModelAdmin):
             return
         
         for pedido in queryset:
-            if pedido.payment_id:
-                try:
-                    # Consultar API do Mercado Pago
-                    response = requests.get(
-                        f'https://api.mercadopago.com/v1/payments/{pedido.payment_id}',
-                        headers={'Authorization': f'Bearer {mp_token}'}
-                    )
-                    
-                    if response.status_code == 200:
-                        data = response.json()
-                        novo_status = data.get('status', pedido.status_pagamento)
+            try:
+                payment_data = None
+                method_used = None
+                
+                # Método 1: Consultar por payment_id (se disponível)
+                if pedido.payment_id:
+                    try:
+                        response = requests.get(
+                            f'https://api.mercadopago.com/v1/payments/{pedido.payment_id}',
+                            headers={'Authorization': f'Bearer {mp_token}'}
+                        )
                         
-                        # Atualizar status se mudou
-                        if novo_status != pedido.status_pagamento:
-                            pedido.status_pagamento = novo_status
-                            pedido.save()
-                            updated += 1
-                            self.message_user(
-                                request, 
-                                f'Pedido #{pedido.id}: {pedido.status_pagamento} → {novo_status}',
-                                level='SUCCESS'
-                            )
+                        if response.status_code == 200:
+                            payment_data = response.json()
+                            method_used = f'payment_id: {pedido.payment_id}'
                         else:
                             self.message_user(
                                 request, 
-                                f'Pedido #{pedido.id}: Status mantido ({novo_status})',
-                                level='INFO'
+                                f'Pedido #{pedido.id}: Payment ID {pedido.payment_id} não encontrado (HTTP {response.status_code})',
+                                level='WARNING'
                             )
-                    else:
-                        errors += 1
+                    except Exception as e:
                         self.message_user(
                             request, 
-                            f'Erro ao consultar pedido #{pedido.id}: HTTP {response.status_code}',
-                            level='ERROR'
+                            f'Pedido #{pedido.id}: Erro ao consultar payment_id: {str(e)}',
+                            level='WARNING'
                         )
-                except Exception as e:
+                
+                # Método 2: Buscar por external_reference (se payment_id falhou ou não existe)
+                if not payment_data and pedido.external_reference:
+                    try:
+                        # Buscar pagamentos por external_reference
+                        search_url = 'https://api.mercadopago.com/v1/payments/search'
+                        search_params = {
+                            'external_reference': pedido.external_reference,
+                            'limit': 50  # MP permite até 50 resultados
+                        }
+                        
+                        search_response = requests.get(
+                            search_url,
+                            headers={'Authorization': f'Bearer {mp_token}'},
+                            params=search_params
+                        )
+                        
+                        if search_response.status_code == 200:
+                            search_data = search_response.json()
+                            results = search_data.get('results', [])
+                            
+                            if results:
+                                # Pegar o pagamento mais recente
+                                payment_data = results[0]
+                                method_used = f'external_reference: {pedido.external_reference}'
+                                
+                                # Salvar payment_id se não existia
+                                if not pedido.payment_id and payment_data.get('id'):
+                                    pedido.payment_id = str(payment_data['id'])
+                                    found_payments += 1
+                                    self.message_user(
+                                        request, 
+                                        f'Pedido #{pedido.id}: Payment ID encontrado e salvo: {payment_data["id"]}',
+                                        level='SUCCESS'
+                                    )
+                            else:
+                                self.message_user(
+                                    request, 
+                                    f'Pedido #{pedido.id}: Nenhum pagamento encontrado com external_reference: {pedido.external_reference}',
+                                    level='WARNING'
+                                )
+                        else:
+                            self.message_user(
+                                request, 
+                                f'Pedido #{pedido.id}: Erro na busca por external_reference (HTTP {search_response.status_code})',
+                                level='WARNING'
+                            )
+                    except Exception as e:
+                        self.message_user(
+                            request, 
+                            f'Pedido #{pedido.id}: Erro ao buscar por external_reference: {str(e)}',
+                            level='WARNING'
+                        )
+                
+                # Processar dados do pagamento se encontrado
+                if payment_data:
+                    novo_status = payment_data.get('status', pedido.status_pagamento)
+                    
+                    # Atualizar campos extras se disponíveis
+                    if not pedido.merchant_order_id and payment_data.get('order', {}).get('id'):
+                        pedido.merchant_order_id = str(payment_data['order']['id'])
+                    
+                    # Atualizar status se mudou
+                    if novo_status != pedido.status_pagamento:
+                        pedido.status_pagamento = novo_status
+                        pedido.save()
+                        updated += 1
+                        self.message_user(
+                            request, 
+                            f'Pedido #{pedido.id}: {pedido.status_pagamento} → {novo_status} (via {method_used})',
+                            level='SUCCESS'
+                        )
+                    else:
+                        pedido.save()  # Salvar payment_id ou outros campos atualizados
+                        self.message_user(
+                            request, 
+                            f'Pedido #{pedido.id}: Status mantido ({novo_status}) (via {method_used})',
+                            level='INFO'
+                        )
+                else:
+                    # Nenhum método funcionou
+                    if not pedido.payment_id and not pedido.external_reference:
+                        message = f'Pedido #{pedido.id}: Sem payment_id nem external_reference para consultar'
+                    elif pedido.forma_pagamento == 'presencial':
+                        message = f'Pedido #{pedido.id}: Pagamento presencial - não consultável no MP'
+                    else:
+                        message = f'Pedido #{pedido.id}: Pagamento não encontrado no Mercado Pago'
+                    
+                    self.message_user(request, message, level='WARNING')
                     errors += 1
-                    self.message_user(
-                        request, 
-                        f'Erro ao consultar pedido #{pedido.id}: {str(e)}',
-                        level='ERROR'
-                    )
+                    
+            except Exception as e:
+                errors += 1
+                self.message_user(
+                    request, 
+                    f'Erro geral ao processar pedido #{pedido.id}: {str(e)}',
+                    level='ERROR'
+                )
         
         # Resumo final
-        if updated:
-            self.message_user(request, f'✅ {updated} pedidos atualizados no total.', level='SUCCESS')
-        if errors:
-            self.message_user(request, f'❌ {errors} erros durante a consulta.', level='ERROR')
+        total_processed = queryset.count()
+        self.message_user(
+            request, 
+            f'📊 Processados: {total_processed} pedidos | ✅ Atualizados: {updated} | 🔍 Payment IDs encontrados: {found_payments} | ❌ Erros/Avisos: {errors}',
+            level='SUCCESS' if errors == 0 else 'INFO'
+        )
     
     consultar_status_mp.short_description = "🔄 Consultar status no Mercado Pago"
     
