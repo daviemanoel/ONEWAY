@@ -131,7 +131,16 @@
     <script>
         // Função para capturar parâmetros da URL do Mercado Pago
         function capturarParametrosMP() {
+            const timestamp = new Date().toISOString();
             const urlParams = new URLSearchParams(window.location.search);
+            
+            console.log('🎯 INICIANDO PROCESSAMENTO RETORNO MP:', {
+                timestamp,
+                url: window.location.href,
+                search: window.location.search,
+                userAgent: navigator.userAgent,
+                referrer: document.referrer
+            });
             
             // Parâmetros principais do Mercado Pago
             const paymentId = urlParams.get('payment_id');
@@ -140,6 +149,19 @@
             const paymentType = urlParams.get('payment_type');
             const merchantOrderId = urlParams.get('merchant_order_id');
             const preferenceId = urlParams.get('preference_id');
+            
+            console.log('📋 PARÂMETROS MP CAPTURADOS:', {
+                paymentId,
+                status,
+                externalReference,
+                paymentType,
+                merchantOrderId,
+                preferenceId,
+                hasPaymentId: !!paymentId,
+                hasStatus: !!status,
+                hasExternalRef: !!externalReference,
+                timestamp
+            });
             
             // Se houver parâmetros do MP, processar o pagamento
             if (paymentId || status || externalReference) {
@@ -152,11 +174,17 @@
                     preferenceId
                 };
                 
+                console.log('📊 DADOS MP ORGANIZADOS:', dadosMP);
                 exibirDadosPagamento(dadosMP);
                 
                 // Se pagamento aprovado ou pendente, atualizar pedido existente
                 if (status === 'approved' || status === 'pending') {
-                    console.log(`✅ PAGAMENTO ${status.toUpperCase()} - INICIANDO ATUALIZAÇÃO DO PEDIDO`);
+                    console.log(`✅ PAGAMENTO ${status.toUpperCase()} - INICIANDO ATUALIZAÇÃO:`, {
+                        status,
+                        paymentId,
+                        externalReference,
+                        timestamp
+                    });
                     atualizarPedidoExistente(dadosMP);
                 } else {
                     console.log('⚠️ PAGAMENTO NÃO PROCESSADO - STATUS:', status);
@@ -322,20 +350,49 @@
                 console.log('📊 Status real:', statusReal);
                 
                 // ETAPA 1: Buscar pedido existente por external_reference
-                console.log('📋 Buscando pedido existente...');
+                console.log('🔍 BUSCANDO PEDIDO POR EXTERNAL_REFERENCE:', {
+                    externalReference,
+                    encodedRef: encodeURIComponent(externalReference),
+                    endpoint: `/api/django/pedidos/referencia/${encodeURIComponent(externalReference)}/`,
+                    timestamp: new Date().toISOString()
+                });
                 
                 const buscarResponse = await fetch(`/api/django/pedidos/referencia/${encodeURIComponent(externalReference)}/`);
                 
+                console.log('📥 RESPOSTA BUSCA PEDIDO:', {
+                    status: buscarResponse.status,
+                    ok: buscarResponse.ok,
+                    statusText: buscarResponse.statusText,
+                    headers: {
+                        contentType: buscarResponse.headers.get('content-type'),
+                        contentLength: buscarResponse.headers.get('content-length')
+                    }
+                });
+                
                 if (!buscarResponse.ok) {
                     if (buscarResponse.status === 404) {
+                        console.error('❌ PEDIDO NÃO ENCONTRADO:', { externalReference, status: 404 });
                         throw new Error('Pedido não encontrado no sistema');
                     } else {
+                        console.error('❌ ERRO AO BUSCAR PEDIDO:', { 
+                            status: buscarResponse.status, 
+                            statusText: buscarResponse.statusText,
+                            externalReference 
+                        });
                         throw new Error('Erro ao buscar pedido existente');
                     }
                 }
                 
                 const pedidoExistente = await buscarResponse.json();
-                console.log('✅ Pedido encontrado:', pedidoExistente);
+                console.log('✅ PEDIDO ENCONTRADO:', {
+                    id: pedidoExistente.id,
+                    status_pagamento: pedidoExistente.status_pagamento,
+                    forma_pagamento: pedidoExistente.forma_pagamento,
+                    external_reference: pedidoExistente.external_reference,
+                    payment_id: pedidoExistente.payment_id,
+                    hasPaymentId: !!pedidoExistente.payment_id,
+                    timestamp: new Date().toISOString()
+                });
                 
                 // ETAPA 1.5: Se for carrinho, buscar itens do pedido
                 let itensPedido = [];
@@ -432,9 +489,28 @@
                 }
                 
             } catch (error) {
-                console.error('❌ Erro ao processar pagamento:', error);
+                console.error('❌ ERRO CRÍTICO NO PROCESSAMENTO:', {
+                    message: error.message,
+                    stack: error.stack,
+                    name: error.name,
+                    externalReference,
+                    paymentId: dadosMP.paymentId,
+                    status: dadosMP.status,
+                    timestamp: new Date().toISOString(),
+                    url: window.location.href,
+                    userAgent: navigator.userAgent
+                });
                 exibirErroProcessamento(error.message);
             }
+            
+            // Log final do resultado
+            console.log('🏁 PROCESSAMENTO MP FINALIZADO:', {
+                externalReference: dadosMP.externalReference,
+                paymentId: dadosMP.paymentId,
+                status: dadosMP.status,
+                timestamp: new Date().toISOString(),
+                success: !error
+            });
         }
         
         // Função para mapear nome do produto para ID do Django
