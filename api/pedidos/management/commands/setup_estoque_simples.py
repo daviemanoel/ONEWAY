@@ -60,6 +60,60 @@ class Command(BaseCommand):
                     'G': {'estoque': 10, 'disponivel': True},
                     'GG': {'estoque': 5, 'disponivel': True},
                 }
+            },
+            'almoco-sabado': {
+                'nome': 'Almoço - Sábado',
+                'preco': 23.00,
+                'preco_custo': 15.00,
+                'ordem': 5,
+                'tamanhos': {
+                    'UNICO': {'estoque': 300, 'disponivel': True},
+                }
+            },
+            'jantar-sabado': {
+                'nome': 'Jantar - Sábado',
+                'preco': 13.00,
+                'preco_custo': 11.00,
+                'ordem': 6,
+                'tamanhos': {
+                    'UNICO': {'estoque': 350, 'disponivel': True},
+                }
+            },
+            'espetinho-carne': {
+                'nome': 'Espetinho de Carne Bovina',
+                'preco': 10.00,
+                'preco_custo': 6.50,
+                'ordem': 7,
+                'tamanhos': {
+                    'UNICO': {'estoque': 200, 'disponivel': True},
+                }
+            },
+            'espetinho-frango': {
+                'nome': 'Espetinho Medalhão de Frango',
+                'preco': 10.00,
+                'preco_custo': 5.50,
+                'ordem': 8,
+                'tamanhos': {
+                    'UNICO': {'estoque': 200, 'disponivel': True},
+                }
+            },
+            'espetinho-linguica': {
+                'nome': 'Espetinho de Linguiça',
+                'preco': 10.00,
+                'preco_custo': 5.00,
+                'ordem': 9,
+                'tamanhos': {
+                    'UNICO': {'estoque': 200, 'disponivel': True},
+                }
+            },
+            'adicional-mandioca': {
+                'nome': 'Adicional: Mandioca + Vinagrete',
+                'preco': 3.00,
+                'preco_custo': 1.50,
+                'ordem': 10,
+                'tamanhos': {
+                    'UNICO': {'estoque': 400, 'disponivel': True},
+                }
             }
         }
         
@@ -68,44 +122,45 @@ class Command(BaseCommand):
                 produtos_criados = 0
                 tamanhos_criados = 0
                 
-                # Verificar se produtos já existem
-                if Produto.objects.exists():
-                    self.stdout.write(self.style.WARNING('♻️  Produtos já existem - pulando criação'))
-                else:
-                    self.stdout.write(self.style.NOTICE('📦 Criando produtos...'))
+                # Criar produtos (get_or_create fará o controle)
+                self.stdout.write(self.style.NOTICE('📦 Verificando e criando produtos...'))
+                
+                # Criar produtos
+                for json_key, dados in produtos_data.items():
+                    produto, criado = Produto.objects.get_or_create(
+                        json_key=json_key,
+                        defaults={
+                            'nome': dados['nome'],
+                            'slug': json_key,
+                            'preco': dados['preco'],
+                            'preco_custo': dados['preco_custo'],
+                            'ativo': True,
+                            'ordem': dados['ordem'],
+                        }
+                    )
                     
-                    # Criar produtos
-                    for json_key, dados in produtos_data.items():
-                        produto, criado = Produto.objects.get_or_create(
-                            json_key=json_key,
+                    if criado:
+                        produtos_criados += 1
+                        self.stdout.write(f"  ✅ {dados['nome']}")
+                    else:
+                        self.stdout.write(f"  ♻️  {dados['nome']} (já existe)")
+                    
+                    # Criar tamanhos
+                    for tamanho, config in dados['tamanhos'].items():
+                        tamanho_obj, criado = ProdutoTamanho.objects.get_or_create(
+                            produto=produto,
+                            tamanho=tamanho,
                             defaults={
-                                'nome': dados['nome'],
-                                'slug': json_key,
-                                'preco': dados['preco'],
-                                'preco_custo': dados['preco_custo'],
-                                'ativo': True,
-                                'ordem': dados['ordem'],
+                                'estoque': config['estoque'],
+                                'disponivel': config['disponivel'],
                             }
                         )
                         
                         if criado:
-                            produtos_criados += 1
-                            self.stdout.write(f"  ✅ {dados['nome']}")
-                        
-                        # Criar tamanhos
-                        for tamanho, config in dados['tamanhos'].items():
-                            tamanho_obj, criado = ProdutoTamanho.objects.get_or_create(
-                                produto=produto,
-                                tamanho=tamanho,
-                                defaults={
-                                    'estoque': config['estoque'],
-                                    'disponivel': config['disponivel'],
-                                }
-                            )
-                            
-                            if criado:
-                                tamanhos_criados += 1
-                                self.stdout.write(f"    • {tamanho}: {config['estoque']} unidades")
+                            tamanhos_criados += 1
+                            self.stdout.write(f"    • {tamanho}: {config['estoque']} unidades")
+                        else:
+                            self.stdout.write(f"    ♻️  {tamanho}: {tamanho_obj.estoque} unidades (já existe)")
                 
                 # Associar pedidos legacy
                 pedidos_legacy = Pedido.objects.filter(produto_tamanho__isnull=True)
