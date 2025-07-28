@@ -446,6 +446,7 @@ class PedidoAdmin(admin.ModelAdmin):
         'total_display',
         'forma_pagamento_display',
         'status_display_admin',
+        'email_status_display',
         'status_mercadopago',
         'data_pedido'
     ]
@@ -455,6 +456,7 @@ class PedidoAdmin(admin.ModelAdmin):
         'produto',
         'tamanho',
         'forma_pagamento',
+        'email_confirmacao_enviado',
         'data_pedido',
         'data_atualizacao',
         PedidosOrfaosFilter,
@@ -474,7 +476,9 @@ class PedidoAdmin(admin.ModelAdmin):
         'data_atualizacao',
         'external_reference',
         'status_mercadopago',
-        'link_mercadopago'
+        'link_mercadopago',
+        'data_email_enviado',
+        'usuario_email_enviado'
     ]
     
     fieldsets = (
@@ -494,6 +498,10 @@ class PedidoAdmin(admin.ModelAdmin):
         }),
         ('Status e Controle', {
             'fields': ('status_pagamento', 'observacoes', 'data_pedido', 'data_atualizacao')
+        }),
+        ('Controle de Email', {
+            'fields': ('email_confirmacao_enviado', 'data_email_enviado', 'usuario_email_enviado'),
+            'classes': ('collapse',)
         })
     )
     
@@ -569,6 +577,20 @@ class PedidoAdmin(admin.ModelAdmin):
             color, obj.status_display
         )
     status_display_admin.short_description = 'Status'
+    
+    def email_status_display(self, obj):
+        """Exibe status visual do envio de email"""
+        if obj.email_confirmacao_enviado:
+            tooltip = f"Enviado em: {obj.data_email_enviado.strftime('%d/%m/%Y %H:%M') if obj.data_email_enviado else 'N/A'}\nPor: {obj.usuario_email_enviado or 'N/A'}"
+            return format_html(
+                '<span style="color: #28a745; font-weight: bold;" title="{}">📧 ✅</span>',
+                tooltip
+            )
+        else:
+            return format_html(
+                '<span style="color: #dc3545; font-weight: bold;" title="Email ainda não enviado">📧 ❌</span>'
+            )
+    email_status_display.short_description = 'Email'
     
     def status_mercadopago(self, obj):
         """Campo readonly para exibir consulta ao MP"""
@@ -946,15 +968,42 @@ class PedidoAdmin(admin.ModelAdmin):
     confirmar_pagamento_presencial.short_description = "💰 Confirmar pagamento presencial"
 
     def enviar_email_confirmacao(self, request, queryset):
-        """Envia email de confirmação para os pedidos selecionados"""
+        """Envia email de confirmação para os pedidos selecionados - com controle anti-duplicação"""
         from django.core.mail import send_mail
         from django.template.loader import render_to_string
         from django.conf import settings
+        from django.utils import timezone
         
+        # Separar pedidos que já receberam email dos que não receberam
+        pedidos_sem_email = queryset.filter(email_confirmacao_enviado=False)
+        pedidos_ja_enviados = queryset.filter(email_confirmacao_enviado=True)
+        
+        # Informar sobre pedidos que já receberam email
+        if pedidos_ja_enviados.exists():
+            lista_ja_enviados = ', '.join([f"#{p.id}" for p in pedidos_ja_enviados[:5]])
+            if pedidos_ja_enviados.count() > 5:
+                lista_ja_enviados += f" (+ {pedidos_ja_enviados.count() - 5} outros)"
+            
+            self.message_user(
+                request,
+                f'⚠️ {pedidos_ja_enviados.count()} pedidos já receberam email de confirmação e foram ignorados: {lista_ja_enviados}',
+                level='WARNING'
+            )
+        
+        # Se não há pedidos para processar
+        if not pedidos_sem_email.exists():
+            self.message_user(
+                request,
+                'ℹ️ Todos os pedidos selecionados já receberam email de confirmação',
+                level='INFO'  
+            )
+            return
+        
+        # Processar apenas pedidos que não receberam email
         enviados = 0
         erros = 0
         
-        for pedido in queryset:
+        for pedido in pedidos_sem_email:
             try:
                 # Verificar se comprador tem email
                 if not pedido.comprador.email:
@@ -1123,6 +1172,12 @@ class PedidoAdmin(admin.ModelAdmin):
                     html_message=html_message,
                     fail_silently=False,
                 )
+                
+                # Marcar pedido como email enviado
+                pedido.email_confirmacao_enviado = True
+                pedido.data_email_enviado = timezone.now()
+                pedido.usuario_email_enviado = request.user.username if request.user.is_authenticated else 'admin'
+                pedido.save(update_fields=['email_confirmacao_enviado', 'data_email_enviado', 'usuario_email_enviado'])
                 
                 enviados += 1
                 self.message_user(

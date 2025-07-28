@@ -257,6 +257,25 @@ class Pedido(models.Model):
     data_pedido = models.DateTimeField(auto_now_add=True, verbose_name="Data do Pedido")
     data_atualizacao = models.DateTimeField(auto_now=True, verbose_name="Última Atualização")
     observacoes = models.TextField(blank=True, verbose_name="Observações")
+    
+    # Controle de envio de email
+    email_confirmacao_enviado = models.BooleanField(
+        default=False, 
+        verbose_name="Email de confirmação enviado",
+        help_text="Indica se o email de confirmação já foi enviado para este pedido"
+    )
+    data_email_enviado = models.DateTimeField(
+        null=True, 
+        blank=True,
+        verbose_name="Data do envio do email",
+        help_text="Data e hora em que o email de confirmação foi enviado"
+    )
+    usuario_email_enviado = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name="Usuário que enviou o email",
+        help_text="Nome do usuário admin que enviou o email de confirmação"
+    )
 
     class Meta:
         verbose_name = "Pedido"
