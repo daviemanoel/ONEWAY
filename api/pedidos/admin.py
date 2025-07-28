@@ -412,11 +412,18 @@ class CompradorAdmin(admin.ModelAdmin):
 
 
 class ItemPedidoInline(admin.TabularInline):
-    """Inline para exibir e editar itens do pedido"""
+    """Inline para exibir e editar itens do pedido - otimizado"""
     model = ItemPedido
     extra = 0
+    max_num = 10  # Limitar máximo de itens mostrados
     fields = ['produto', 'tamanho', 'quantidade', 'preco_unitario', 'subtotal_display']
     readonly_fields = ['subtotal_display']
+    
+    # Otimizar queryset do inline
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related(
+            'produto_tamanho__produto'
+        )
     
     def subtotal_display(self, obj):
         if obj.id:
@@ -428,6 +435,10 @@ class ItemPedidoInline(admin.TabularInline):
 @admin.register(Pedido)
 class PedidoAdmin(admin.ModelAdmin):
     inlines = [ItemPedidoInline]
+    
+    # Configurações de performance
+    list_per_page = 50  # Reduzir de 100 (padrão) para 50
+    list_max_show_all = 200  # Máximo para "mostrar todos"
     list_display = [
         'id', 
         'comprador_link', 
@@ -494,18 +505,21 @@ class PedidoAdmin(admin.ModelAdmin):
     comprador_link.short_description = 'Comprador'
     
     def resumo_pedido(self, obj):
-        """Mostra resumo dos itens do pedido"""
+        """Mostra resumo dos itens do pedido - otimizado para evitar N+1"""
         # Indicador de sistema
         sistema_icon = '🆕' if obj.usa_novo_sistema else '📊'
         
-        if obj.itens.exists():
+        # Usar dados já carregados via prefetch_related
+        itens = list(obj.itens.all())  # Converter para lista para evitar múltiplas queries
+        
+        if itens:
             # Nova estrutura com múltiplos itens
-            itens = obj.itens.all()
-            if itens.count() == 1:
-                item = itens.first()
+            if len(itens) == 1:
+                item = itens[0]
                 return f"{sistema_icon} {item.get_produto_display()} ({item.tamanho}) x{item.quantidade}"
             else:
-                return f"{sistema_icon} {itens.count()} itens - {sum(item.quantidade for item in itens)} produtos"
+                total_quantidade = sum(item.quantidade for item in itens)
+                return f"{sistema_icon} {len(itens)} itens - {total_quantidade} produtos"
         else:
             # Pedido antigo - estrutura legada
             return f"{sistema_icon} {obj.get_produto_display()} ({obj.tamanho})"
@@ -1142,7 +1156,12 @@ class PedidoAdmin(admin.ModelAdmin):
     enviar_email_confirmacao.short_description = "📧 Enviar email de confirmação"
 
     def get_queryset(self, request):
-        return super().get_queryset(request).select_related('comprador')
+        return super().get_queryset(request).select_related(
+            'comprador',
+            'produto_tamanho__produto'
+        ).prefetch_related(
+            'itens__produto_tamanho__produto'
+        )
 
     class Media:
         js = ('admin/js/consultar_mp.js',)
