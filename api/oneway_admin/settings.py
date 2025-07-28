@@ -172,6 +172,19 @@ ADMIN_INDEX_TITLE = "Painel Administrativo"
 MERCADOPAGO_ACCESS_TOKEN = os.environ.get('MERCADOPAGO_ACCESS_TOKEN', '')
 MERCADOPAGO_PUBLIC_KEY = os.environ.get('MERCADOPAGO_PUBLIC_KEY', '')
 
+# Configurações de Email SMTP (Locaweb)
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'email-ssl.com.br')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '465'))
+EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', 'True') == 'True'
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'False') == 'True'
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'oneway@mevamfranca.com.br')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'ONE WAY 2025 <oneway@mevamfranca.com.br>')
+
+# Timeout para conexões de email (30 segundos)
+EMAIL_TIMEOUT = 30
+
 # CSRF Settings
 CSRF_TRUSTED_ORIGINS = [
     'https://oneway.mevamfranca.com.br',

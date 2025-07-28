@@ -486,7 +486,7 @@ class PedidoAdmin(admin.ModelAdmin):
         })
     )
     
-    actions = ['consultar_status_mp', 'marcar_como_aprovado', 'marcar_como_cancelado', 'sincronizar_estoque', 'confirmar_pagamento_presencial']
+    actions = ['consultar_status_mp', 'marcar_como_aprovado', 'marcar_como_cancelado', 'sincronizar_estoque', 'confirmar_pagamento_presencial', 'enviar_email_confirmacao']
     
     def comprador_link(self, obj):
         url = reverse('admin:pedidos_comprador_change', args=[obj.comprador.id])
@@ -930,6 +930,216 @@ class PedidoAdmin(admin.ModelAdmin):
         # Sincronizar estoque automaticamente
         self.sincronizar_estoque(request, pedidos)
     confirmar_pagamento_presencial.short_description = "💰 Confirmar pagamento presencial"
+
+    def enviar_email_confirmacao(self, request, queryset):
+        """Envia email de confirmação para os pedidos selecionados"""
+        from django.core.mail import send_mail
+        from django.template.loader import render_to_string
+        from django.conf import settings
+        
+        enviados = 0
+        erros = 0
+        
+        for pedido in queryset:
+            try:
+                # Verificar se comprador tem email
+                if not pedido.comprador.email:
+                    self.message_user(
+                        request,
+                        f'Pedido #{pedido.id}: Comprador sem email cadastrado',
+                        level='WARNING'
+                    )
+                    erros += 1
+                    continue
+                
+                # Preparar dados para o template
+                context = {
+                    'pedido': pedido,
+                    'comprador': pedido.comprador,
+                    'itens': pedido.itens.all() if pedido.itens.exists() else [],
+                    'total': pedido.total_pedido,
+                    'usa_novo_sistema': pedido.usa_novo_sistema,
+                }
+                
+                # Template HTML do email
+                html_message = f"""
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <title>Confirmação do Pedido - ONE WAY 2025</title>
+                    <style>
+                        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                        .header {{ background: #007bff; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }}
+                        .content {{ background: #f8f9fa; padding: 20px; border: 1px solid #ddd; }}
+                        .footer {{ background: #343a40; color: white; padding: 15px; text-align: center; border-radius: 0 0 5px 5px; }}
+                        .item {{ background: white; margin: 10px 0; padding: 15px; border-radius: 5px; border-left: 4px solid #007bff; }}
+                        .total {{ font-size: 1.2em; font-weight: bold; color: #007bff; }}
+                        .status {{ padding: 5px 10px; border-radius: 3px; color: white; }}
+                        .approved {{ background: #28a745; }}
+                        .pending {{ background: #ffc107; color: black; }}
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="header">
+                            <h1>🎯 ONE WAY 2025</h1>
+                            <p>Confirmação do seu Pedido #{pedido.id}</p>
+                        </div>
+                        
+                        <div class="content">
+                            <h2>Olá, {pedido.comprador.nome}!</h2>
+                            <p>Seu pedido foi processado com sucesso. Confira os detalhes abaixo:</p>
+                            
+                            <h3>📦 Itens do Pedido:</h3>
+                """
+                
+                # Adicionar itens
+                if pedido.itens.exists():
+                    # Sistema novo - múltiplos itens
+                    for item in pedido.itens.all():
+                        html_message += f"""
+                            <div class="item">
+                                <strong>{item.get_produto_display()}</strong><br/>
+                                <small>Tamanho: {item.tamanho} | Quantidade: {item.quantidade} | Preço unitário: R$ {item.preco_unitario:.2f}</small><br/>
+                                <span class="total">Subtotal: R$ {item.subtotal:.2f}</span>
+                            </div>
+                        """
+                else:
+                    # Sistema legado - pedido único
+                    html_message += f"""
+                        <div class="item">
+                            <strong>{pedido.get_produto_display()}</strong><br/>
+                            <small>Tamanho: {pedido.tamanho}</small><br/>
+                            <span class="total">Valor: R$ {pedido.preco:.2f}</span>
+                        </div>
+                    """
+                
+                # Informações de pagamento
+                status_class = 'approved' if pedido.status_pagamento == 'approved' else 'pending'
+                status_text = 'Aprovado ✅' if pedido.status_pagamento == 'approved' else 'Pendente ⏳'
+                
+                html_message += f"""
+                            <h3>💳 Informações de Pagamento:</h3>
+                            <div class="item">
+                                <strong>Método:</strong> {pedido.get_forma_pagamento_display()}<br/>
+                                <strong>Status:</strong> <span class="status {status_class}">{status_text}</span><br/>
+                                <strong>Total:</strong> <span class="total">R$ {pedido.total_pedido:.2f}</span>
+                """
+                
+                # Adicionar desconto PIX se aplicável
+                if pedido.forma_pagamento == 'pix':
+                    total_sem_desconto = pedido.total_pedido / Decimal('0.95')
+                    html_message += f"""<br/>
+                                <small style="color: green;">💰 Desconto PIX aplicado! De R$ {total_sem_desconto:.2f} por R$ {pedido.total_pedido:.2f}</small>
+                    """
+                
+                html_message += """
+                            </div>
+                """
+                
+                # Instruções específicas por método de pagamento
+                if pedido.forma_pagamento == 'presencial':
+                    html_message += f"""
+                            <div class="item" style="border-left-color: #ffc107;">
+                                <h4>📍 Pagamento Presencial</h4>
+                                <p><strong>Importante:</strong> Você tem até <strong>48 horas</strong> após este email para efetuar o pagamento na igreja.</p>
+                                <p><strong>Número do Pedido:</strong> #{pedido.id}</p>
+                                <p><strong>External Reference:</strong> {pedido.external_reference}</p>
+                                <p>Apresente esse número na igreja para confirmar seu pagamento.</p>
+                            </div>
+                    """
+                elif pedido.status_pagamento == 'approved':
+                    html_message += """
+                            <div class="item" style="border-left-color: #28a745;">
+                                <h4>✅ Pagamento Confirmado</h4>
+                                <p>Seu pagamento foi aprovado! Seus produtos serão entregues no evento.</p>
+                            </div>
+                    """
+                
+                html_message += f"""
+                        </div>
+                        
+                        <div class="footer">
+                            <p><strong>ONE WAY 2025</strong></p>
+                            <p>31 de julho - 2 de agosto de 2025</p>
+                            <p>Este é um email automático, não responda.</p>
+                            <p><small>Pedido gerado em: {pedido.data_pedido.strftime('%d/%m/%Y às %H:%M')}</small></p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+                """
+                
+                # Texto simples como fallback
+                text_message = f"""
+                ONE WAY 2025 - Confirmação do Pedido #{pedido.id}
+                
+                Olá, {pedido.comprador.nome}!
+                
+                Seu pedido foi processado com sucesso.
+                """
+                
+                if pedido.itens.exists():
+                    text_message += "\n\nItens do Pedido:\n"
+                    for item in pedido.itens.all():
+                        text_message += f"- {item.get_produto_display()} ({item.tamanho}) x{item.quantidade} - R$ {item.subtotal:.2f}\n"
+                else:
+                    text_message += f"\nProduto: {pedido.get_produto_display()} ({pedido.tamanho}) - R$ {pedido.preco:.2f}\n"
+                
+                text_message += f"""
+                Método de Pagamento: {pedido.get_forma_pagamento_display()}
+                Status: {status_text}
+                Total: R$ {pedido.total_pedido:.2f}
+                
+                ONE WAY 2025
+                31 de julho - 2 de agosto de 2025
+                """
+                
+                # Assunto do email
+                assunto = f"Confirmação do Pedido #{pedido.id} - ONE WAY 2025"
+                
+                # Enviar email
+                send_mail(
+                    subject=assunto,
+                    message=text_message,
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[pedido.comprador.email],
+                    html_message=html_message,
+                    fail_silently=False,
+                )
+                
+                enviados += 1
+                self.message_user(
+                    request,
+                    f'Email enviado para {pedido.comprador.nome} ({pedido.comprador.email})',
+                    level='SUCCESS'
+                )
+                
+            except Exception as e:
+                erros += 1
+                self.message_user(
+                    request,
+                    f'Erro ao enviar email para pedido #{pedido.id}: {str(e)}',
+                    level='ERROR'
+                )
+        
+        # Resumo final
+        if enviados > 0:
+            self.message_user(
+                request,
+                f'✅ {enviados} email(s) de confirmação enviado(s) com sucesso!',
+                level='SUCCESS'
+            )
+        if erros > 0:
+            self.message_user(
+                request,
+                f'❌ {erros} erro(s) ao enviar emails',
+                level='ERROR'
+            )
+    
+    enviar_email_confirmacao.short_description = "📧 Enviar email de confirmação"
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('comprador')
