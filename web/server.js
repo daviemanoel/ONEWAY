@@ -1784,15 +1784,13 @@ async function createMercadoPagoPreference(req, res, data) {
   try {
     // Preparar items para Mercado Pago
     const mpItems = items.map(item => {
-      // Aplicar desconto PIX se necessário
-      const unitPrice = paymentMethod === 'pix' ? 
-        item.priceUnit * 0.95 : // 5% desconto para PIX
-        item.priceUnit;
+      // IMPORTANTE: Não aplicar desconto PIX aqui pois o finalPrice já tem o desconto aplicado
+      // O Mercado Pago irá calcular o total baseado nos preços unitários originais
       
       return {
         title: `${item.title} - Tamanho ${item.size}`,
         quantity: item.quantity,
-        unit_price: parseFloat(unitPrice.toFixed(2)), // Arredondar para 2 casas decimais
+        unit_price: parseFloat(item.priceUnit.toFixed(2)), // Usar preço original sem desconto
         currency_id: 'BRL'
       };
     });
@@ -1830,6 +1828,12 @@ async function createMercadoPagoPreference(req, res, data) {
       }
     }
     
+    // Adicionar desconto PIX se aplicável
+    const discount = paymentMethod === 'pix' ? {
+      discount_percentage: 5,
+      campaign_id: 'PIX_DISCOUNT_5'
+    } : null;
+    
     const preferenceData = {
       items: mpItems,
       payer: {
@@ -1855,12 +1859,24 @@ async function createMercadoPagoPreference(req, res, data) {
         forma_pagamento: paymentMethod,
         total_original: totalPrice,
         total_final: finalPrice,
-        carrinho_items: items.length
+        carrinho_items: items.length,
+        desconto_pix_aplicado: paymentMethod === 'pix'
       }
     };
     
+    // Adicionar desconto se for PIX
+    if (discount) {
+      preferenceData.discount = discount;
+    }
+    
     console.log('🔵 Criando preferência Mercado Pago...');
     console.log('📦 Items:', mpItems.length, 'produtos');
+    console.log('💰 Total Original:', `R$ ${totalPrice.toFixed(2)}`);
+    console.log('💰 Total Final:', `R$ ${finalPrice.toFixed(2)}`);
+    if (paymentMethod === 'pix') {
+      console.log('🏷️ Desconto PIX:', '5%');
+      console.log('💳 Desconto aplicado via:', 'discount object no Mercado Pago');
+    }
     
     const result = await preference.create({ body: preferenceData });
     

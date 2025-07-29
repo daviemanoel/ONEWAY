@@ -714,6 +714,66 @@ ee52885 - Fix: Garantir preco com exatamente 2 casas decimais
 4. **Variáveis únicas**: Evitar `const` duplicado em escopo global
 5. **Validação tripla**: Frontend + Backend + Django para campos críticos
 
+### Sessão 27 Janeiro 2025: Correção Action "Consultar Status MP" + Token Mismatch ⭐ **RESOLVIDO**
+
+#### Contexto da Sessão  
+**Problema inicial**: Action "Consultar status no Mercado Pago" só funcionava com payment_id, falhando em pedidos sem essa informação
+
+#### Issues Resolvidas:
+- ✅ **Action Melhorada**: consultar_status_mp agora funciona com external_reference
+- ✅ **Busca Dupla**: Primeiro tenta payment_id, depois busca por external_reference  
+- ✅ **Auto-salvamento**: payment_id é salvo quando encontrado via external_reference
+- ✅ **Fix Settings**: MERCADOPAGO_ACCESS_TOKEN carregado de variável de ambiente
+- ✅ **Diagnóstico Token**: Identificado mismatch entre tokens Railway WEB vs API
+
+#### Problemas Encontrados e Soluções:
+
+**🚨 Problema 1: "Token do Mercado Pago não configurado!"**
+- **Causa**: Django settings.py com MERCADOPAGO_ACCESS_TOKEN hardcoded como string vazia
+- **Fix aplicado**: `MERCADOPAGO_ACCESS_TOKEN = os.environ.get('MERCADOPAGO_ACCESS_TOKEN', '')`
+
+**🚨 Problema 2: Payment ID 120083978058 retorna 404**
+- **Causa identificada**: Tokens diferentes entre serviços Railway
+  - WEB Service: APP_USR-3514745276930725-... (funciona)
+  - API Service: APP_USR-601129357783049-... (inválido)
+- **Solução**: Usuário deve atualizar token API service no Railway
+
+**🚨 Problema 3: Action só funcionava com payment_id**
+- **Fix aplicado**: Nova lógica com duas tentativas:
+  1. Consulta por payment_id (se disponível)
+  2. Busca por external_reference via search API
+  3. Salva payment_id se encontrado na busca
+
+#### Código da Action Melhorada:
+```python
+def consultar_status_mp(self, request, queryset):
+    """Action melhorada para consultar status no Mercado Pago via payment_id ou external_reference"""
+    import requests
+    from django.conf import settings
+    
+    mp_token = getattr(settings, 'MERCADOPAGO_ACCESS_TOKEN', os.environ.get('MERCADOPAGO_ACCESS_TOKEN'))
+    
+    for pedido in queryset:
+        payment_data = None
+        method_used = None
+        
+        # Método 1: Consultar por payment_id (se disponível)
+        if pedido.payment_id:
+            response = requests.get(
+                f'https://api.mercadopago.com/v1/payments/{pedido.payment_id}',
+                headers={'Authorization': f'Bearer {mp_token}'}
+            )
+            
+        # Método 2: Buscar por external_reference (se payment_id falhou ou não existe)
+        if not payment_data and pedido.external_reference:
+            search_url = 'https://api.mercadopago.com/v1/payments/search'
+            search_params = {
+                'external_reference': pedido.external_reference,
+                'limit': 50
+            }
+            response = requests.get(search_url, headers={'Authorization': f'Bearer {mp_token}'}, params=search_params)
+```
+
 ### Sessão 27 Janeiro 2025: Sistema de Logs Detalhados + Validação de Pedidos Órfãos ⭐ **NOVO**
 
 #### Contexto da Sessão  
