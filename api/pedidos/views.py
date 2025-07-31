@@ -2194,6 +2194,56 @@ def consulta_comprador_view(request):
                 100% {{ box-shadow: 0 0 0 0 rgba(253, 203, 110, 0); }}
             }}
             
+            /* Badge de Quantidade - Ênfase Visual */
+            .item-nome {{
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                flex-wrap: wrap;
+                gap: 8px;
+            }}
+            
+            .quantidade-badge {{
+                display: inline-flex;
+                align-items: center;
+                gap: 4px;
+                padding: 6px 12px;
+                border-radius: 20px;
+                font-weight: bold;
+                font-size: 0.9em;
+                white-space: nowrap;
+                flex-shrink: 0;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }}
+            
+            .quantidade-badge.qtd-1 {{
+                background: linear-gradient(135deg, #3498db, #2980b9);
+                color: white;
+            }}
+            
+            .quantidade-badge.qtd-multi {{
+                background: linear-gradient(135deg, #f39c12, #e67e22);
+                color: white;
+                animation: subtle-pulse 3s ease-in-out infinite;
+            }}
+            
+            .quantidade-badge.qtd-alta {{
+                background: linear-gradient(135deg, #e74c3c, #c0392b);
+                color: white;
+                animation: attention-pulse 2s ease-in-out infinite;
+                font-size: 1em;
+            }}
+            
+            @keyframes subtle-pulse {{
+                0%, 100% {{ transform: scale(1); }}
+                50% {{ transform: scale(1.05); }}
+            }}
+            
+            @keyframes attention-pulse {{
+                0%, 100% {{ transform: scale(1); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }}
+                50% {{ transform: scale(1.08); box-shadow: 0 4px 8px rgba(231, 76, 60, 0.3); }}
+            }}
+            
             /* Responsividade Mobile */
             @media (max-width: 768px) {{
                 body {{
@@ -2248,6 +2298,17 @@ def consulta_comprador_view(request):
                     font-size: 0.8em;
                 }}
                 
+                .item-nome {{
+                    flex-direction: column;
+                    align-items: flex-start;
+                    gap: 6px;
+                }}
+                
+                .quantidade-badge {{
+                    font-size: 0.85em;
+                    padding: 5px 10px;
+                }}
+                
                 .item-linha {{
                     flex-direction: column;
                     align-items: flex-start;
@@ -2286,6 +2347,15 @@ def consulta_comprador_view(request):
                 
                 .item-linha {{
                     padding: 8px;
+                }}
+                
+                .quantidade-badge {{
+                    font-size: 0.8em;
+                    padding: 4px 8px;
+                }}
+                
+                .quantidade-badge.qtd-alta {{
+                    font-size: 0.85em;
                 }}
             }}
         </style>
@@ -2436,12 +2506,28 @@ def consulta_comprador_view(request):
                                 </button>
                             """
                         
+                        # Determinar classe CSS baseada na quantidade
+                        if item.quantidade == 1:
+                            quantidade_classe = "qtd-1"
+                        elif item.quantidade <= 4:
+                            quantidade_classe = "qtd-multi"
+                        else:
+                            quantidade_classe = "qtd-alta"
+                        
+                        # Pluralização correta
+                        unidade_texto = "unidade" if item.quantidade == 1 else "unidades"
+                        
                         html_response += f"""
                             <div class="item-linha">
                                 <div class="item-info">
-                                    <div class="item-nome">{item.get_produto_display()}</div>
+                                    <div class="item-nome">
+                                        <span class="produto-titulo">{item.get_produto_display()}</span>
+                                        <span class="quantidade-badge {quantidade_classe}">
+                                            📦 {item.quantidade}x
+                                        </span>
+                                    </div>
                                     <div class="item-detalhes">
-                                        Tamanho: {item.tamanho} | Qtd: {item.quantidade}
+                                        Tamanho: {item.tamanho}
                                     </div>
                                 </div>
                                 <div class="item-status">
