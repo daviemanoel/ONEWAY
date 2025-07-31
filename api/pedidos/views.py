@@ -591,6 +591,68 @@ def setup_estoque_view(request):
                 margin-top: 5px;
                 line-height: 1.4;
             }}
+            
+            .acesso-rapido {{
+                background: rgba(255, 255, 255, 0.95);
+                padding: 25px;
+                border-radius: 15px;
+                box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+                margin-bottom: 30px;
+            }}
+            
+            .acesso-rapido h2 {{
+                font-size: 1.4em;
+                margin-bottom: 20px;
+                padding-bottom: 10px;
+                border-bottom: 2px solid #f1f1f1;
+                color: #2c3e50;
+                text-align: center;
+            }}
+            
+            .links-importantes {{
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 20px;
+            }}
+            
+            .btn-destaque {{
+                display: block;
+                padding: 25px 20px;
+                border-radius: 12px;
+                text-decoration: none;
+                color: white;
+                font-size: 1.3em;
+                font-weight: bold;
+                text-align: center;
+                transition: all 0.3s ease;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            }}
+            
+            .btn-destaque:hover {{
+                transform: translateY(-3px);
+                box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+            }}
+            
+            .btn-destaque.vendas {{
+                background: linear-gradient(135deg, #27ae60, #229954);
+            }}
+            
+            .btn-destaque.entrega {{
+                background: linear-gradient(135deg, #3498db, #2980b9);
+            }}
+            
+            .btn-destaque-desc {{
+                font-size: 0.8em;
+                margin-top: 8px;
+                opacity: 0.9;
+                font-weight: normal;
+            }}
+            
+            @media (max-width: 768px) {{
+                .links-importantes {{
+                    grid-template-columns: 1fr;
+                }}
+            }}
         </style>
     </head>
     <body>
@@ -617,6 +679,24 @@ def setup_estoque_view(request):
                 <div class="stat-card">
                     <div class="stat-number warning">{pedidos_presenciais}</div>
                     <div class="stat-label">Pagamentos Presenciais</div>
+                </div>
+            </div>
+            
+            <div class="acesso-rapido">
+                <h2>🚀 Acesso Rápido às Funcionalidades</h2>
+                <div class="links-importantes">
+                    <a href="/api/relatorio-vendas/" target="_blank" class="btn-destaque vendas">
+                        📈 Relatório de Vendas
+                        <div class="btn-destaque-desc">
+                            Visualizar vendas por produto e comprador
+                        </div>
+                    </a>
+                    <a href="/api/consulta-comprador/" target="_blank" class="btn-destaque entrega">
+                        📦 Controle de Entregas
+                        <div class="btn-destaque-desc">
+                            Buscar compradores e marcar entregas
+                        </div>
+                    </a>
                 </div>
             </div>
             
