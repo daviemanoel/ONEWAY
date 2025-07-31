@@ -368,6 +368,7 @@ def setup_estoque_view(request):
         <title>Dashboard Administrativo - ONEWAY</title>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
         <style>
             * {{ margin: 0; padding: 0; box-sizing: border-box; }}
             
@@ -1110,6 +1111,7 @@ def gerar_products_json_view(request):
         <head>
             <title>Geração Products.JSON</title>
             <meta charset="UTF-8">
+            <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📄</text></svg>">
             <style>
                 body {{ font-family: monospace; background: #1e1e1e; color: #00ff00; padding: 20px; }}
                 pre {{ white-space: pre-wrap; }}
@@ -1136,6 +1138,7 @@ def gerar_products_json_view(request):
         <head>
             <title>Erro - Geração JSON</title>
             <meta charset="UTF-8">
+            <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>❌</text></svg>">
             <style>
                 body {{ font-family: monospace; background: #1e1e1e; color: #ff4444; padding: 20px; }}
             </style>
@@ -1358,6 +1361,7 @@ def relatorio_vendas_view(request):
         <title>Relatório de Vendas - ONEWAY</title>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
         <style>
             * {{ margin: 0; padding: 0; box-sizing: border-box; }}
             
@@ -1858,6 +1862,7 @@ def consulta_comprador_view(request):
         <title>Consulta de Compradores - ONEWAY</title>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔍</text></svg>">
         <style>
             * {{ margin: 0; padding: 0; box-sizing: border-box; }}
             
