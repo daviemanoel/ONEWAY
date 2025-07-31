@@ -1784,13 +1784,15 @@ async function createMercadoPagoPreference(req, res, data) {
   try {
     // Preparar items para Mercado Pago
     const mpItems = items.map(item => {
-      // IMPORTANTE: Não aplicar desconto PIX aqui pois o finalPrice já tem o desconto aplicado
-      // O Mercado Pago irá calcular o total baseado nos preços unitários originais
+      // CORREÇÃO: Aplicar desconto PIX diretamente no unit_price para garantir que o MP calcule corretamente
+      const unitPriceWithDiscount = paymentMethod === 'pix' 
+        ? parseFloat((item.priceUnit * 0.95).toFixed(2))  // Aplicar 5% desconto para PIX
+        : parseFloat(item.priceUnit.toFixed(2));           // Preço original para outros métodos
       
       return {
         title: `${item.title} - Tamanho ${item.size}`,
         quantity: item.quantity,
-        unit_price: parseFloat(item.priceUnit.toFixed(2)), // Usar preço original sem desconto
+        unit_price: unitPriceWithDiscount,
         currency_id: 'BRL'
       };
     });
@@ -1828,10 +1830,11 @@ async function createMercadoPagoPreference(req, res, data) {
       }
     }
     
-    // Adicionar desconto PIX se aplicável
+    // DESCONTO PIX: Agora aplicado diretamente nos unit_price dos itens (mais confiável)
+    // Mantendo discount object como redundância para garantir (pode ser removido se funcionar bem)
     const discount = paymentMethod === 'pix' ? {
-      discount_percentage: 5,
-      campaign_id: 'PIX_DISCOUNT_5'
+      discount_percentage: 0, // Zerado pois desconto já aplicado nos preços unitários
+      campaign_id: 'PIX_DISCOUNT_APPLIED_IN_PRICES'
     } : null;
     
     const preferenceData = {
@@ -1875,7 +1878,8 @@ async function createMercadoPagoPreference(req, res, data) {
     console.log('💰 Total Final:', `R$ ${finalPrice.toFixed(2)}`);
     if (paymentMethod === 'pix') {
       console.log('🏷️ Desconto PIX:', '5%');
-      console.log('💳 Desconto aplicado via:', 'discount object no Mercado Pago');
+      console.log('💳 Desconto aplicado via:', 'preços unitários dos itens (mais confiável)');
+      console.log('📝 Items com desconto:', mpItems.map(i => `${i.title}: R$ ${i.unit_price}`));
     }
     
     const result = await preference.create({ body: preferenceData });
