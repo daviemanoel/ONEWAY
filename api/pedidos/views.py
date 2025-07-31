@@ -1204,8 +1204,8 @@ def relatorio_vendas_view(request):
     # Obter categoria do filtro
     categoria = request.GET.get('categoria', 'todos')
     
-    # Buscar apenas pedidos aprovados ou presenciais confirmados
-    pedidos_validos = Q(status_pagamento='approved') | (Q(forma_pagamento='presencial') & Q(status_pagamento='approved'))
+    # Buscar pedidos aprovados ou TODOS os presenciais (independente do status)
+    pedidos_validos = Q(status_pagamento='approved') | Q(forma_pagamento='presencial')
     
     # Base query com dados dos compradores
     vendas_query = ItemPedido.objects.filter(
