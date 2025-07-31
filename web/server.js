@@ -1451,8 +1451,14 @@ app.post('/api/cart/checkout', async (req, res) => {
       }
       
       const serverPrice = product.price;
-      if (Math.abs(price - serverPrice) > 0.01) {
-        console.warn(`⚠️ PREÇO DIVERGENTE! Cliente: ${price}, Servidor: ${serverPrice}`);
+      const serverPriceWithPix = Math.round(serverPrice * 0.95 * 100) / 100; // Preço com desconto PIX
+      
+      // Validar se o preço está correto (original ou com desconto PIX)
+      const isPriceValid = Math.abs(price - serverPrice) <= 0.01 || 
+                          Math.abs(price - serverPriceWithPix) <= 0.01;
+      
+      if (!isPriceValid) {
+        console.warn(`⚠️ PREÇO DIVERGENTE! Cliente: ${price}, Servidor: ${serverPrice}, PIX: ${serverPriceWithPix}`);
         return res.status(400).json({
           error: 'Preços desatualizados. Recarregue a página.'
         });
@@ -1468,7 +1474,8 @@ app.post('/api/cart/checkout', async (req, res) => {
         }
       }
       
-      const itemTotal = serverPrice * quantity;
+      // Usar o preço que veio do frontend (já com desconto aplicado se for PIX)
+      const itemTotal = price * quantity;
       totalPrice += itemTotal;
       
       validatedItems.push({
@@ -1476,7 +1483,7 @@ app.post('/api/cart/checkout', async (req, res) => {
         title: product.title,
         size: size,
         quantity: quantity,
-        priceUnit: serverPrice,
+        priceUnit: price, // Usar preço do frontend (já com desconto se PIX)
         subtotal: itemTotal,
         product_size_id: product_size_id // Adicionar para uso posterior
       });
@@ -1500,11 +1507,13 @@ app.post('/api/cart/checkout', async (req, res) => {
       console.log('✅ Estoque validado - todos os itens disponíveis');
     }
     
-    // Aplicar desconto PIX se necessário
-    const finalPrice = paymentMethod === 'pix' ? totalPrice * 0.95 : totalPrice;
+    // O desconto PIX já foi aplicado no frontend nos preços individuais
+    const finalPrice = totalPrice;
     
-    console.log(`💰 Total: R$ ${totalPrice.toFixed(2)}`);
-    console.log(`💰 Final: R$ ${finalPrice.toFixed(2)} (${paymentMethod})`);
+    console.log(`💰 Total: R$ ${totalPrice.toFixed(2)} (${paymentMethod})`);
+    if (paymentMethod === 'pix') {
+      console.log(`💡 Desconto PIX já aplicado nos itens individuais pelo frontend`);
+    }
     
     // O comprador será criado automaticamente pelo CriarPedidoSerializer
     console.log(`👤 Comprador será criado no Django: ${buyer.name} (${buyer.email})`);
@@ -1860,10 +1869,10 @@ async function createMercadoPagoPreference(req, res, data) {
         comprador_email: buyer.email,
         comprador_telefone: buyer.phone,
         forma_pagamento: paymentMethod,
-        total_original: totalPrice,
+        total_calculado: totalPrice,
         total_final: finalPrice,
         carrinho_items: items.length,
-        desconto_pix_aplicado: paymentMethod === 'pix'
+        desconto_pix_aplicado_frontend: paymentMethod === 'pix'
       }
     };
     

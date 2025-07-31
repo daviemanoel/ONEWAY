@@ -1581,14 +1581,26 @@
                     };
                     console.log('👤 DADOS COMPRADOR:', { ...buyer, emailMasked: buyer.email.replace(/(.{2}).*(@.*)/, '$1***$2') });
 
-                    // Preparar itens do carrinho
-                    const items = this.items.map(item => ({
-                        productId: item.productId,
-                        size: item.size,
-                        quantity: item.quantity,
-                        price: item.price,
-                        product_size_id: item.product_size_id // ✨ NOVO CAMPO para Django
-                    }));
+                    // Determinar método de pagamento baseado na seleção do carrinho
+                    const paymentSelect = document.getElementById('cart-payment-select');
+                    const paymentMethod = paymentSelect ? paymentSelect.value : 'pix';
+
+                    // Preparar itens do carrinho aplicando desconto PIX se necessário
+                    const items = this.items.map(item => {
+                        let price = item.price;
+                        // Aplicar desconto PIX (5%) se método for PIX
+                        if (paymentMethod === 'pix') {
+                            price = Math.round(price * 0.95 * 100) / 100; // 5% desconto com precisão
+                        }
+                        
+                        return {
+                            productId: item.productId,
+                            size: item.size,
+                            quantity: item.quantity,
+                            price: price,
+                            product_size_id: item.product_size_id // ✨ NOVO CAMPO para Django
+                        };
+                    });
                     console.log('📦 ITENS PREPARADOS:', items.map(item => ({
                         id: item.productId,
                         size: item.size,
@@ -1597,9 +1609,6 @@
                         hasProductSizeId: !!item.product_size_id
                     })));
 
-                    // Determinar método de pagamento baseado na seleção do carrinho
-                    const paymentSelect = document.getElementById('cart-payment-select');
-                    const paymentMethod = paymentSelect ? paymentSelect.value : 'pix';
                     console.log('💳 MÉTODO PAGAMENTO:', { paymentMethod, total: `R$ ${this.getTotal().toFixed(2)}`, totalPix: `R$ ${this.getPixTotal().toFixed(2)}` });
 
                     console.log('🚀 ENVIANDO REQUISIÇÃO CHECKOUT:', { 
