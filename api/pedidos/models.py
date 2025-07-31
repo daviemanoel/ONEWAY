@@ -391,6 +391,25 @@ class ItemPedido(models.Model):
         verbose_name="Preço Unitário"
     )
     
+    # Campos de controle de entrega
+    entregue = models.BooleanField(
+        default=False,
+        verbose_name="Entregue",
+        help_text="Indica se o item já foi entregue ao comprador"
+    )
+    data_entrega = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="Data da Entrega",
+        help_text="Data e hora em que o item foi entregue"
+    )
+    usuario_entrega = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name="Entregue por",
+        help_text="Nome do usuário que registrou a entrega"
+    )
+    
     class Meta:
         verbose_name = "Item do Pedido"
         verbose_name_plural = "Itens do Pedido"

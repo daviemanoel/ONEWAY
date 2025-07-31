@@ -682,6 +682,11 @@ def setup_estoque_view(request):
                     </a>
                     <div class="description">Visualiza quantidade vendida por produto e tamanho</div>
                     
+                    <a href="/api/consulta-comprador/" target="_blank" class="btn primary">
+                        🔍 Consulta de Compradores
+                    </a>
+                    <div class="description">Busca compradores e controla entregas dos itens</div>
+                    
                     <button class="btn primary" onclick="executeCommand('sincronizar_estoque', '--dry-run')">
                         🔍 Simular Sincronização
                     </button>
@@ -1621,3 +1626,499 @@ def relatorio_vendas_view(request):
     """
     
     return HttpResponse(html_response, content_type='text/html')
+
+
+@staff_member_required
+def consulta_comprador_view(request):
+    """
+    View para consultar compradores e seus pedidos/itens
+    GET /api/consulta-comprador/
+    GET /api/consulta-comprador/?nome=João
+    """
+    from django.db.models import Q, Count
+    from .models import Comprador, ItemPedido, Pedido
+    
+    nome_busca = request.GET.get('nome', '').strip()
+    
+    # HTML base
+    html_response = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Consulta de Compradores - ONEWAY</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+            * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+            
+            body {{
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: #333;
+                line-height: 1.6;
+                min-height: 100vh;
+                padding: 20px;
+            }}
+            
+            .container {{
+                max-width: 1200px;
+                margin: 0 auto;
+                background: rgba(255, 255, 255, 0.95);
+                padding: 30px;
+                border-radius: 15px;
+                box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            }}
+            
+            h1 {{
+                font-size: 2.5em;
+                margin-bottom: 20px;
+                background: linear-gradient(135deg, #667eea, #764ba2);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                background-clip: text;
+                text-align: center;
+            }}
+            
+            .busca-form {{
+                background: #f8f9fa;
+                padding: 20px;
+                border-radius: 10px;
+                margin-bottom: 30px;
+                text-align: center;
+            }}
+            
+            .busca-input {{
+                width: 60%;
+                padding: 12px 20px;
+                font-size: 1.1em;
+                border: 2px solid #dee2e6;
+                border-radius: 25px;
+                margin-right: 10px;
+            }}
+            
+            .busca-input:focus {{
+                outline: none;
+                border-color: #667eea;
+            }}
+            
+            .btn-buscar {{
+                padding: 12px 30px;
+                background: linear-gradient(135deg, #667eea, #764ba2);
+                color: white;
+                border: none;
+                border-radius: 25px;
+                font-size: 1.1em;
+                cursor: pointer;
+                transition: all 0.3s ease;
+            }}
+            
+            .btn-buscar:hover {{
+                transform: scale(1.05);
+                box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            }}
+            
+            .resultados {{
+                margin-top: 30px;
+            }}
+            
+            .comprador-card {{
+                background: white;
+                padding: 25px;
+                border-radius: 10px;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+                margin-bottom: 25px;
+            }}
+            
+            .comprador-header {{
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 20px;
+                padding-bottom: 15px;
+                border-bottom: 2px solid #f0f0f0;
+            }}
+            
+            .comprador-info {{
+                font-size: 1.2em;
+            }}
+            
+            .comprador-nome {{
+                font-weight: bold;
+                color: #2c3e50;
+                font-size: 1.4em;
+                margin-bottom: 5px;
+            }}
+            
+            .comprador-contato {{
+                color: #6c757d;
+                font-size: 0.9em;
+            }}
+            
+            .pedidos-lista {{
+                margin-top: 20px;
+            }}
+            
+            .pedido-grupo {{
+                background: #f8f9fa;
+                padding: 15px;
+                border-radius: 8px;
+                margin-bottom: 15px;
+            }}
+            
+            .pedido-header {{
+                font-weight: bold;
+                color: #495057;
+                margin-bottom: 10px;
+                display: flex;
+                justify-content: space-between;
+            }}
+            
+            .item-linha {{
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 10px;
+                margin: 5px 0;
+                background: white;
+                border-radius: 5px;
+                border: 1px solid #e9ecef;
+            }}
+            
+            .item-info {{
+                flex: 1;
+            }}
+            
+            .item-nome {{
+                font-weight: 500;
+                color: #2c3e50;
+            }}
+            
+            .item-detalhes {{
+                font-size: 0.9em;
+                color: #6c757d;
+            }}
+            
+            .item-status {{
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }}
+            
+            .status-entregue {{
+                color: #27ae60;
+                font-weight: bold;
+            }}
+            
+            .status-pendente {{
+                color: #e67e22;
+                font-weight: bold;
+            }}
+            
+            .btn-entregar {{
+                padding: 8px 20px;
+                background: linear-gradient(135deg, #27ae60, #229954);
+                color: white;
+                border: none;
+                border-radius: 20px;
+                cursor: pointer;
+                font-size: 0.9em;
+                transition: all 0.3s ease;
+            }}
+            
+            .btn-entregar:hover {{
+                transform: scale(1.05);
+                box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+            }}
+            
+            .btn-entregar:disabled {{
+                background: #95a5a6;
+                cursor: not-allowed;
+                transform: none;
+            }}
+            
+            .sem-resultados {{
+                text-align: center;
+                padding: 40px;
+                color: #6c757d;
+                font-size: 1.2em;
+            }}
+            
+            .voltar-link {{
+                display: inline-block;
+                margin-top: 30px;
+                padding: 12px 25px;
+                background: linear-gradient(135deg, #667eea, #764ba2);
+                color: white;
+                text-decoration: none;
+                border-radius: 25px;
+                transition: all 0.3s ease;
+            }}
+            
+            .voltar-link:hover {{
+                transform: scale(1.05);
+                box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            }}
+            
+            .loading {{
+                display: none;
+                text-align: center;
+                padding: 20px;
+            }}
+            
+            .spinner {{
+                border: 4px solid #f3f3f3;
+                border-top: 4px solid #667eea;
+                border-radius: 50%;
+                width: 40px;
+                height: 40px;
+                animation: spin 1s linear infinite;
+                margin: 0 auto;
+            }}
+            
+            @keyframes spin {{
+                0% {{ transform: rotate(0deg); }}
+                100% {{ transform: rotate(360deg); }}
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>🔍 Consulta de Compradores</h1>
+            
+            <div class="busca-form">
+                <form method="get" action="/api/consulta-comprador/">
+                    <input type="text" name="nome" class="busca-input" 
+                           placeholder="Digite o nome do comprador..." 
+                           value="{nome_busca}" autofocus>
+                    <button type="submit" class="btn-buscar">🔍 Buscar</button>
+                </form>
+            </div>
+            
+            <div id="loading" class="loading">
+                <div class="spinner"></div>
+                <p>Processando entrega...</p>
+            </div>
+            
+            <div class="resultados">
+    """
+    
+    if nome_busca:
+        # Buscar compradores com nome similar
+        compradores = Comprador.objects.filter(
+            nome__icontains=nome_busca
+        ).prefetch_related(
+            'pedido_set__itens'
+        ).order_by('nome')
+        
+        if compradores.exists():
+            for comprador in compradores:
+                # Contar totais
+                total_itens = 0
+                total_entregue = 0
+                
+                pedidos_com_itens = []
+                for pedido in comprador.pedido_set.all():
+                    if pedido.itens.exists():
+                        itens_list = []
+                        for item in pedido.itens.all():
+                            total_itens += 1
+                            if item.entregue:
+                                total_entregue += 1
+                            itens_list.append(item)
+                        pedidos_com_itens.append({
+                            'pedido': pedido,
+                            'itens': itens_list
+                        })
+                
+                html_response += f"""
+                <div class="comprador-card">
+                    <div class="comprador-header">
+                        <div class="comprador-info">
+                            <div class="comprador-nome">👤 {comprador.nome}</div>
+                            <div class="comprador-contato">
+                                📧 {comprador.email} | 📱 {comprador.telefone}
+                            </div>
+                        </div>
+                        <div>
+                            <span style="color: #27ae60;">✅ {total_entregue}</span> / 
+                            <span style="color: #3498db;">{total_itens} itens</span>
+                        </div>
+                    </div>
+                    
+                    <div class="pedidos-lista">
+                """
+                
+                for pedido_info in pedidos_com_itens:
+                    pedido = pedido_info['pedido']
+                    itens = pedido_info['itens']
+                    
+                    html_response += f"""
+                        <div class="pedido-grupo">
+                            <div class="pedido-header">
+                                <span>📦 Pedido #{pedido.id} - {pedido.data_pedido.strftime('%d/%m/%Y')}</span>
+                                <span>{pedido.get_status_pagamento_display()}</span>
+                            </div>
+                    """
+                    
+                    for item in itens:
+                        status_html = ""
+                        if item.entregue:
+                            status_html = f"""
+                                <span class="status-entregue">✅ Entregue</span>
+                                <small style="color: #95a5a6;">{item.data_entrega.strftime('%d/%m %H:%M') if item.data_entrega else ''}</small>
+                            """
+                        else:
+                            status_html = f"""
+                                <span class="status-pendente">📦 Pendente</span>
+                                <button class="btn-entregar" onclick="marcarEntregue({item.id}, '{comprador.nome}')">
+                                    Marcar Entregue
+                                </button>
+                            """
+                        
+                        html_response += f"""
+                            <div class="item-linha">
+                                <div class="item-info">
+                                    <div class="item-nome">{item.get_produto_display()}</div>
+                                    <div class="item-detalhes">
+                                        Tamanho: {item.tamanho} | Qtd: {item.quantidade}
+                                    </div>
+                                </div>
+                                <div class="item-status">
+                                    {status_html}
+                                </div>
+                            </div>
+                        """
+                    
+                    html_response += """
+                        </div>
+                    """
+                
+                html_response += """
+                    </div>
+                </div>
+                """
+        else:
+            html_response += f"""
+                <div class="sem-resultados">
+                    <p>❌ Nenhum comprador encontrado com o nome "{nome_busca}"</p>
+                    <p style="font-size: 0.9em; margin-top: 10px;">Tente buscar por parte do nome</p>
+                </div>
+            """
+    else:
+        html_response += """
+            <div class="sem-resultados">
+                <p>👆 Digite um nome para buscar</p>
+            </div>
+        """
+    
+    html_response += f"""
+            </div>
+            
+            <center>
+                <a href="/api/setup-estoque/" class="voltar-link">⬅️ Voltar ao Dashboard</a>
+            </center>
+        </div>
+        
+        <script>
+            async function marcarEntregue(itemId, compradorNome) {{
+                if (!confirm(`Confirmar entrega para ${{compradorNome}}?`)) {{
+                    return;
+                }}
+                
+                const loading = document.getElementById('loading');
+                loading.style.display = 'block';
+                
+                try {{
+                    const response = await fetch('/api/marcar-entrega/', {{
+                        method: 'POST',
+                        headers: {{
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCookie('csrftoken')
+                        }},
+                        body: JSON.stringify({{ item_id: itemId }})
+                    }});
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {{
+                        alert('✅ Item marcado como entregue!');
+                        window.location.reload();
+                    }} else {{
+                        alert('❌ Erro: ' + (result.error || 'Erro desconhecido'));
+                    }}
+                }} catch (error) {{
+                    alert('❌ Erro na requisição: ' + error.message);
+                }} finally {{
+                    loading.style.display = 'none';
+                }}
+            }}
+            
+            function getCookie(name) {{
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {{
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {{
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {{
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }}
+                    }}
+                }}
+                return cookieValue;
+            }}
+        </script>
+    </body>
+    </html>
+    """
+    
+    return HttpResponse(html_response, content_type='text/html')
+
+
+@csrf_exempt
+@staff_member_required
+def marcar_entrega_view(request):
+    """
+    Endpoint para marcar um item como entregue
+    POST /api/marcar-entrega/
+    Body: {"item_id": 123}
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método não permitido'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        item_id = data.get('item_id')
+        
+        if not item_id:
+            return JsonResponse({'error': 'item_id é obrigatório'}, status=400)
+        
+        # Buscar o item
+        from .models import ItemPedido
+        try:
+            item = ItemPedido.objects.get(id=item_id)
+        except ItemPedido.DoesNotExist:
+            return JsonResponse({'error': 'Item não encontrado'}, status=404)
+        
+        # Verificar se já foi entregue
+        if item.entregue:
+            return JsonResponse({'error': 'Item já foi entregue'}, status=400)
+        
+        # Marcar como entregue
+        item.entregue = True
+        item.data_entrega = timezone.now()
+        item.usuario_entrega = request.user.username
+        item.save()
+        
+        return JsonResponse({
+            'success': True,
+            'item_id': item.id,
+            'produto': item.get_produto_display(),
+            'comprador': item.pedido.comprador.nome,
+            'data_entrega': item.data_entrega.strftime('%d/%m/%Y %H:%M:%S')
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'JSON inválido'}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': f'Erro interno: {str(e)}'}, status=500)
