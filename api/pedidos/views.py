@@ -1717,6 +1717,16 @@ def consulta_comprador_view(request):
     """
     from django.db.models import Q, Count
     from .models import Comprador, ItemPedido, Pedido
+    import unicodedata
+    
+    def normalizar_texto(texto):
+        """Remove acentos e converte para minúsculas para busca insensível a acentos"""
+        if not texto:
+            return ""
+        # Normalizar caracteres unicode (NFD) e remover acentos
+        texto_normalizado = unicodedata.normalize('NFD', texto.lower().strip())
+        # Remover caracteres de combinação (acentos)
+        return ''.join(c for c in texto_normalizado if unicodedata.category(c) != 'Mn')
     
     nome_busca = request.GET.get('nome', '').strip()
     
@@ -1983,14 +1993,25 @@ def consulta_comprador_view(request):
     """
     
     if nome_busca:
-        # Buscar compradores com nome similar
-        compradores = Comprador.objects.filter(
-            nome__icontains=nome_busca
-        ).prefetch_related(
-            'pedido_set__itens'
-        ).order_by('nome')
+        # Normalizar o termo de busca (remover acentos)
+        nome_busca_normalizado = normalizar_texto(nome_busca)
         
-        if compradores.exists():
+        # Buscar todos os compradores e filtrar por nome normalizado
+        todos_compradores = Comprador.objects.prefetch_related(
+            'pedido_set__itens'
+        ).all()
+        
+        # Filtrar manualmente para busca sem acentos
+        compradores = []
+        for comprador in todos_compradores:
+            nome_normalizado = normalizar_texto(comprador.nome)
+            if nome_busca_normalizado in nome_normalizado:
+                compradores.append(comprador)
+        
+        # Ordenar por nome
+        compradores = sorted(compradores, key=lambda c: c.nome)
+        
+        if compradores:
             for comprador in compradores:
                 # Contar totais
                 total_itens = 0
