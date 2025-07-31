@@ -1191,42 +1191,71 @@ def relatorio_vendas_view(request):
     """
     Relatório de vendas mostrando quantidade vendida por produto e tamanho
     GET /api/relatorio-vendas/
+    GET /api/relatorio-vendas/?categoria=camisetas
+    GET /api/relatorio-vendas/?categoria=alimentacao
     """
     from django.db.models import Sum, Count, Q
     from .models import ItemPedido, Pedido
     
+    # Definir categorias de produtos
+    PRODUTOS_CAMISETAS = ['camiseta-marrom', 'camiseta-jesus', 'camiseta-oneway-branca', 'camiseta-the-way']
+    PRODUTOS_ALIMENTACAO = ['almoco-sabado', 'jantar-sabado', 'espetinho-carne', 'espetinho-frango', 'espetinho-linguica', 'adicional-mandioca']
+    
+    # Obter categoria do filtro
+    categoria = request.GET.get('categoria', 'todos')
+    
     # Buscar apenas pedidos aprovados ou presenciais confirmados
     pedidos_validos = Q(status_pagamento='approved') | (Q(forma_pagamento='presencial') & Q(status_pagamento='approved'))
     
-    # Agrupar por produto e tamanho, somando as quantidades
-    vendas = ItemPedido.objects.filter(
+    # Base query
+    vendas_query = ItemPedido.objects.filter(
         pedido__in=Pedido.objects.filter(pedidos_validos)
-    ).values(
+    )
+    
+    # Aplicar filtro de categoria
+    if categoria == 'camisetas':
+        vendas_query = vendas_query.filter(produto__in=PRODUTOS_CAMISETAS)
+    elif categoria == 'alimentacao':
+        vendas_query = vendas_query.filter(produto__in=PRODUTOS_ALIMENTACAO)
+    
+    # Agrupar por produto e tamanho, somando as quantidades
+    vendas = vendas_query.values(
         'produto', 'tamanho'
     ).annotate(
         quantidade_vendida=Sum('quantidade'),
         total_pedidos=Count('pedido', distinct=True)
     ).order_by('produto', 'tamanho')
     
-    # Calcular totais gerais
+    # Calcular totais gerais e por categoria
     total_geral = 0
+    total_camisetas = 0
+    total_alimentacao = 0
     vendas_por_produto = {}
     
     for venda in vendas:
-        produto_nome = dict(ItemPedido.PRODUTOS_CHOICES).get(venda['produto'], venda['produto'])
+        produto_key = venda['produto']
+        produto_nome = dict(ItemPedido.PRODUTOS_CHOICES).get(produto_key, produto_key)
+        quantidade = venda['quantidade_vendida']
         
         if produto_nome not in vendas_por_produto:
             vendas_por_produto[produto_nome] = {
                 'tamanhos': {},
-                'total': 0
+                'total': 0,
+                'categoria': 'camisetas' if produto_key in PRODUTOS_CAMISETAS else 'alimentacao'
             }
         
         vendas_por_produto[produto_nome]['tamanhos'][venda['tamanho']] = {
-            'quantidade': venda['quantidade_vendida'],
+            'quantidade': quantidade,
             'pedidos': venda['total_pedidos']
         }
-        vendas_por_produto[produto_nome]['total'] += venda['quantidade_vendida']
-        total_geral += venda['quantidade_vendida']
+        vendas_por_produto[produto_nome]['total'] += quantidade
+        total_geral += quantidade
+        
+        # Somar por categoria
+        if produto_key in PRODUTOS_CAMISETAS:
+            total_camisetas += quantidade
+        else:
+            total_alimentacao += quantidade
     
     # Gerar HTML do relatório
     html_response = f"""
@@ -1380,6 +1409,68 @@ def relatorio_vendas_view(request):
                 background: linear-gradient(135deg, #27ae60, #229954);
             }}
             
+            .filtros {{
+                text-align: center;
+                margin-bottom: 30px;
+                padding: 20px;
+                background: rgba(255, 255, 255, 0.9);
+                border-radius: 10px;
+            }}
+            
+            .filtros h3 {{
+                margin-bottom: 15px;
+                color: #2c3e50;
+            }}
+            
+            .btn-filtro {{
+                display: inline-block;
+                padding: 10px 20px;
+                margin: 0 5px;
+                background: #e9ecef;
+                color: #495057;
+                text-decoration: none;
+                border-radius: 20px;
+                transition: all 0.3s ease;
+                font-weight: 500;
+            }}
+            
+            .btn-filtro:hover {{
+                background: #dee2e6;
+                transform: translateY(-2px);
+            }}
+            
+            .btn-filtro.ativo {{
+                background: linear-gradient(135deg, #667eea, #764ba2);
+                color: white;
+            }}
+            
+            .resumo-categorias {{
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 20px;
+                margin-bottom: 30px;
+            }}
+            
+            .categoria-card {{
+                background: #f8f9fa;
+                padding: 20px;
+                border-radius: 10px;
+                text-align: center;
+                border: 2px solid #e9ecef;
+            }}
+            
+            .categoria-card h4 {{
+                color: #495057;
+                margin-bottom: 10px;
+                font-size: 1.1em;
+            }}
+            
+            .categoria-total {{
+                font-size: 2em;
+                font-weight: bold;
+                color: #3498db;
+            }}
+            
             @media print {{
                 body {{
                     background: white;
@@ -1389,7 +1480,7 @@ def relatorio_vendas_view(request):
                     box-shadow: none;
                     padding: 20px;
                 }}
-                .botoes {{
+                .botoes, .filtros {{
                     display: none;
                 }}
             }}
@@ -1402,11 +1493,23 @@ def relatorio_vendas_view(request):
                 {timezone.now().strftime('%d/%m/%Y às %H:%M:%S')}
             </div>
             
+            <div class="filtros">
+                <h3>Filtrar por Categoria:</h3>
+                <a href="/api/relatorio-vendas/" class="btn-filtro {'ativo' if categoria == 'todos' else ''}">Todos</a>
+                <a href="/api/relatorio-vendas/?categoria=camisetas" class="btn-filtro {'ativo' if categoria == 'camisetas' else ''}">👕 Camisetas</a>
+                <a href="/api/relatorio-vendas/?categoria=alimentacao" class="btn-filtro {'ativo' if categoria == 'alimentacao' else ''}">🍽️ Alimentação</a>
+            </div>
+            
             <div class="resumo">
-                <h2>Resumo Geral</h2>
+                <h2>Resumo {'Geral' if categoria == 'todos' else 'de ' + categoria.title()}</h2>
                 <div class="total-geral">{total_geral}</div>
                 <div>Unidades Vendidas</div>
             </div>
+            
+            {'<div class="resumo-categorias">' if categoria == 'todos' else ''}
+            {'<div class="categoria-card"><h4>👕 Camisetas</h4><div class="categoria-total">' + str(total_camisetas) + '</div><div>unidades</div></div>' if categoria == 'todos' and total_camisetas > 0 else ''}
+            {'<div class="categoria-card"><h4>🍽️ Alimentação</h4><div class="categoria-total">' + str(total_alimentacao) + '</div><div>unidades</div></div>' if categoria == 'todos' and total_alimentacao > 0 else ''}
+            {'</div>' if categoria == 'todos' else ''}
             
             <div class="produtos">
     """
