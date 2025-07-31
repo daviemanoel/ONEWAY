@@ -675,7 +675,12 @@ def setup_estoque_view(request):
                 </div>
                 
                 <div class="section">
-                    <h2>📊 Diagnóstico</h2>
+                    <h2>📊 Relatórios e Diagnóstico</h2>
+                    <a href="/api/relatorio-vendas/" target="_blank" class="btn success">
+                        📈 Relatório de Vendas
+                    </a>
+                    <div class="description">Visualiza quantidade vendida por produto e tamanho</div>
+                    
                     <button class="btn primary" onclick="executeCommand('sincronizar_estoque', '--dry-run')">
                         🔍 Simular Sincronização
                     </button>
@@ -1178,3 +1183,270 @@ def decrementar_estoque_view(request):
             'error': f'Erro interno: {str(e)}',
             'success': False
         }, status=500)
+
+
+@staff_member_required
+def relatorio_vendas_view(request):
+    """
+    Relatório de vendas mostrando quantidade vendida por produto e tamanho
+    GET /api/relatorio-vendas/
+    """
+    from django.db.models import Sum, Count, Q
+    from .models import ItemPedido, Pedido
+    
+    # Buscar apenas pedidos aprovados ou presenciais confirmados
+    pedidos_validos = Q(status_pagamento='approved') | (Q(forma_pagamento='presencial') & Q(status_pagamento='approved'))
+    
+    # Agrupar por produto e tamanho, somando as quantidades
+    vendas = ItemPedido.objects.filter(
+        pedido__in=Pedido.objects.filter(pedidos_validos)
+    ).values(
+        'produto', 'tamanho'
+    ).annotate(
+        quantidade_vendida=Sum('quantidade'),
+        total_pedidos=Count('pedido', distinct=True)
+    ).order_by('produto', 'tamanho')
+    
+    # Calcular totais gerais
+    total_geral = 0
+    vendas_por_produto = {}
+    
+    for venda in vendas:
+        produto_nome = dict(ItemPedido.PRODUTOS_CHOICES).get(venda['produto'], venda['produto'])
+        
+        if produto_nome not in vendas_por_produto:
+            vendas_por_produto[produto_nome] = {
+                'tamanhos': {},
+                'total': 0
+            }
+        
+        vendas_por_produto[produto_nome]['tamanhos'][venda['tamanho']] = {
+            'quantidade': venda['quantidade_vendida'],
+            'pedidos': venda['total_pedidos']
+        }
+        vendas_por_produto[produto_nome]['total'] += venda['quantidade_vendida']
+        total_geral += venda['quantidade_vendida']
+    
+    # Gerar HTML do relatório
+    html_response = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Relatório de Vendas - ONEWAY</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+            * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+            
+            body {{
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: #333;
+                line-height: 1.6;
+                min-height: 100vh;
+                padding: 20px;
+            }}
+            
+            .container {{
+                max-width: 1200px;
+                margin: 0 auto;
+                background: rgba(255, 255, 255, 0.95);
+                padding: 30px;
+                border-radius: 15px;
+                box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            }}
+            
+            h1 {{
+                font-size: 2.5em;
+                margin-bottom: 10px;
+                background: linear-gradient(135deg, #667eea, #764ba2);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                background-clip: text;
+                text-align: center;
+            }}
+            
+            .data-hora {{
+                text-align: center;
+                color: #7f8c8d;
+                margin-bottom: 30px;
+            }}
+            
+            .resumo {{
+                background: #f8f9fa;
+                padding: 20px;
+                border-radius: 10px;
+                margin-bottom: 30px;
+                text-align: center;
+            }}
+            
+            .resumo h2 {{
+                color: #2c3e50;
+                margin-bottom: 10px;
+            }}
+            
+            .total-geral {{
+                font-size: 3em;
+                font-weight: bold;
+                color: #27ae60;
+                margin: 10px 0;
+            }}
+            
+            .produtos {{
+                margin-bottom: 30px;
+            }}
+            
+            .produto-card {{
+                background: #fff;
+                border: 1px solid #e0e0e0;
+                border-radius: 10px;
+                padding: 20px;
+                margin-bottom: 20px;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            }}
+            
+            .produto-header {{
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 15px;
+                padding-bottom: 10px;
+                border-bottom: 2px solid #f0f0f0;
+            }}
+            
+            .produto-nome {{
+                font-size: 1.3em;
+                font-weight: bold;
+                color: #2c3e50;
+            }}
+            
+            .produto-total {{
+                font-size: 1.2em;
+                font-weight: bold;
+                color: #3498db;
+            }}
+            
+            .tamanhos {{
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+                gap: 10px;
+                margin-top: 10px;
+            }}
+            
+            .tamanho-box {{
+                background: #f8f9fa;
+                padding: 10px;
+                border-radius: 8px;
+                text-align: center;
+                border: 1px solid #e9ecef;
+            }}
+            
+            .tamanho-label {{
+                font-size: 0.9em;
+                color: #6c757d;
+                margin-bottom: 5px;
+            }}
+            
+            .tamanho-qtd {{
+                font-size: 1.5em;
+                font-weight: bold;
+                color: #2c3e50;
+            }}
+            
+            .botoes {{
+                text-align: center;
+                margin-top: 30px;
+            }}
+            
+            .btn {{
+                display: inline-block;
+                padding: 12px 25px;
+                margin: 0 10px;
+                background: linear-gradient(135deg, #667eea, #764ba2);
+                color: white;
+                text-decoration: none;
+                border-radius: 25px;
+                transition: all 0.3s ease;
+                font-weight: 500;
+            }}
+            
+            .btn:hover {{
+                transform: scale(1.05);
+                box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            }}
+            
+            .btn.print {{
+                background: linear-gradient(135deg, #27ae60, #229954);
+            }}
+            
+            @media print {{
+                body {{
+                    background: white;
+                    padding: 0;
+                }}
+                .container {{
+                    box-shadow: none;
+                    padding: 20px;
+                }}
+                .botoes {{
+                    display: none;
+                }}
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>📊 Relatório de Vendas</h1>
+            <div class="data-hora">
+                {timezone.now().strftime('%d/%m/%Y às %H:%M:%S')}
+            </div>
+            
+            <div class="resumo">
+                <h2>Resumo Geral</h2>
+                <div class="total-geral">{total_geral}</div>
+                <div>Unidades Vendidas</div>
+            </div>
+            
+            <div class="produtos">
+    """
+    
+    # Adicionar cada produto
+    for produto_nome, dados in sorted(vendas_por_produto.items()):
+        html_response += f"""
+                <div class="produto-card">
+                    <div class="produto-header">
+                        <div class="produto-nome">{produto_nome}</div>
+                        <div class="produto-total">Total: {dados['total']} unidades</div>
+                    </div>
+                    <div class="tamanhos">
+        """
+        
+        # Adicionar tamanhos
+        for tamanho in ['P', 'M', 'G', 'GG', 'UNICO']:
+            if tamanho in dados['tamanhos']:
+                qtd = dados['tamanhos'][tamanho]['quantidade']
+                html_response += f"""
+                        <div class="tamanho-box">
+                            <div class="tamanho-label">Tamanho {tamanho}</div>
+                            <div class="tamanho-qtd">{qtd}</div>
+                        </div>
+                """
+        
+        html_response += """
+                    </div>
+                </div>
+        """
+    
+    html_response += """
+            </div>
+            
+            <div class="botoes">
+                <a href="#" onclick="window.print(); return false;" class="btn print">🖨️ Imprimir Relatório</a>
+                <a href="/api/setup-estoque/" class="btn">⬅️ Voltar ao Dashboard</a>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    return HttpResponse(html_response, content_type='text/html')

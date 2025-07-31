@@ -3,7 +3,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     CompradorViewSet, PedidoViewSet, ItemPedidoViewSet, 
     setup_estoque_view, validar_estoque_view, estoque_multiplo_view, gerar_products_json_view,
-    decrementar_estoque_view
+    decrementar_estoque_view, relatorio_vendas_view
 )
 
 router = DefaultRouter()
@@ -18,4 +18,5 @@ urlpatterns = [
     path('estoque-multiplo/', estoque_multiplo_view, name='estoque-multiplo'),
     path('gerar-products-json/', gerar_products_json_view, name='gerar-products-json'),
     path('decrementar-estoque/', decrementar_estoque_view, name='decrementar-estoque'),
+    path('relatorio-vendas/', relatorio_vendas_view, name='relatorio-vendas'),
 ]
