@@ -1207,10 +1207,10 @@ def relatorio_vendas_view(request):
     # Buscar apenas pedidos aprovados ou presenciais confirmados
     pedidos_validos = Q(status_pagamento='approved') | (Q(forma_pagamento='presencial') & Q(status_pagamento='approved'))
     
-    # Base query
+    # Base query com dados dos compradores
     vendas_query = ItemPedido.objects.filter(
         pedido__in=Pedido.objects.filter(pedidos_validos)
-    )
+    ).select_related('pedido__comprador')
     
     # Aplicar filtro de categoria
     if categoria == 'camisetas':
@@ -1218,25 +1218,23 @@ def relatorio_vendas_view(request):
     elif categoria == 'alimentacao':
         vendas_query = vendas_query.filter(produto__in=PRODUTOS_ALIMENTACAO)
     
-    # Agrupar por produto e tamanho, somando as quantidades
-    vendas = vendas_query.values(
-        'produto', 'tamanho'
-    ).annotate(
-        quantidade_vendida=Sum('quantidade'),
-        total_pedidos=Count('pedido', distinct=True)
-    ).order_by('produto', 'tamanho')
+    # Ordenar por produto, tamanho e nome do comprador
+    vendas_detalhadas = vendas_query.order_by('produto', 'tamanho', 'pedido__comprador__nome')
     
-    # Calcular totais gerais e por categoria
+    # Calcular totais gerais e organizar dados com compradores
     total_geral = 0
     total_camisetas = 0
     total_alimentacao = 0
     vendas_por_produto = {}
     
-    for venda in vendas:
-        produto_key = venda['produto']
+    for item in vendas_detalhadas:
+        produto_key = item.produto
         produto_nome = dict(ItemPedido.PRODUTOS_CHOICES).get(produto_key, produto_key)
-        quantidade = venda['quantidade_vendida']
+        tamanho = item.tamanho
+        quantidade = item.quantidade
+        comprador_nome = item.pedido.comprador.nome
         
+        # Inicializar estrutura se necessário
         if produto_nome not in vendas_por_produto:
             vendas_por_produto[produto_nome] = {
                 'tamanhos': {},
@@ -1244,10 +1242,20 @@ def relatorio_vendas_view(request):
                 'categoria': 'camisetas' if produto_key in PRODUTOS_CAMISETAS else 'alimentacao'
             }
         
-        vendas_por_produto[produto_nome]['tamanhos'][venda['tamanho']] = {
-            'quantidade': quantidade,
-            'pedidos': venda['total_pedidos']
-        }
+        if tamanho not in vendas_por_produto[produto_nome]['tamanhos']:
+            vendas_por_produto[produto_nome]['tamanhos'][tamanho] = {
+                'compradores': [],
+                'total': 0
+            }
+        
+        # Adicionar comprador e quantidade
+        vendas_por_produto[produto_nome]['tamanhos'][tamanho]['compradores'].append({
+            'nome': comprador_nome,
+            'quantidade': quantidade
+        })
+        
+        # Atualizar totais
+        vendas_por_produto[produto_nome]['tamanhos'][tamanho]['total'] += quantidade
         vendas_por_produto[produto_nome]['total'] += quantidade
         total_geral += quantidade
         
@@ -1471,6 +1479,50 @@ def relatorio_vendas_view(request):
                 color: #3498db;
             }}
             
+            .compradores-lista {{
+                margin-top: 15px;
+                padding-left: 20px;
+            }}
+            
+            .comprador-item {{
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 8px 15px;
+                margin: 5px 0;
+                background: #f8f9fa;
+                border-left: 3px solid #667eea;
+                border-radius: 5px;
+                transition: all 0.2s ease;
+            }}
+            
+            .comprador-item:hover {{
+                background: #e9ecef;
+                transform: translateX(5px);
+            }}
+            
+            .comprador-nome {{
+                font-weight: 500;
+                color: #2c3e50;
+            }}
+            
+            .comprador-qtd {{
+                font-weight: bold;
+                color: #667eea;
+                background: white;
+                padding: 3px 10px;
+                border-radius: 15px;
+            }}
+            
+            .tamanho-header {{
+                font-weight: bold;
+                color: #495057;
+                margin-top: 15px;
+                margin-bottom: 10px;
+                padding: 5px 0;
+                border-bottom: 1px solid #dee2e6;
+            }}
+            
             @media print {{
                 body {{
                     background: white;
@@ -1482,6 +1534,10 @@ def relatorio_vendas_view(request):
                 }}
                 .botoes, .filtros {{
                     display: none;
+                }}
+                .comprador-item {{
+                    border-left: 2px solid #000;
+                    page-break-inside: avoid;
                 }}
             }}
         </style>
@@ -1519,25 +1575,36 @@ def relatorio_vendas_view(request):
         html_response += f"""
                 <div class="produto-card">
                     <div class="produto-header">
-                        <div class="produto-nome">{produto_nome}</div>
+                        <div class="produto-nome">📦 {produto_nome}</div>
                         <div class="produto-total">Total: {dados['total']} unidades</div>
                     </div>
-                    <div class="tamanhos">
         """
         
-        # Adicionar tamanhos
+        # Adicionar tamanhos com lista de compradores
         for tamanho in ['P', 'M', 'G', 'GG', 'UNICO']:
             if tamanho in dados['tamanhos']:
-                qtd = dados['tamanhos'][tamanho]['quantidade']
+                tamanho_info = dados['tamanhos'][tamanho]
                 html_response += f"""
-                        <div class="tamanho-box">
-                            <div class="tamanho-label">Tamanho {tamanho}</div>
-                            <div class="tamanho-qtd">{qtd}</div>
+                    <div class="tamanho-header">
+                        Tamanho {tamanho} - Total: {tamanho_info['total']} unidades
+                    </div>
+                    <div class="compradores-lista">
+                """
+                
+                # Adicionar cada comprador
+                for comprador in tamanho_info['compradores']:
+                    html_response += f"""
+                        <div class="comprador-item">
+                            <span class="comprador-nome">• {comprador['nome']}</span>
+                            <span class="comprador-qtd">{comprador['quantidade']} {'unidade' if comprador['quantidade'] == 1 else 'unidades'}</span>
                         </div>
+                    """
+                
+                html_response += """
+                    </div>
                 """
         
         html_response += """
-                    </div>
                 </div>
         """
     
