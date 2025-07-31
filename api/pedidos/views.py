@@ -2090,6 +2090,110 @@ def consulta_comprador_view(request):
                 100% {{ transform: rotate(360deg); }}
             }}
             
+            /* Classes para Status e Formas de Pagamento */
+            .pedido-info {{
+                display: flex;
+                flex-direction: column;
+                gap: 5px;
+            }}
+            
+            .pedido-primeira-linha {{
+                font-weight: bold;
+                color: #495057;
+            }}
+            
+            .pedido-segunda-linha {{
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                font-size: 0.9em;
+            }}
+            
+            .forma-pagamento {{
+                display: inline-flex;
+                align-items: center;
+                gap: 4px;
+                padding: 4px 8px;
+                border-radius: 12px;
+                font-weight: 500;
+                font-size: 0.85em;
+            }}
+            
+            .forma-pagamento.pix {{
+                background: linear-gradient(135deg, #00d4aa, #00b894);
+                color: white;
+            }}
+            
+            .forma-pagamento.presencial {{
+                background: linear-gradient(135deg, #fdcb6e, #e17055);
+                color: white;
+            }}
+            
+            .forma-pagamento.paypal {{
+                background: linear-gradient(135deg, #0984e3, #74b9ff);
+                color: white;
+            }}
+            
+            .forma-pagamento.cartao {{
+                background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+                color: white;
+            }}
+            
+            .forma-pagamento.outros {{
+                background: linear-gradient(135deg, #636e72, #b2bec3);
+                color: white;
+            }}
+            
+            .status-pagamento {{
+                display: inline-flex;
+                align-items: center;
+                gap: 4px;
+                padding: 4px 10px;
+                border-radius: 12px;
+                font-weight: 500;
+                font-size: 0.85em;
+            }}
+            
+            .status-pagamento.approved {{
+                background: linear-gradient(135deg, #00b894, #00cec9);
+                color: white;
+            }}
+            
+            .status-pagamento.pending {{
+                background: linear-gradient(135deg, #fdcb6e, #f39c12);
+                color: white;
+            }}
+            
+            .status-pagamento.rejected {{
+                background: linear-gradient(135deg, #e17055, #d63031);
+                color: white;
+            }}
+            
+            .status-pagamento.in_process {{
+                background: linear-gradient(135deg, #74b9ff, #0984e3);
+                color: white;
+            }}
+            
+            .status-pagamento.cancelled {{
+                background: linear-gradient(135deg, #636e72, #2d3436);
+                color: white;
+            }}
+            
+            .status-pagamento.refunded {{
+                background: linear-gradient(135deg, #a29bfe, #6c5ce7);
+                color: white;
+            }}
+            
+            .status-destaque {{
+                animation: pulse 2s infinite;
+            }}
+            
+            @keyframes pulse {{
+                0% {{ box-shadow: 0 0 0 0 rgba(253, 203, 110, 0.7); }}
+                70% {{ box-shadow: 0 0 0 10px rgba(253, 203, 110, 0); }}
+                100% {{ box-shadow: 0 0 0 0 rgba(253, 203, 110, 0); }}
+            }}
+            
             /* Responsividade Mobile */
             @media (max-width: 768px) {{
                 body {{
@@ -2132,6 +2236,16 @@ def consulta_comprador_view(request):
                     flex-direction: column;
                     align-items: flex-start;
                     gap: 5px;
+                }}
+                
+                .pedido-segunda-linha {{
+                    flex-direction: column;
+                    align-items: flex-start;
+                    gap: 8px;
+                }}
+                
+                .forma-pagamento, .status-pagamento {{
+                    font-size: 0.8em;
                 }}
                 
                 .item-linha {{
@@ -2258,11 +2372,52 @@ def consulta_comprador_view(request):
                     pedido = pedido_info['pedido']
                     itens = pedido_info['itens']
                     
+                    # Definir ícone da forma de pagamento
+                    forma_pagamento_info = {
+                        'pix': {'icone': '💳', 'classe': 'pix'},
+                        'presencial': {'icone': '💰', 'classe': 'presencial'},
+                        'paypal': {'icone': '🏧', 'classe': 'paypal'},
+                        '2x': {'icone': '💴', 'classe': 'cartao'},
+                        '4x': {'icone': '💴', 'classe': 'cartao'},
+                        'credit_card': {'icone': '💴', 'classe': 'cartao'},
+                        'debit_card': {'icone': '💴', 'classe': 'cartao'},
+                    }
+                    
+                    forma_info = forma_pagamento_info.get(pedido.forma_pagamento, {'icone': '💵', 'classe': 'outros'})
+                    
+                    # Definir ícone do status
+                    status_info = {
+                        'approved': {'icone': '✅', 'classe': 'approved'},
+                        'pending': {'icone': '⏳', 'classe': 'pending'},
+                        'rejected': {'icone': '❌', 'classe': 'rejected'},
+                        'in_process': {'icone': '🔄', 'classe': 'in_process'},
+                        'cancelled': {'icone': '🚫', 'classe': 'cancelled'},
+                        'refunded': {'icone': '↩️', 'classe': 'refunded'},
+                    }
+                    
+                    status_info_atual = status_info.get(pedido.status_pagamento, {'icone': '❓', 'classe': 'pending'})
+                    
+                    # Adicionar destaque para pagamentos presenciais pendentes
+                    destaque_class = ""
+                    if pedido.forma_pagamento == 'presencial' and pedido.status_pagamento == 'pending':
+                        destaque_class = " status-destaque"
+                    
                     html_response += f"""
                         <div class="pedido-grupo">
                             <div class="pedido-header">
-                                <span>📦 Pedido #{pedido.id} - {pedido.data_pedido.strftime('%d/%m/%Y')}</span>
-                                <span>{pedido.get_status_pagamento_display()}</span>
+                                <div class="pedido-info">
+                                    <div class="pedido-primeira-linha">
+                                        📦 Pedido #{pedido.id} - {pedido.data_pedido.strftime('%d/%m/%Y')}
+                                    </div>
+                                    <div class="pedido-segunda-linha">
+                                        <span class="forma-pagamento {forma_info['classe']}{destaque_class}">
+                                            {forma_info['icone']} {pedido.get_forma_pagamento_display()}
+                                        </span>
+                                        <span class="status-pagamento {status_info_atual['classe']}">
+                                            {status_info_atual['icone']} {pedido.get_status_pagamento_display()}
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
                     """
                     
