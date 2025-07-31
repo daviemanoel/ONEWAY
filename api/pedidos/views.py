@@ -1608,6 +1608,126 @@ def relatorio_vendas_view(request):
                 border-bottom: 1px solid #dee2e6;
             }}
             
+            /* Responsividade Mobile */
+            @media (max-width: 768px) {{
+                body {{
+                    padding: 10px;
+                }}
+                
+                .container {{
+                    padding: 20px;
+                }}
+                
+                h1 {{
+                    font-size: 2em;
+                }}
+                
+                .total-geral {{
+                    font-size: 2.5em;
+                }}
+                
+                .resumo-categorias {{
+                    grid-template-columns: 1fr;
+                }}
+                
+                .categoria-card {{
+                    padding: 15px;
+                }}
+                
+                .filtros {{
+                    padding: 15px;
+                }}
+                
+                .btn-filtro {{
+                    display: block;
+                    margin: 5px 0;
+                    width: 100%;
+                }}
+                
+                .produto-header {{
+                    flex-direction: column;
+                    align-items: flex-start;
+                    gap: 10px;
+                }}
+                
+                .produto-nome {{
+                    font-size: 1.1em;
+                }}
+                
+                .produto-total {{
+                    font-size: 1em;
+                }}
+                
+                .tamanhos {{
+                    grid-template-columns: repeat(2, 1fr);
+                    gap: 8px;
+                }}
+                
+                .comprador-item {{
+                    flex-direction: column;
+                    align-items: flex-start;
+                    gap: 5px;
+                    padding: 10px;
+                }}
+                
+                .comprador-nome {{
+                    font-size: 0.9em;
+                }}
+                
+                .comprador-qtd {{
+                    align-self: flex-end;
+                }}
+                
+                .botoes {{
+                    margin-top: 20px;
+                }}
+                
+                .btn {{
+                    display: block;
+                    margin: 10px 0;
+                    width: 100%;
+                }}
+            }}
+            
+            @media (max-width: 480px) {{
+                .container {{
+                    padding: 15px;
+                    margin: 5px;
+                }}
+                
+                h1 {{
+                    font-size: 1.5em;
+                }}
+                
+                .total-geral {{
+                    font-size: 2em;
+                }}
+                
+                .produto-card {{
+                    padding: 15px;
+                }}
+                
+                .tamanhos {{
+                    grid-template-columns: 1fr;
+                }}
+                
+                .tamanho-box {{
+                    padding: 8px;
+                }}
+                
+                .categoria-total {{
+                    font-size: 1.5em;
+                }}
+                
+                .compradores-lista {{
+                    padding-left: 10px;
+                }}
+                
+                .comprador-item {{
+                    padding: 8px;
+                }}
+            }}
+            
             @media print {{
                 body {{
                     background: white;
@@ -1968,6 +2088,91 @@ def consulta_comprador_view(request):
             @keyframes spin {{
                 0% {{ transform: rotate(0deg); }}
                 100% {{ transform: rotate(360deg); }}
+            }}
+            
+            /* Responsividade Mobile */
+            @media (max-width: 768px) {{
+                body {{
+                    padding: 10px;
+                }}
+                
+                .container {{
+                    padding: 20px;
+                }}
+                
+                h1 {{
+                    font-size: 2em;
+                }}
+                
+                .busca-input {{
+                    width: 100%;
+                    margin-right: 0;
+                    margin-bottom: 15px;
+                }}
+                
+                .btn-buscar {{
+                    width: 100%;
+                }}
+                
+                .comprador-header {{
+                    flex-direction: column;
+                    align-items: flex-start;
+                    gap: 10px;
+                }}
+                
+                .comprador-info {{
+                    font-size: 1em;
+                }}
+                
+                .comprador-nome {{
+                    font-size: 1.2em;
+                }}
+                
+                .pedido-header {{
+                    flex-direction: column;
+                    align-items: flex-start;
+                    gap: 5px;
+                }}
+                
+                .item-linha {{
+                    flex-direction: column;
+                    align-items: flex-start;
+                    gap: 10px;
+                }}
+                
+                .item-status {{
+                    width: 100%;
+                    justify-content: space-between;
+                }}
+                
+                .btn-entregar {{
+                    width: 100%;
+                    padding: 12px;
+                    font-size: 1em;
+                }}
+            }}
+            
+            @media (max-width: 480px) {{
+                h1 {{
+                    font-size: 1.5em;
+                }}
+                
+                .container {{
+                    padding: 15px;
+                    margin: 5px;
+                }}
+                
+                .comprador-card {{
+                    padding: 15px;
+                }}
+                
+                .pedido-grupo {{
+                    padding: 10px;
+                }}
+                
+                .item-linha {{
+                    padding: 8px;
+                }}
             }}
         </style>
     </head>

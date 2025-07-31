@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - ONE WAY 2025</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 50%, #1a1a1a 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        .header h1 {
+            font-size: 3rem;
+            font-weight: bold;
+            background: linear-gradient(135deg, #ff6b35, #f7931e, #ffd700);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            margin-bottom: 0.5rem;
+        }
+        
+        .header .subtitle {
+            font-size: 1.2rem;
+            color: #cccccc;
+            font-weight: 300;
+        }
+        
+        .login-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            padding: 2.5rem;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        
+        .login-form h2 {
+            text-align: center;
+            margin-bottom: 1.5rem;
+            color: #ffffff;
+            font-size: 1.5rem;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #cccccc;
+            font-weight: 500;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .form-group input::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: #ff6b35;
+            box-shadow: 0 0 0 2px rgba(255, 107, 53, 0.2);
+            background: rgba(255, 255, 255, 0.15);
+        }
+        
+        .btn-primary {
+            width: 100%;
+            padding: 0.75rem;
+            background: linear-gradient(135deg, #ff6b35, #f7931e);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #e55a2b, #e8871a);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(255, 107, 53, 0.4);
+        }
+        
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+        
+        .error-messages {
+            background: rgba(220, 53, 69, 0.1);
+            border: 1px solid rgba(220, 53, 69, 0.3);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            color: #ffb3ba;
+        }
+        
+        .error-messages ul {
+            list-style: none;
+            margin: 0;
+        }
+        
+        .error-messages li {
+            margin-bottom: 0.5rem;
+        }
+        
+        .footer {
+            margin-top: 2rem;
+            text-align: center;
+            color: #888888;
+            font-size: 0.9rem;
+        }
+        
+        .footer a {
+            color: #ff6b35;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+        
+        .footer a:hover {
+            color: #f7931e;
+        }
+        
+        /* Responsividade */
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2.5rem;
+            }
+            
+            .header .subtitle {
+                font-size: 1rem;
+            }
+            
+            .login-container {
+                margin: 1rem;
+                padding: 2rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .login-container {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>ONE WAY</h1>
+        <p class="subtitle">31 de julho - 2 de agosto de 2025</p>
+    </div>
+    
+    <div class="login-container">
+        <form method="post" class="login-form">
+            <h2>Acesso Administrativo</h2>
+            
+            {% csrf_token %}
+            
+            {% if form.errors %}
+                <div class="error-messages">
+                    <ul>
+                        {% for field, errors in form.errors.items %}
+                            {% for error in errors %}
+                                <li>{% if field != '__all__' %}{{ field }}: {% endif %}{{ error }}</li>
+                            {% endfor %}
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
+            
+            <div class="form-group">
+                <label for="{{ form.username.id_for_label }}">Usuário</label>
+                <input type="text" 
+                       name="{{ form.username.name }}" 
+                       id="{{ form.username.id_for_label }}"
+                       placeholder="Digite seu usuário"
+                       required
+                       {% if form.username.value %}value="{{ form.username.value }}"{% endif %}>
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.password.id_for_label }}">Senha</label>
+                <input type="password" 
+                       name="{{ form.password.name }}" 
+                       id="{{ form.password.id_for_label }}"
+                       placeholder="Digite sua senha"
+                       required>
+            </div>
+            
+            <button type="submit" class="btn-primary">Entrar</button>
+            
+            <input type="hidden" name="next" value="{{ next }}">
+        </form>
+    </div>
+    
+    <div class="footer">
+        <p>&copy; 2025 Igreja Evangélica Assembleia de Deus - Ministério Belém França</p>
+        <p><a href="https://oneway.mevamfranca.com.br" target="_blank">oneway.mevamfranca.com.br</a></p>
+    </div>
+</body>
+</html>
