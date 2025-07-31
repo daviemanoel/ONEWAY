@@ -2046,6 +2046,51 @@ def consulta_comprador_view(request):
                 transform: none;
             }}
             
+            .btn-entregar-unitario {{
+                padding: 8px 16px;
+                background: linear-gradient(135deg, #3498db, #2980b9);
+                color: white;
+                border: none;
+                border-radius: 20px;
+                cursor: pointer;
+                font-size: 0.85em;
+                font-weight: 500;
+                transition: all 0.3s ease;
+                white-space: nowrap;
+            }}
+            
+            .btn-entregar-unitario:hover {{
+                transform: scale(1.05);
+                box-shadow: 0 3px 10px rgba(52, 152, 219, 0.3);
+            }}
+            
+            .entrega-parcial {{
+                display: flex;
+                flex-direction: column;
+                gap: 5px;
+                margin-bottom: 8px;
+            }}
+            
+            .status-parcial {{
+                font-weight: bold;
+                color: #f39c12;
+            }}
+            
+            .progresso-barra {{
+                width: 100px;
+                height: 8px;
+                background: #ecf0f1;
+                border-radius: 4px;
+                overflow: hidden;
+            }}
+            
+            .progresso-fill {{
+                height: 100%;
+                background: linear-gradient(135deg, #f39c12, #e67e22);
+                border-radius: 4px;
+                transition: width 0.5s ease;
+            }}
+            
             .sem-resultados {{
                 text-align: center;
                 padding: 40px;
@@ -2492,17 +2537,33 @@ def consulta_comprador_view(request):
                     """
                     
                     for item in itens:
-                        status_html = ""
-                        if item.entregue:
+                        # Determinar status de entrega e botão adequado
+                        if item.entrega_completa:
                             status_html = f"""
-                                <span class="status-entregue">✅ Entregue</span>
+                                <span class="status-entregue">✅ Completo</span>
                                 <small style="color: #95a5a6;">{item.data_entrega.strftime('%d/%m %H:%M') if item.data_entrega else ''}</small>
                             """
-                        else:
+                        elif item.quantidade_entregue > 0:
+                            # Entrega parcial - mostrar progresso
+                            porcentagem = item.percentual_entregue
                             status_html = f"""
-                                <span class="status-pendente">📦 Pendente</span>
-                                <button class="btn-entregar" onclick="marcarEntregue({item.id}, '{comprador.nome}')">
-                                    Marcar Entregue
+                                <div class="entrega-parcial">
+                                    <span class="status-parcial">🔄 {item.quantidade_entregue}/{item.quantidade}</span>
+                                    <div class="progresso-barra">
+                                        <div class="progresso-fill" style="width: {porcentagem}%"></div>
+                                    </div>
+                                    <small style="color: #f39c12;">{porcentagem}% entregue</small>
+                                </div>
+                                <button class="btn-entregar-unitario" onclick="entregarUmItem({item.id}, '{comprador.nome}', {item.quantidade_pendente})">
+                                    Entregar +1 ({item.quantidade_pendente} restantes)
+                                </button>
+                            """
+                        else:
+                            # Nenhuma entrega ainda
+                            status_html = f"""
+                                <span class="status-pendente">📦 Pendente ({item.quantidade}x)</span>
+                                <button class="btn-entregar-unitario" onclick="entregarUmItem({item.id}, '{comprador.nome}', {item.quantidade_pendente})">
+                                    Entregar +1
                                 </button>
                             """
                         
@@ -2567,8 +2628,12 @@ def consulta_comprador_view(request):
         </div>
         
         <script>
-            async function marcarEntregue(itemId, compradorNome) {{
-                if (!confirm(`Confirmar entrega para ${{compradorNome}}?`)) {{
+            async function entregarUmItem(itemId, compradorNome, quantidadePendente) {{
+                const textoConfirmacao = quantidadePendente === 1 
+                    ? `Confirmar entrega da última unidade para ${{compradorNome}}?`
+                    : `Entregar 1 unidade para ${{compradorNome}}? (Restarão ${{quantidadePendente - 1}} unidades)`;
+                
+                if (!confirm(textoConfirmacao)) {{
                     return;
                 }}
                 
@@ -2582,13 +2647,20 @@ def consulta_comprador_view(request):
                             'Content-Type': 'application/json',
                             'X-CSRFToken': getCookie('csrftoken')
                         }},
-                        body: JSON.stringify({{ item_id: itemId }})
+                        body: JSON.stringify({{ 
+                            item_id: itemId,
+                            quantidade: 1
+                        }})
                     }});
                     
                     const result = await response.json();
                     
                     if (result.success) {{
-                        alert('✅ Item marcado como entregue!');
+                        const statusTexto = result.entrega_completa 
+                            ? '✅ Item completamente entregue!'
+                            : `✅ 1 unidade entregue! Progresso: ${{result.quantidade_total_entregue}}/${{result.quantidade_total}} (${{result.percentual_entregue}}%)`;
+                        
+                        alert(statusTexto);
                         window.location.reload();
                     }} else {{
                         alert('❌ Erro: ' + (result.error || 'Erro desconhecido'));
@@ -2626,9 +2698,9 @@ def consulta_comprador_view(request):
 @staff_member_required
 def marcar_entrega_view(request):
     """
-    Endpoint para marcar um item como entregue
+    Endpoint para marcar entrega unitária de um item
     POST /api/marcar-entrega/
-    Body: {"item_id": 123}
+    Body: {"item_id": 123, "quantidade": 1}
     """
     if request.method != 'POST':
         return JsonResponse({'error': 'Método não permitido'}, status=405)
@@ -2636,9 +2708,13 @@ def marcar_entrega_view(request):
     try:
         data = json.loads(request.body)
         item_id = data.get('item_id')
+        quantidade_a_entregar = data.get('quantidade', 1)  # Padrão: 1 unidade
         
         if not item_id:
             return JsonResponse({'error': 'item_id é obrigatório'}, status=400)
+        
+        if quantidade_a_entregar <= 0:
+            return JsonResponse({'error': 'Quantidade deve ser maior que zero'}, status=400)
         
         # Buscar o item
         from .models import ItemPedido
@@ -2647,23 +2723,52 @@ def marcar_entrega_view(request):
         except ItemPedido.DoesNotExist:
             return JsonResponse({'error': 'Item não encontrado'}, status=404)
         
-        # Verificar se já foi entregue
-        if item.entregue:
-            return JsonResponse({'error': 'Item já foi entregue'}, status=400)
+        # Verificar se já foi totalmente entregue
+        if item.entrega_completa:
+            return JsonResponse({
+                'error': f'Item já foi totalmente entregue ({item.quantidade_entregue}/{item.quantidade})'
+            }, status=400)
         
-        # Marcar como entregue
-        item.entregue = True
-        item.data_entrega = timezone.now()
-        item.usuario_entrega = request.user.username
+        # Verificar se quantidade não excede o pendente
+        if quantidade_a_entregar > item.quantidade_pendente:
+            return JsonResponse({
+                'error': f'Quantidade excede o pendente. Restam {item.quantidade_pendente} unidades'
+            }, status=400)
+        
+        # Incrementar quantidade entregue
+        quantidade_anterior = item.quantidade_entregue
+        item.quantidade_entregue += quantidade_a_entregar
+        
+        # Registrar usuário e data na primeira entrega ou na entrega final
+        if quantidade_anterior == 0 or item.entrega_completa:
+            item.usuario_entrega = request.user.username
+            if item.entrega_completa:
+                item.data_entrega = timezone.now()
+        
+        # Salvar (o método save() automaticamente marca entregue=True se completo)
         item.save()
         
-        return JsonResponse({
+        # Resposta com informações detalhadas
+        response_data = {
             'success': True,
             'item_id': item.id,
             'produto': item.get_produto_display(),
             'comprador': item.pedido.comprador.nome,
-            'data_entrega': item.data_entrega.strftime('%d/%m/%Y %H:%M:%S')
-        })
+            'quantidade_entregue_agora': quantidade_a_entregar,
+            'quantidade_total_entregue': item.quantidade_entregue,
+            'quantidade_total': item.quantidade,
+            'quantidade_pendente': item.quantidade_pendente,
+            'percentual_entregue': item.percentual_entregue,
+            'status_entrega': item.status_entrega_display,
+            'entrega_completa': item.entrega_completa,
+            'timestamp': timezone.now().strftime('%d/%m/%Y %H:%M:%S')
+        }
+        
+        # Adicionar data de entrega se foi completado agora
+        if item.entrega_completa and item.data_entrega:
+            response_data['data_entrega_completa'] = item.data_entrega.strftime('%d/%m/%Y %H:%M:%S')
+        
+        return JsonResponse(response_data)
         
     except json.JSONDecodeError:
         return JsonResponse({'error': 'JSON inválido'}, status=400)

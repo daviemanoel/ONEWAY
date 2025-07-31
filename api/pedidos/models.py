@@ -397,6 +397,11 @@ class ItemPedido(models.Model):
         verbose_name="Entregue",
         help_text="Indica se o item já foi entregue ao comprador"
     )
+    quantidade_entregue = models.PositiveIntegerField(
+        default=0,
+        verbose_name="Quantidade Entregue",
+        help_text="Quantas unidades já foram entregues deste item"
+    )
     data_entrega = models.DateTimeField(
         null=True,
         blank=True,
@@ -423,8 +428,42 @@ class ItemPedido(models.Model):
         """Calcula o subtotal do item"""
         return self.preco_unitario * self.quantidade
     
+    @property
+    def entrega_completa(self):
+        """Verifica se todas as unidades foram entregues"""
+        return self.quantidade_entregue >= self.quantidade
+    
+    @property
+    def quantidade_pendente(self):
+        """Retorna quantas unidades ainda faltam ser entregues"""
+        return max(0, self.quantidade - self.quantidade_entregue)
+    
+    @property
+    def percentual_entregue(self):
+        """Retorna o percentual de entrega (0-100)"""
+        if self.quantidade == 0:
+            return 100
+        return int((self.quantidade_entregue / self.quantidade) * 100)
+    
+    @property
+    def status_entrega_display(self):
+        """Retorna string amigável do status de entrega"""
+        if self.quantidade_entregue == 0:
+            return "Pendente"
+        elif self.entrega_completa:
+            return "Completo"
+        else:
+            return f"Parcial ({self.quantidade_entregue}/{self.quantidade})"
+    
     def save(self, *args, **kwargs):
-        # Validar preço contra products.json seria ideal aqui
+        # Auto-marcar como entregue se quantidade_entregue >= quantidade
+        if self.quantidade_entregue >= self.quantidade:
+            self.entregue = True
+            if not self.data_entrega:
+                self.data_entrega = timezone.now()
+        else:
+            self.entregue = False
+        
         super().save(*args, **kwargs)
 
 
